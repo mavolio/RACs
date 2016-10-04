@@ -17,6 +17,7 @@
 #' @return A vector of integers that sum to n. If zeros == TRUE and m is
 #' not null, the vector is of length m.
 #' @references Notation as in section 3.2 of \doi{10.1007/b11601500}.
+#'
 #' @examples
 #' # Simulate a SAD with at most 42 species
 #' rCRP(n = 100, kappa = 3.1, m = 42)
