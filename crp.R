@@ -1,169 +1,92 @@
-library('vegan')
-library('ggplot2')
-library('dplyr')
-
-# Two parameter function for sampling integer partitions, regretably known as
-# the "Chinese restaurant process" (CRP).
-# In the more common parameterization, 0 <= alpha < 1, theta > -alpha
-
-crp.sample = function(size, theta, alpha = 0) {
-  # Initialize with a single member of the first class.
-  result <- c(1)
-  k <- length(result)
-  # Iterate according to sample size
-  for (n in 2:size) {
-    if (runif(1, 0, 1) < (theta + k * alpha) / (theta + n)) {
-      # Add a new class.
-      result <- c(result, 1)
-      k <- k + 1
+#' Generate a random integer partition through the Chinese
+#' Restaurant Process (CRP).
+#'
+#' In the literature on the Unified Neutral Theory of Biodiveristy,
+#' a special case of the CRP makes an appearance as the Ewens' Sampling Formula, a 
+#' probability distribution on vectors of species' abundances. \code{rCRP}
+#' includes simulating from this family of distributions as the default parameterization,
+#' but allows the full range of parameters for non UNTB-based models of a
+#' species abundance distribution (SAD).
+#'
+#' @n The integer being partitioned.
+#' @theta The "concentration" parameter, $\theta > -\alpha$.
+#' @alpha The "discount" parameter, $0 <= \alpha < 1$.
+#' @kappa An alternative parameterization setting $\alpha = -\kappa < 0$.
+#' @m A positive integer in the alternative parameterization.
+#' @zeros Preserve zeros.
+#' @return A vector of integers that sum to n. If zeros == TRUE and m is
+#' not null, the vector is of length m.
+#' @references Notation as in section 3.2 of \doi{10.1007/b11601500}.
+#' @examples
+#' # Simulate a SAD with at most 42 species
+#' rCRP(n = 100, kappa = 3.1, m = 42)
+#' 
+#' # Show effect of (alternative) parameters on richness and evenness.
+#' rep <- 1:10
+#' kappa <- c(0.5, 1, 10)
+#' m <- c(30, 60, 90)
+#' df <- expand.grid(rep = rep, kappa = kappa, m = m)
+#' SAD <- mapply(rCRP, kappa = df$kappa, m = df$m, MoreArgs = list(n = 150))
+#' df$richness <- vapply(SAD, vegan::specnumber, 0)
+#' df$evenness <- vapply(SAD,
+#'   function(x) {(1 - vegan::diversity(x, index = "inv")) / (1 - vegan::specnumber(x))},
+#'   0)
+#' plot(df$richness, df$evenness, col = df$m, pch = df$kappa)
+#' 
+rCRP = function(n, theta, alpha = 0, kappa = NULL, m = NULL, zeros = TRUE) {
+  if (!is.null(kappa) & !is.null(m)) {
+    if (m == round(m) & m > 0 & kappa > 0) {
+      alpha <- -kappa
+      theta <- kappa * m
     } else {
-      # Add to an existing class,
-      # with probability related to current class abundance
-      i <- sample(k, size = 1, prob = result - alpha)
-      result[[i]] <- result[[i]] + 1
+      stop("Parameter m must be a positive integer and kappa must be non-negative.")
+    }
+  } else {
+    if (alpha < 0 | 1 <= alpha | -alpha < theta) { 
+      stop("Without kappa or m, parameters must satisfy 0 <= alpha < 1 & theta > -alpha.")
+    }
+  }
+  if (!is.null(kappa) & !is.null(m) & zeros) {
+    # Sample so as to preserve zero abundances, given integer m
+    result <- rep(0, m)
+    extant <- which(result != 0)
+    j <- m - length(extant)
+    p <- rep(NA, m)
+    idx <- sample(m, 1)
+    for (k in 1:n) {
+      result[[idx]] <- result[[idx]] + 1
+      if (result[[idx]] == 1) {
+        # respond to new class
+        extant <- c(extant, idx)
+        j <- j + 1
+        p[-extant] <- (theta + j * alpha) / (m - j)
+        p[[idx]] <- 1 - alpha
+      } else {
+        # step up the sampling prob for extant class
+        p[[idx]] <- p[[idx]] + 1
+      }
+      # sample a class for the next object
+      idx <- sample(m, 1, prob = p / (theta + k))
+    }
+  } else if (zeros) {
+    stop("Preserving zeros not implemented for non-null kappa and m")
+  } else {
+    # Initialize with a single instance of the first class.
+    result <- c(1)
+    k <- length(result)
+    # Iterate according to sample size
+    for (j in 2:n) {
+      if (runif(1, 0, 1) < (theta + k * alpha) / (theta + j)) {
+        # Add a new class.
+        result <- c(result, 1)
+        k <- k + 1
+      } else {
+        # Add to an existing class,
+        # with probability related to current class abundance
+        i <- sample(k, size = 1, prob = result - alpha)
+        result[[i]] <- result[[i]] + 1
+      }
     }
   }
   return(result)
 }
-
-# With alpha = 0 (the default), the process samples the
-# UNTB/Ewens distribution with `size` individuals observed.
-
-J <- 1000
-theta <- 5.2
-x <- crp.sample(J, theta)
-rad <- radfit(x)
-plot(rad)
-
-# Scatter of Evenness vs. Richness
-m <- 100
-J <- 1000
-theta <- 10
-alpha <- 0
-df <- data.frame(richness = rep(NA, m), diversity = rep(NA, m))
-for (i in 1:nrow(df)) {
-  x <- crp.sample(J, theta = theta, alpha = alpha)
-  df$diversity[i] <- diversity(x, "inv")
-  df$richness[i] <- length(x)
-}
-df$even <- df$diversity/df$richness
-ggplot(df, aes(x = richness, y = even)) +
-  geom_point() +
-  geom_smooth(method = 'lm')
-
-# How do parameters relate to average richness and evenness?
-
-## (Slowly) generate data for plot of richness and evenness surfaces
-J <- 1000
-rep <- 1:10
-alpha <- seq(0, 0.99, 0.1)
-theta = seq(0, 100, 5)
-df <- expand.grid(list(rep = rep, theta = theta, alpha = alpha))
-for (i in 1:nrow(df)) {
-  x <- crp.sample(J, df$theta[i], df$alpha[i])
-  df$diversity[i] <- diversity(x, "inv")
-  df$richness[i] <- length(x)
-}
-avg_df <- df %>%
-  filter(richness > 1) %>%
-  mutate(even = (1 - diversity) / (1 - richness)) %>%
-  group_by(theta, alpha) %>%
-  summarize(avg_richness = mean(richness), avg_even = mean(even, na.rm=T))
-
-## Mean Richness Surface
-ggplot(avg_df, aes(x = theta, y = alpha, z = avg_richness)) +
-  geom_raster(aes(fill = avg_richness))
-
-## Mean Evenness Surface
-ggplot(avg_df, aes(x = theta, y = alpha, z = avg_even)) +
-  geom_raster(aes(fill = avg_even))
-
-# The GUILDS package samples from the Etienne Sampling Formula, which
-# converges to the Ewens Sampling Formula when the "immigration rate"
-# is very large. With lower immigration rates, the function is sampling from
-# the dispersal limited local community in Hubbell's thoery.
-library(GUILDS)
-
-## (Slowly) generate data for plot of richness and evenness surfaces
-J <- 1000
-rep <- 1:10
-theta <- seq(1, 10, 1)
-eye <- seq(1, 10 * J, 100)
-df <- expand.grid(list(rep = rep, theta = theta, eye = eye))
-for (i in 1:nrow(df)) {
-  x <- generate.ESF(theta = df$theta[i], I = df$eye[i], J = J)
-  df$diversity[i] <- diversity(x, "inv")
-  df$richness[i] <- length(x)
-}
-avg_df <- df %>%
-  filter(richness > 1) %>%
-  mutate(even = (1 - diversity) / (1 - richness)) %>%
-  group_by(theta, eye) %>%
-  summarize(avg_richness = mean(richness), avg_even = mean(even, na.rm=TRUE))
-
-## Mean Richness Surface
-ggplot(avg_df, aes(x = theta, y = eye, z = avg_richness)) +
-  geom_raster(aes(fill = avg_richness))
-
-## Mean Evenness Surface
-ggplot(avg_df, aes(x = theta, y = eye, z = avg_even)) +
-  geom_raster(aes(fill = avg_even)) 
-
-# The CRP has another, less common, parameterization, that more tightly
-# contrains the species richness. It has no application (known to me) is
-# ecological literature. In this parameterization of the
-# CRP; alpha < 0, k in {1,2,3,...}, and theta = -k*alpha
-
-J <- 1000
-rep <- 1:10
-k <- seq(2, 102, 10)
-alpha <- seq(-3, -0.01, 0.01)
-df <- expand.grid(list(rep = rep, k = k, alpha = alpha))
-df$theta = abs(df$k * df$alpha)
-for (i in 1:nrow(df)) {
-  x <- crp.sample(J, df$theta[i], df$alpha[i])
-  df$diversity[i] <- diversity(x, "inv")
-  df$richness[i] <- length(x)
-}
-avg_df <- df %>%
-  filter(richness > 1) %>%
-  mutate(even = (1 - diversity) / (1 - richness)) %>%
-  group_by(k, alpha) %>%
-  summarize(avg_richness = mean(richness), avg_even = mean(even, na.rm=T))
-
-## Mean Richness Surface
-ggplot(avg_df, aes(x = k, y = alpha, z = avg_richness)) +
-  geom_raster(aes(fill = avg_richness))
-
-## Mean Evenness Surface
-ggplot(avg_df, aes(x = k, y = alpha, z = avg_even)) +
-  geom_raster(aes(fill = avg_even))
-
-# Scatter of Evenness vs. Richness
-m <- 100
-J <- 1000
-alpha <- -1
-k <- 60
-theta <- -k*alpha
-df <- data.frame(richness = rep(NA, m), diversity = rep(NA, m))
-for (i in 1:nrow(df)) {
-  x <- crp.sample(J, theta = theta, alpha = alpha)
-  df$diversity[i] <- diversity(x, "inv")
-  df$richness[i] <- length(x)
-}
-df$even <- (1 - df$diversity) / (1 - df$richness)
-ggplot(df, aes(x = richness, y = even)) +
-  geom_point() +
-  geom_smooth(method = 'lm')
-
----
-  
-## Notes
-  
-# 1. The evenness quantity shown is (1-D)/(1-R), where D is the Inverse Simpson index and R is richness. D ranges from 1 to R, so this scales evenness between [0, 1].
-# 2. Dispersal limitation doesn't seem to have any affect on evenness, to my surprise.
-# 3. In theory, density dependence should help with evenness, but there's no sampling formula for that.
-  
----
-  
-  
