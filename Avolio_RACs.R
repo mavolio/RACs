@@ -476,7 +476,10 @@ for(i in 1:length(unique$treatment)) {
   
   tao<-as.data.frame(seq(from=2, to=12))
   names(tao)[1]<-paste("timestep")
-  
+
+#use cor on matrix of times and then extract lower diagonal
+#m is the matics of cor outputs
+# diag(m[2:n,1:n-1])
   tao_calc<-c(
     as.numeric(Kendall(subset$t1, subset$t2)[1]),
     as.numeric(Kendall(subset$t2, subset$t3)[1]),
