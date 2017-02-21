@@ -1,4 +1,33 @@
 library(ggplot2)
+library(dplyr)
+
+## Manual calculation of Kolmogorov-Smirnov Distance
+## for cumulative abundance by relative rank curves
+
+# FIXME should relative rank start at zero? (and normalize by n-1)
+
+df <- data.frame(
+  plot_id=1,
+  year=factor(c(1996, 1996, 1996, 2012, 2012, 2012, 2012)),
+  rank=c(1/3, 2/3, 1, 1/4, 2/4, 3/4, 1),
+  abun=c(0.2, 0.9, 1, 0.1, 0.8, 0.95, 1)
+)
+
+ggplot(df, aes(x=rank, y=abun, group=year)) +
+  geom_point() +
+  geom_step(aes(color=year))
+
+result <- df %>%
+  group_by(plot_id) %>%
+  do({
+    y <- unique(.$year)
+    df1 <- filter(., year==y[[1]])
+    df2 <- filter(., year==y[[2]])
+    sf1 <- stepfun(df1$rank, c(0, df1$abun))
+    sf2 <- stepfun(df2$rank, c(0, df2$abun))
+    r <- c(0, df1$rank, df2$rank)
+    data.frame(Dmax=max(abs(sf1(r) - sf2(r))))
+  })
 
 ## Kolmogorov-Smirnov Distance
 # 
