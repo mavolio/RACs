@@ -10,14 +10,16 @@ df <- data.frame(
   plot_id=1,
   year=factor(c(1996, 1996, 1996, 2012, 2012, 2012, 2012)),
   rank=c(1/3, 2/3, 1, 1/4, 2/4, 3/4, 1),
-  abun=c(0.2, 0.9, 1, 0.1, 0.8, 0.95, 1)
+  abun=c(0.5, 0.9, 1, 0.6, 0.8, 0.95, 1)
 )
 
 ggplot(df, aes(x=rank, y=abun, group=year)) +
   geom_point() +
-  geom_step(aes(color=year))
+  geom_step(aes(color=year)) + 
+  scale_y_continuous(limits=c(0, 1)) +
+  scale_x_continuous(limits=c(0, 1))
 
-result <- df %>%
+cc <- df %>%
   group_by(plot_id) %>%
   do({
     y <- unique(.$year)
@@ -25,8 +27,12 @@ result <- df %>%
     df2 <- filter(., year==y[[2]])
     sf1 <- stepfun(df1$rank, c(0, df1$abun))
     sf2 <- stepfun(df2$rank, c(0, df2$abun))
-    r <- c(0, df1$rank, df2$rank)
-    data.frame(Dmax=max(abs(sf1(r) - sf2(r))))
+    r <- sort(unique(c(0, df1$rank, df2$rank)))
+    h <- abs(sf1(r) - sf2(r))
+    w <- c(diff(r), 0)
+    data.frame(
+      Dmax=max(h),
+      Dstar=sum(w*h))
   })
 
 ## Kolmogorov-Smirnov Distance
