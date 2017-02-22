@@ -82,3 +82,18 @@ ks$statistic
 # but the diversity is unknown in advance.
 # so what do you use for infinite mixtures ... dirichlet process.
 # have to think about that one.
+
+## I also want there to exist a abundance curve
+# that is independent of species richness.
+# With an infinite number of individuals, the curves for a perfectly
+# even community of any size would be identical
+# possibly the smoothed/expected rarefaction curve, normalized to one.
+
+# for frequencies q_i, the expected number of species after n samples is
+# i dunno ...
+# s_0 = 
+# s_1 = 1
+# Pr[s_{n+1} == k| s_n] = {p1 if k = s_n, 1-p1 if k = s_n + 1
+
+
+
