@@ -44,8 +44,15 @@ S<-function(x){
 
 #function to calculate EQ evenness from Smith and Wilson 1996
 #' @x the vector of abundances of each species
-E_q<-function(x){ 
+#' if all abundances are equal it returns a 1
+E_q<-function(x){
   x1<-x[x!=0]
+  if (length(x1)==1) {
+    return(NA)
+  }
+  if (abs(max(x1) - min(x1)) < .Machine$double.eps^0.5) {##bad idea to test for zero, so this is basically doing the same thing testing for a very small number
+    return(1)
+  }
   r<-rank(x1, ties.method = "average")
   r_scale<-r/max(r)
   x_log<-log(x1)
@@ -53,6 +60,7 @@ E_q<-function(x){
   b<-fit$coefficients[[2]]
   2/pi*atan(b)
 }
+
 
 #function to calculate E1/D (inverse of Simpson's) from Smith and Wilson 1996
 #' @S the number of species in the sample
@@ -72,6 +80,7 @@ Gini<-function(x){
   1-reldist::gini(x1)
 }
 
+##need to get this working with NAs for mean calculations
 codyndat_diversity <- group_by(codyndat_clean, site_project_comm, experiment_year, plot_id) %>% 
   summarize(S=S(abundance),
             E_q=E_q(abundance),
@@ -381,8 +390,18 @@ for(i in 1:length(ComType_u)) {
 sim_bray_curtis<-bray_curtis
 
 ####Looking at the shape of the curve - cc
-average_test<-ractoplot%>%
-  filter(treatment=="N1P0"|treatment=="N2P0")%>%
+
+d_output=data.frame(id=c(), experiment_year=c(), Darea=c())#expeiment year is year of timestep2
+
+spc_id<-unique(codyndat_clean$id)
+
+for (i in 1:length(spc_id)){
+  subset<-codyndat_clean%>%
+    filter(id==spc_id[i])
+  id<-spc_id[i]
+  
+  ranks<-subset%>%
+  filter(abundance!=0)%>%
   group_by(calendar_year, treatment, plot_id)%>%
   mutate(rank=rank(-relcov, ties.method="average"),
          maxrank=max(rank),
