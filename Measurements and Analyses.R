@@ -13,9 +13,12 @@ sim<-read.csv("~/Documents/SESYNC/SESYNC_RACs/R Files/SimCom.csv")%>%
   mutate(time=as.numeric(time),
          id=paste(ComType, rep, sep="::"))
   
-
 codyndat<-read.csv("~/Dropbox/CoDyn/R Files/11_06_2015_v7/relative cover_nceas and converge_12012015_cleaned.csv")%>%
-  gather(species, abundance, sp1:sp99)
+  gather(species, abundance, sp1:sp99)%>%
+  filter(site_code!="MISS")
+
+codyndat_info<-read.csv("~/Dropbox/CoDyn/R Files/11_06_2015_v7/siteinfo_key.csv")%>%
+  filter(site_project_comm!="")
 
 ###CLEANING CODYN DATASET
 #restrict to species that are present in an experiment
@@ -80,6 +83,23 @@ codyndat_diversity <- group_by(codyndat_clean, site_project_comm, experiment_yea
             E_Q=mean(E_q),
             Gini=mean(Gini),
             E_simp=mean(E_simp))
+
+codyndat_diversity2 <- group_by(codyndat_clean, site_project_comm, experiment_year, plot_id) %>% 
+  summarize(S=S(abundance),
+            E_q=E_q(abundance),
+            Gini=Gini(abundance),
+            E_simp=E_simp(abundance))
+
+###graphing this
+codyndat_div2<-merge(codyndat_diversity, codyndat_info, by=c("site_project_comm"))
+
+ggplot(subset(codyndat_div2, site_code!="MISS"), aes(x=E_Q, y=S, group=taxa))+
+  geom_point(aes(color=taxa))
+
+ggplot(codyndat_div2, aes(x=E_Q, y=S))+
+  geom_point()+
+  facet_wrap(~taxa)
+
 
 sim_diversity<-group_by(sim, ComType, time, rep)%>%
   summarize(S=S(abundance),
@@ -162,7 +182,7 @@ codyndat_rank<-rbind(codyndat_rank_pres, codyndat_zero_rank)
 
 ##calculate reordering between time steps 3 ways, rank correlations, mean rank shifts not corrected, and mean ranks shifts corrected for the size of the speceis pool
 
-reordering=data.frame(id=c(), experiment_year=c(), MRSc=c(), MRSnc=c(), RC=c())#expeiment year is year of timestep2
+reordering=data.frame(id=c(), experiment_year=c(), MRSc=c(), MRSnc=c(), gains=c(), losses=c(), gains_c=c(), losses_c=c())#expeiment year is year of timestep2
 
 spc_id<-unique(codyndat_rank$id)
   
@@ -170,6 +190,12 @@ for (i in 1:length(spc_id)){
   subset<-codyndat_rank%>%
     filter(id==spc_id[i])
   id<-spc_id[i]
+  
+  splist<-subset%>%
+    select(species)%>%
+    unique()
+  sppool<-length(splist$species)
+  
 #now get all timestep within an experiment
   timestep<-sort(unique(subset$experiment_year))    
 
@@ -181,26 +207,61 @@ for (i in 1:length(spc_id)){
       filter(experiment_year==timestep[i+1])
     
     subset_t12<-merge(subset_t1, subset_t2, by=c("species","id"), all=T)%>%
-      filter(abundance.x!=0|abundance.y!=0)
+      filter(abundance.x!=0|abundance.y!=0)%>%
+      mutate(presentyr1=ifelse(abundance.x>0,1,0),
+             presentyr2=ifelse(abundance.y>0,1,0),
+             diff=presentyr2-presentyr1,
+             gain=ifelse(diff==1, 1,0),
+             loss=ifelse(diff==-1,1,0))
     
     MRSc<-mean(abs(subset_t12$rank.x-subset_t12$rank.y))/nrow(subset_t12)
     MRSnc<-mean(abs(subset_t12$rank.x-subset_t12$rank.y))
+    n<-nrow(subset_t12)
+    losses<-abs(sum(subset_t12$loss))
+    gains<-abs(sum(subset_t12$gain))
+    losses_c<-abs(sum(subset_t12$loss))/n
+    gains_c<-abs(sum(subset_t12$gain))/n
     
-    RC<-abs(cor(subset_t12$rank.x, subset_t12$rank.y, method="kendall"))
     
-    metrics<-data.frame(id=id, experiment_year=timestep[i+1], MRSc=MRSc, MRSnc=MRSnc, RC=RC)#spc_id
+    #RC<-abs(cor(subset_t12$rank.x, subset_t12$rank.y, method="kendall"))
+    
+    metrics<-data.frame(id=id, experiment_year=timestep[i+1], MRSc=MRSc, MRSnc=MRSnc, gains=gains, losses=losses, losses_c=losses_c, gains_c=gains_c)#spc_id
     ##calculate differences for these year comparison and rbind to what I want.
     
     reordering=rbind(metrics, reordering)  
   }
 }
 
-codyndat_reorder<-reordering%>%
+codyndat_reorder_test<-reordering%>%
   separate(id, c("site_project_comm","plot_id"), sep="::")%>%
   group_by(site_project_comm, experiment_year)%>%
   summarise(MRSc=mean(MRSc),
             MRSnc=mean(MRSnc),
-            RC=mean(RC, na.rm=T))
+            gains=mean(gains),
+            losses=mean(losses),
+            gains_c=mean(gains_c),
+            losses_c=mean(losses_c))
+            #RC=mean(RC, na.rm=T))
+
+pairs(codyndat_reorder_test[,c(3:8)])
+
+codyndat_reorder_test2<-codyndat_reorder_test%>%
+  group_by(site_project_comm)%>%
+  summarise(MRSc=mean(MRSc),
+            MRSnc=mean(MRSnc),
+            gains=mean(gains),
+            losses=mean(losses),
+            gains_c=mean(gains_c),
+            losses_c=mean(losses_c))
+pairs(codyndat_reorder_test2[,c(2:7)])
+
+#####looking at ways to normalize MRS
+test<-merge(codyndat_diversity, codyndat_reorder, by=c("site_project_comm","experiment_year"))
+
+pairs(test[,c(3,4,7,8,9,10)])
+
+
+
 
 ##SIM dataset
 
@@ -531,6 +592,72 @@ for(i in 1:length(ComType_u)) {
 
 sim_jaccard<-jaccard
 
+####Looking at the shape of the curve - cc
+average_test<-ractoplot%>%
+  filter(treatment=="N1P0"|treatment=="N2P0")%>%
+  group_by(calendar_year, treatment, plot_id)%>%
+  mutate(rank=rank(-relcov, ties.method="average"),
+         maxrank=max(rank),
+         relrank=rank/maxrank)%>%
+  arrange(relrank)%>%
+  mutate(cumabund=cumsum(relcov))
+
+result <- average_test %>%
+  group_by(plot_id) %>%
+  do({
+    y <- unique(.$calendar_year)###assumption this is a length 2 list
+    df1 <- filter(., calendar_year==y[[1]])
+    df2 <- filter(., calendar_year==y[[2]])
+    sf1 <- stepfun(df1$relrank, c(0, df1$cumabund))
+    sf2 <- stepfun(df2$relrank, c(0, df2$cumabund))
+    r <- c(0, df1$relrank, df2$relrank)
+    data.frame(Dmax=max(abs(sf1(r) - sf2(r))))#do has to output a dataframe
+  })
+
+d_output=data.frame(id=c(), experiment_year=c(), Dmax=c(), Darea=c())#expeiment year is year of timestep2
+
+spc_id<-unique(codyndat_rank$id)
+
+for (i in 1:length(spc_id)){
+  subset<-codyndat_rank%>%
+    filter(id==spc_id[i])
+  id<-spc_id[i]
+  
+  splist<-subset%>%
+    select(species)%>%
+    unique()
+  sppool<-length(splist$species)
+  
+  #now get all timestep within an experiment
+  timestep<-sort(unique(subset$experiment_year))    
+  
+  for(i in 1:(length(timestep)-1)) {#minus 1 will keep me in year bounds NOT WORKING
+    subset_t1<-subset%>%
+      filter(experiment_year==timestep[i])
+    
+    subset_t2<-subset%>%
+      filter(experiment_year==timestep[i+1])
+    
+    subset_t12<-merge(subset_t1, subset_t2, by=c("species","id"), all=T)%>%
+      filter(abundance.x!=0|abundance.y!=0)
+    
+    MRSc<-mean(abs(subset_t12$rank.x-subset_t12$rank.y))/nrow(subset_t12)
+    MRSt<-mean(abs(subset_t12$rank.x-subset_t12$rank.y))/sppool
+    MRSnc<-mean(abs(subset_t12$rank.x-subset_t12$rank.y))
+    n<-nrow(subset_t12)
+    MRSm<-mean(abs(subset_t12$rank.x-subset_t12$rank.y))/(n+n/2-n/4+1.5)
+    
+    #RC<-abs(cor(subset_t12$rank.x, subset_t12$rank.y, method="kendall"))
+    
+    metrics<-data.frame(id=id, experiment_year=timestep[i+1], MRSc=MRSc, MRSnc=MRSnc, MRSt=MRSt, MRSm=MRSm)#spc_id
+    ##calculate differences for these year comparison and rbind to what I want.
+    
+    reordering=rbind(metrics, reordering)  
+  }
+}
+
+
+
 ####MERGING TO A SINGE DATASET
 #codyn
 merge1<-merge(codyndat_diversity, codyndat_mrs, by=c("site_project_comm","experiment_year"))
@@ -605,7 +732,33 @@ cor.test(sim_allmetrics$E_Q, sim_allmetrics$loss)
 cor.test(sim_allmetrics$MRSc, sim_allmetrics$loss)
 
 ##Bray-Curtis
-pairs(codyndat_allmetrics[,c(3,4,8,9,10,13,14)])
+pairs(codyndat_allmetrics[,c(3,4,8,9,10,14,15)])
+
+
+
+###averaging to see what happnes, see negaive gain/loss switch to postive relationship. what is going on?
+ave_codyndat_allmetrics<-codyndat_allmetrics%>%
+  group_by(site_project_comm)%>%
+  summarize(S=mean(S),
+            E_Q=mean(E_Q),
+            gain=mean(gain),
+            loss=mean(loss),
+            MRSc=mean(MRSc),
+            mean_change=mean(mean_change),
+            dispersion_diff=mean(dispersion_diff))
+pairs(ave_codyndat_allmetrics[,c(2:8)])
+
+ggplot(codyndat_allmetrics, aes(x=gain, y=loss))+
+  geom_point()+
+  facet_wrap(~site_project_comm)
+
+bnz<-codyndat_allmetrics%>%
+  filter(site_project_comm=="msh_butte_0")
+
+ggplot(bnz, aes(x=gain, y=loss))+
+  geom_point()
+
+
 pairs(sim_allmetrics[,c(3,4,8,9,10,13,14)])
 
 ##correlations between BC with RAC measures for CODYN
