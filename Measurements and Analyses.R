@@ -84,23 +84,6 @@ codyndat_diversity <- group_by(codyndat_clean, site_project_comm, experiment_yea
             Gini=mean(Gini),
             E_simp=mean(E_simp))
 
-codyndat_diversity2 <- group_by(codyndat_clean, site_project_comm, experiment_year, plot_id) %>% 
-  summarize(S=S(abundance),
-            E_q=E_q(abundance),
-            Gini=Gini(abundance),
-            E_simp=E_simp(abundance))
-
-###graphing this
-codyndat_div2<-merge(codyndat_diversity, codyndat_info, by=c("site_project_comm"))
-
-ggplot(subset(codyndat_div2, site_code!="MISS"), aes(x=E_Q, y=S, group=taxa))+
-  geom_point(aes(color=taxa))
-
-ggplot(codyndat_div2, aes(x=E_Q, y=S))+
-  geom_point()+
-  facet_wrap(~taxa)
-
-
 sim_diversity<-group_by(sim, ComType, time, rep)%>%
   summarize(S=S(abundance),
             E_q=E_q(abundance),
@@ -134,22 +117,6 @@ sim_gains_loss<-merge(sim_gain, sim_loss, by=c("time","id"))%>%
   summarize(gain=mean(appearance),
             loss=mean(disappearance))
 
-#rank shifts with CODYN
-#problems with this, it needs to be corrected by species pool and it drops species that are not present in the entire dataset #I just do not want to use.
-codyndat_mrs<-rank_shift(df=codyndat_clean, time.var = "experiment_year", species.var = "species", abundance.var="abundance", replicate.var = "id")%>%
-  separate(id, c("site_project_comm", "plot_id"), sep="::")%>%
-  group_by(site_project_comm, year_pair)%>%
-  summarize(codyn_mrs=mean(MRS))%>%
-  separate(year_pair, c("year1","experiment_year"), sep="-")%>%
-  select(-year1)
-
-sim_mrs<-rank_shift(df=sim, time.var="time", species.var="species", abundance.var="abundance", replicate.var = "id")%>%
-  separate(id, c("ComType", "plot_id"), sep="::")%>%
-  group_by(ComType, year_pair)%>%
-  summarize(codyn_mrs=mean(MRS))%>%
-  separate(year_pair, c("year1","time"), sep="-")%>%
-  select(-year1)
-
 ####New appraoch to Rank Shifts
 ###ranks - taking into account that all speices are not always present.
 ###Give all species with zerio abundace the S+1 rank for that year.
@@ -182,7 +149,7 @@ codyndat_rank<-rbind(codyndat_rank_pres, codyndat_zero_rank)
 
 ##calculate reordering between time steps 3 ways, rank correlations, mean rank shifts not corrected, and mean ranks shifts corrected for the size of the speceis pool
 
-reordering=data.frame(id=c(), experiment_year=c(), MRSc=c(), MRSnc=c(), gains=c(), losses=c(), gains_c=c(), losses_c=c())#expeiment year is year of timestep2
+reordering=data.frame(id=c(), experiment_year=c(), MRSc=c())#expeiment year is year of timestep2
 
 spc_id<-unique(codyndat_rank$id)
   
@@ -207,61 +174,21 @@ for (i in 1:length(spc_id)){
       filter(experiment_year==timestep[i+1])
     
     subset_t12<-merge(subset_t1, subset_t2, by=c("species","id"), all=T)%>%
-      filter(abundance.x!=0|abundance.y!=0)%>%
-      mutate(presentyr1=ifelse(abundance.x>0,1,0),
-             presentyr2=ifelse(abundance.y>0,1,0),
-             diff=presentyr2-presentyr1,
-             gain=ifelse(diff==1, 1,0),
-             loss=ifelse(diff==-1,1,0))
+      filter(abundance.x!=0|abundance.y!=0)
     
     MRSc<-mean(abs(subset_t12$rank.x-subset_t12$rank.y))/nrow(subset_t12)
-    MRSnc<-mean(abs(subset_t12$rank.x-subset_t12$rank.y))
-    n<-nrow(subset_t12)
-    losses<-abs(sum(subset_t12$loss))
-    gains<-abs(sum(subset_t12$gain))
-    losses_c<-abs(sum(subset_t12$loss))/n
-    gains_c<-abs(sum(subset_t12$gain))/n
     
-    
-    #RC<-abs(cor(subset_t12$rank.x, subset_t12$rank.y, method="kendall"))
-    
-    metrics<-data.frame(id=id, experiment_year=timestep[i+1], MRSc=MRSc, MRSnc=MRSnc, gains=gains, losses=losses, losses_c=losses_c, gains_c=gains_c)#spc_id
+    metrics<-data.frame(id=id, experiment_year=timestep[i+1], MRSc=MRSc)#spc_id
     ##calculate differences for these year comparison and rbind to what I want.
     
     reordering=rbind(metrics, reordering)  
   }
 }
 
-codyndat_reorder_test<-reordering%>%
+codyndat_reorder<-reordering%>%
   separate(id, c("site_project_comm","plot_id"), sep="::")%>%
   group_by(site_project_comm, experiment_year)%>%
-  summarise(MRSc=mean(MRSc),
-            MRSnc=mean(MRSnc),
-            gains=mean(gains),
-            losses=mean(losses),
-            gains_c=mean(gains_c),
-            losses_c=mean(losses_c))
-            #RC=mean(RC, na.rm=T))
-
-pairs(codyndat_reorder_test[,c(3:8)])
-
-codyndat_reorder_test2<-codyndat_reorder_test%>%
-  group_by(site_project_comm)%>%
-  summarise(MRSc=mean(MRSc),
-            MRSnc=mean(MRSnc),
-            gains=mean(gains),
-            losses=mean(losses),
-            gains_c=mean(gains_c),
-            losses_c=mean(losses_c))
-pairs(codyndat_reorder_test2[,c(2:7)])
-
-#####looking at ways to normalize MRS
-test<-merge(codyndat_diversity, codyndat_reorder, by=c("site_project_comm","experiment_year"))
-
-pairs(test[,c(3,4,7,8,9,10)])
-
-
-
+  summarise(MRSc=mean(MRSc))
 
 ##SIM dataset
 
@@ -290,7 +217,7 @@ sim_rank<-rbind(sim_rank_pres, sim_zero_rank)
 
 ##calculating re-ordering
 
-reordering=data.frame(id=c(), time=c(), MRSc=c(), MRSnc=c(), RC=c())#expeiment year is year of timestep2
+reordering=data.frame(id=c(), time=c(), MRSc=c())#expeiment year is year of timestep2
 
 spc_id<-unique(sim_rank$id)
 
@@ -312,11 +239,8 @@ for (i in 1:length(spc_id)){
       filter(abundance.x!=0|abundance.y!=0)
     
     MRSc<-mean(abs(subset_t12$rank.x-subset_t12$rank.y))/nrow(subset_t12)
-    MRSnc<-mean(abs(subset_t12$rank.x-subset_t12$rank.y))
-    
-    RC<-abs(cor(subset_t12$rank.x, subset_t12$rank.y, method="kendall"))
-    
-    metrics<-data.frame(id=id, time=timestep[i+1], MRSc=MRSc, MRSnc=MRSnc, RC=RC)#spc_id
+   
+    metrics<-data.frame(id=id, time=timestep[i+1], MRSc=MRSc)#spc_id
     ##calculate differences for these year comparison and rbind to what I want.
     
     reordering=rbind(metrics, reordering)  
@@ -326,9 +250,7 @@ for (i in 1:length(spc_id)){
 sim_reorder<-reordering%>%
   separate(id, c("ComType","rep"), sep="::")%>%
   group_by(ComType, time)%>%
-  summarise(MRSc=mean(MRSc),
-            MRSnc=mean(MRSnc),
-            RC=mean(RC, na.rm=T))
+  summarise(MRSc=mean(MRSc))
 
 #####Calculating Bray-Curtis both comparing the mean community change between consequtive time steps and the change in dispersion between two time steps.
 ##Doing this for all years of an experiment at one time point because want to ensure all points are in the same space.
@@ -458,140 +380,6 @@ for(i in 1:length(ComType_u)) {
 }
 sim_bray_curtis<-bray_curtis
 
-#####Calculating Jaccard following same logic of BC detailed above.
-
-#Codyn dataset first
-
-###making a presence / absence dataset
-
-codyndat_presabs<-codyndat_clean%>%
-  mutate(present=ifelse(abundance>0, 1, 0))
-
-#make a new dataframe with just the label;
-site_project_comm_u<-unique(codyndat_presabs$site_project_comm)
-
-#makes an empty dataframe
-jaccard=data.frame(site_project_comm=c(), experiment_year=c(), jac_mean_change=c(), jac_dispersion_diff=c()) 
-
-##calculating bray-curtis mean change and disperison differecnes
-for(i in 1:length(site_project_comm_u)) {
-  
-  #subsets out each dataset
-  subset=codyndat_presabs%>%
-    filter(site_project_comm==site_project_comm_u[i])%>%
-    select(site_project_comm, experiment_year, species, present, plot_id)
-  
-  #get years
-  experiment_years<-sort(unique(subset$experiment_year))
-  
-  #transpose data
-  species=subset%>%
-    spread(species, present, fill=0)
-  
-  #calculate bray-curtis dissimilarities
-  jac=vegdist(species[,4:ncol(species)], method="jaccard")
-  
-  #calculate distances of each plot to year centroid (i.e., dispersion)
-  disp=betadisper(jac, species$experiment_year, type="centroid")
-  
-  #getting distances between centroids over years; these centroids are in BC space, so that's why this uses euclidean distances
-  cent_dist=as.matrix(vegdist(disp$centroids, method="euclidean"))
-  
-  ##extracting only the comparisions we want year x to year x=1.
-  ###(experiment_year is year x+1
-  cent_dist_yrs=data.frame(site_project_comm=site_project_comm_u[i],
-                           experiment_year=experiment_years[2:length(experiment_years)],
-                           jac_mean_change=diag(cent_dist[2:nrow(cent_dist),1:(ncol(cent_dist)-1)]))
-  
-  #collecting and labeling distances to centroid from betadisper to get a measure of dispersion and then take the mean for a year
-  disp2=data.frame(site_project_comm=site_project_comm_u[i],
-                   experiment_year=species$experiment_year,
-                   plot_id=species$plot_id,
-                   dist=disp$distances)%>%
-    tbl_df%>%
-    group_by(site_project_comm, experiment_year)%>%
-    summarize(dispersion=mean(dist))
-  
-  ##subtract consequtive years subtracts year x+1 - x. So if it is positive there was greater dispersion in year x+1 and if negative less dispersion in year x+1
-  disp_yrs=data.frame(site_project_comm=site_project_comm_u[i],
-                      experiment_year=experiment_years[2:length(experiment_years)],
-                      jac_dispersion_diff=diff(disp2$dispersion))
-  
-  #merge together change in mean and dispersion data
-  distances<-merge(cent_dist_yrs, disp_yrs, by=c("site_project_comm","experiment_year"))
-  
-  #pasting dispersions into the dataframe made for this analysis
-  jaccard=rbind(distances, jaccard)  
-}
-
-codyndat_jaccard<-jaccard
-
-#######SKIP THIS
-#Sim dataset Jaccard 
-###this does not work because in the even communities there is no variation, each species is present all years across all replicates
-
-sim_presabs<-sim%>%
-  mutate(present=ifelse(abundance>0, 1, 0))
-
-#make a new dataframe with just the label;
-ComType_u<-sort(unique(sim_presabs$ComType))
-
-#makes an empty dataframe
-jaccard=data.frame(ComType=c(), time=c(), jac_mean_change=c(), jac_dispersion_diff=c()) 
-
-#Calculating bc mean change and dispersion
-for(i in 1:length(ComType_u)) {
-  
-  #subsets out each dataset
-  subset=sim_presabs%>%
-    filter(ComType==ComType_u[i])%>%
-    select(ComType, time, species, present, rep)
-  
-  #get years
-  timestep<-sort(unique(subset$time))
-  
-  #transpose data
-  species=subset%>%
-    spread(species, present, fill=0)
-  
-  #calculate bray-curtis dissimilarities
-  jac=vegdist(species[,4:ncol(species)], method="jaccard")
-  
-  #calculate distances of each plot to year centroid (i.e., dispersion)
-  disp=betadisper(jac, species$time, type="centroid")
-  
-  #getting distances between centroids over years; these centroids are in BC space, so that's why this uses euclidean distances
-  cent_dist=as.matrix(vegdist(disp$centroids, method="euclidean"))
-  
-  ##extracting only the comparisions we want year x to year x=1.
-  ###(experiment_year is year x+1
-  cent_dist_yrs=data.frame(ComType=ComType_u[i],
-                           time=timestep[2:length(timestep)],
-                           jac_mean_change=diag(cent_dist[2:nrow(cent_dist),1:(ncol(cent_dist)-1)]))
-  
-  #collecting and labeling distances to centroid from betadisper to get a measure of dispersion and then take the mean for a year
-  disp2=data.frame(ComType=ComType_u[i],
-                   time=species$time,
-                   rep=species$rep,
-                   dist=disp$distances)%>%
-    tbl_df%>%
-    group_by(ComType, time)%>%
-    summarize(dispersion=mean(dist))
-  
-  ##subtract consequtive years subtracts year x+1 - x. So if it is positive there was greater dispersion in year x+1 and if negative less dispersion in year x+1
-  disp_yrs=data.frame(ComType=ComType_u[i],
-                      time=timestep[2:length(timestep)],
-                      jac_dispersion_diff=diff(disp2$dispersion))
-  
-  #merge together change in mean and dispersion data
-  distances<-merge(cent_dist_yrs, disp_yrs, by=c("ComType","time"))
-  
-  #pasting dispersions into the dataframe made for this analysis
-  jaccard=rbind(distances, jaccard)  
-}
-
-sim_jaccard<-jaccard
-
 ####Looking at the shape of the curve - cc
 average_test<-ractoplot%>%
   filter(treatment=="N1P0"|treatment=="N2P0")%>%
@@ -657,86 +445,65 @@ for (i in 1:length(spc_id)){
 }
 
 
-
 ####MERGING TO A SINGE DATASET
 #codyn
-merge1<-merge(codyndat_diversity, codyndat_mrs, by=c("site_project_comm","experiment_year"))
-merge2<-merge(merge1, codyndat_gains_loss, by=c("site_project_comm","experiment_year"))
-merge3<-merge(merge2, codyndat_reorder, by=c("site_project_comm","experiment_year"))
-merge4<-merge(merge3, codyndat_braycurtis,by=c("site_project_comm","experiment_year"))
-codyndat_allmetrics<-merge(merge4, codyndat_jaccard, by=c("site_project_comm","experiment_year"))
+merge1<-merge(codyndat_diversity, codyndat_gains_loss, by=c("site_project_comm","experiment_year"))
+merge2<-merge(merge1, codyndat_reorder, by=c("site_project_comm","experiment_year"))
+codyndat_allmetrics<-merge(merge2, codyndat_braycurtis, by=c("site_project_comm","experiment_year"))
+
 
 #sim
-merge1<-merge(sim_diversity, sim_mrs, by=c("ComType","time"))
-merge2<-merge(merge1, sim_gains_loss, by=c("ComType","time"))
-merge3<-merge(merge2, sim_reorder, by=c("ComType","time"))
-sim_allmetrics<-merge(merge3, sim_bray_curtis, by=c("ComType","time"))
+merge1<-merge(sim_diversity, sim_gains_loss, by=c("ComType","time"))
+merge2<-merge(merge1, sim_reorder, by=c("ComType","time"))
+sim_allmetrics<-merge(merge2, sim_bray_curtis, by=c("ComType","time"))
 
-pairs(coyndat_allmetrics[,3:16])
-pairs(sim_allmetrics[,3:14])
+#graphing this
+pairs(codyndat_allmetrics[,c(3:4,7:11)])
+pairs(sim_allmetrics[,c(3:4,7:11)])
 
-##correlations between richness and evennes
-cor.test(codyndat_allmetrics$S, codyndat_allmetrics$E_simp)
+##correlations CODYN
 cor.test(codyndat_allmetrics$S, codyndat_allmetrics$E_Q)
-cor.test(codyndat_allmetrics$S, codyndat_allmetrics$Gini)
-
-cor.test(sim_allmetrics$S, sim_allmetrics$E_simp)
-cor.test(sim_allmetrics$S, sim_allmetrics$E_Q)
-cor.test(sim_allmetrics$S, sim_allmetrics$Gini)
-
-##measures of reordering
-pairs(codyndat_allmetrics[,c(3,4,7,10,11,12)])
-pairs(sim_allmetrics[,c(3,4,7,10,11,12)])
-
-##Correlations between reording metrics and richness, evenness
-cor.test(codyndat_allmetrics$S, codyndat_allmetrics$codyn_mrs)
 cor.test(codyndat_allmetrics$S, codyndat_allmetrics$MRSc)
-cor.test(codyndat_allmetrics$S, codyndat_allmetrics$MRSnc)
-cor.test(codyndat_allmetrics$S, codyndat_allmetrics$RC)
-
-cor.test(codyndat_allmetrics$E_Q, codyndat_allmetrics$codyn_mrs)
 cor.test(codyndat_allmetrics$E_Q, codyndat_allmetrics$MRSc)
-cor.test(codyndat_allmetrics$E_Q, codyndat_allmetrics$MRSnc)
-cor.test(codyndat_allmetrics$E_Q, codyndat_allmetrics$RC)
-
-cor.test(sim_allmetrics$S, sim_allmetrics$codyn_mrs)
-cor.test(sim_allmetrics$S, sim_allmetrics$MRSc)
-cor.test(sim_allmetrics$S, sim_allmetrics$MRSnc)
-cor.test(sim_allmetrics$S, sim_allmetrics$RC)
-
-cor.test(sim_allmetrics$E_Q, sim_allmetrics$codyn_mrs)
-cor.test(sim_allmetrics$E_Q, sim_allmetrics$MRSc)
-cor.test(sim_allmetrics$E_Q, sim_allmetrics$MRSnc)
-cor.test(sim_allmetrics$E_Q, sim_allmetrics$RC)
-
-
-###Gains and Losses
-pairs(codyndat_allmetrics[,c(3,4,8,9,10)])
-pairs(sim_allmetrics[,c(3,4,8,9,10)])
-
-##Correlations between gains and losses with richness, evenness and reodering
 cor.test(codyndat_allmetrics$S, codyndat_allmetrics$gain)
 cor.test(codyndat_allmetrics$E_Q, codyndat_allmetrics$gain)
 cor.test(codyndat_allmetrics$MRSc, codyndat_allmetrics$gain)
-
 cor.test(codyndat_allmetrics$S, codyndat_allmetrics$loss)
 cor.test(codyndat_allmetrics$E_Q, codyndat_allmetrics$loss)
 cor.test(codyndat_allmetrics$MRSc, codyndat_allmetrics$loss)
+cor.test(codyndat_allmetrics$S, codyndat_allmetrics$mean_change)
+cor.test(codyndat_allmetrics$E_Q, codyndat_allmetrics$mean_change)
+cor.test(codyndat_allmetrics$MRSc, codyndat_allmetrics$mean_change)
+cor.test(codyndat_allmetrics$gain, codyndat_allmetrics$mean_change)
+cor.test(codyndat_allmetrics$loss, codyndat_allmetrics$mean_change)
+cor.test(codyndat_allmetrics$S, codyndat_allmetrics$dispersion_diff)
+cor.test(codyndat_allmetrics$E_Q, codyndat_allmetrics$dispersion_diff)
+cor.test(codyndat_allmetrics$MRSc, codyndat_allmetrics$dispersion_diff)
+cor.test(codyndat_allmetrics$gain, codyndat_allmetrics$dispersion_diff)
+cor.test(codyndat_allmetrics$loss, codyndat_allmetrics$dispersion_diff)
 
-cor.test(sim_allmetrics$S, sim_allmetrics$gain)
-cor.test(sim_allmetrics$E_Q, sim_allmetrics$gain)
-cor.test(sim_allmetrics$MRSc, sim_allmetrics$gain)
+##correlations SIM
+cor.test(sim_allmetrics$S, sim_allmetrics$E_Q)
+cor.test(sim_allmetrics$S, sim_allmetrics$MRSc)
+cor.test(sim_allmetrics$E_Q, sim_allmetrics$MRSc)
+cor.test(codyndat_allmetrics$S, codyndat_allmetrics$gain)
+cor.test(codyndat_allmetrics$E_Q, codyndat_allmetrics$gain)
+cor.test(codyndat_allmetrics$MRSc, codyndat_allmetrics$gain)
+cor.test(codyndat_allmetrics$S, codyndat_allmetrics$loss)
+cor.test(codyndat_allmetrics$E_Q, codyndat_allmetrics$loss)
+cor.test(codyndat_allmetrics$MRSc, codyndat_allmetrics$loss)
+cor.test(sim_allmetrics$S, sim_allmetrics$mean_change)
+cor.test(sim_allmetrics$E_Q, sim_allmetrics$mean_change)
+cor.test(sim_allmetrics$MRSc, sim_allmetrics$mean_change)
+cor.test(sim_allmetrics$gain, sim_allmetrics$mean_change)
+cor.test(sim_allmetrics$loss, sim_allmetrics$mean_change)
+cor.test(sim_allmetrics$S, sim_allmetrics$dispersion_diff)
+cor.test(sim_allmetrics$E_Q, sim_allmetrics$dispersion_diff)
+cor.test(sim_allmetrics$MRSc, sim_allmetrics$dispersion_diff)
+cor.test(sim_allmetrics$gain, sim_allmetrics$dispersion_diff)
+cor.test(sim_allmetrics$loss, sim_allmetrics$dispersion_diff)
 
-cor.test(sim_allmetrics$S, sim_allmetrics$loss)
-cor.test(sim_allmetrics$E_Q, sim_allmetrics$loss)
-cor.test(sim_allmetrics$MRSc, sim_allmetrics$loss)
-
-##Bray-Curtis
-pairs(codyndat_allmetrics[,c(3,4,8,9,10,14,15)])
-
-
-
-###averaging to see what happnes, see negaive gain/loss switch to postive relationship. what is going on?
+###Supplental figure of averaging.
 ave_codyndat_allmetrics<-codyndat_allmetrics%>%
   group_by(site_project_comm)%>%
   summarize(S=mean(S),
@@ -748,59 +515,5 @@ ave_codyndat_allmetrics<-codyndat_allmetrics%>%
             dispersion_diff=mean(dispersion_diff))
 pairs(ave_codyndat_allmetrics[,c(2:8)])
 
-ggplot(codyndat_allmetrics, aes(x=gain, y=loss))+
-  geom_point()+
-  facet_wrap(~site_project_comm)
 
-bnz<-codyndat_allmetrics%>%
-  filter(site_project_comm=="msh_butte_0")
-
-ggplot(bnz, aes(x=gain, y=loss))+
-  geom_point()
-
-
-pairs(sim_allmetrics[,c(3,4,8,9,10,13,14)])
-
-##correlations between BC with RAC measures for CODYN
-cor.test(codyndat_allmetrics$S, codyndat_allmetrics$mean_change)
-cor.test(codyndat_allmetrics$E_Q, codyndat_allmetrics$mean_change)
-cor.test(codyndat_allmetrics$MRSc, codyndat_allmetrics$mean_change)
-cor.test(codyndat_allmetrics$gain, codyndat_allmetrics$mean_change)
-cor.test(codyndat_allmetrics$loss, codyndat_allmetrics$mean_change)
-
-cor.test(codyndat_allmetrics$S, codyndat_allmetrics$dispersion_diff)
-cor.test(codyndat_allmetrics$E_Q, codyndat_allmetrics$dispersion_diff)
-cor.test(codyndat_allmetrics$MRSc, codyndat_allmetrics$dispersion_diff)
-cor.test(codyndat_allmetrics$gain, codyndat_allmetrics$dispersion_diff)
-cor.test(codyndat_allmetrics$loss, codyndat_allmetrics$dispersion_diff)
-
-###Correlations between BC and RAC measures for SIM
-cor.test(sim_allmetrics$S, sim_allmetrics$mean_change)
-cor.test(sim_allmetrics$E_Q, sim_allmetrics$mean_change)
-cor.test(sim_allmetrics$MRSc, sim_allmetrics$mean_change)
-cor.test(sim_allmetrics$gain, sim_allmetrics$mean_change)
-cor.test(sim_allmetrics$loss, sim_allmetrics$mean_change)
-
-cor.test(sim_allmetrics$S, sim_allmetrics$dispersion_diff)
-cor.test(sim_allmetrics$E_Q, sim_allmetrics$dispersion_diff)
-cor.test(sim_allmetrics$MRSc, sim_allmetrics$dispersion_diff)
-cor.test(sim_allmetrics$gain, sim_allmetrics$dispersion_diff)
-cor.test(sim_allmetrics$loss, sim_allmetrics$dispersion_diff)
-
-###Jaccard for Codyn
-##Bray-Curtis
-pairs(codyndat_allmetrics[,c(3,4,8,9,10,15,16)])
-
-##correlations between BC with RAC measures for CODYN
-cor.test(codyndat_allmetrics$S, codyndat_allmetrics$jac_mean_change)
-cor.test(codyndat_allmetrics$E_Q, codyndat_allmetrics$jac_mean_change)
-cor.test(codyndat_allmetrics$MRSc, codyndat_allmetrics$jac_mean_change)
-cor.test(codyndat_allmetrics$gain, codyndat_allmetrics$jac_mean_change)
-cor.test(codyndat_allmetrics$loss, codyndat_allmetrics$jac_mean_change)
-
-cor.test(codyndat_allmetrics$S, codyndat_allmetrics$jac_dispersion_diff)
-cor.test(codyndat_allmetrics$E_Q, codyndat_allmetrics$jac_dispersion_diff)
-cor.test(codyndat_allmetrics$MRSc, codyndat_allmetrics$jac_dispersion_diff)
-cor.test(codyndat_allmetrics$gain, codyndat_allmetrics$jac_dispersion_diff)
-cor.test(codyndat_allmetrics$loss, codyndat_allmetrics$jac_dispersion_diff)
 
