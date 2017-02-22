@@ -1,5 +1,7 @@
 setwd("~/Dropbox/converge_diverge/datasets/Longform")
 
+library(tidyr)
+library(dplyr)
 library(ggplot2)
 library(vegan)
 
@@ -9,26 +11,14 @@ dat<-read.csv("SpeciesRelativeAbundance_Dec2016.csv")
 pplots<-dat%>%
   filter(project_name=="pplots",calendar_year==2014)%>%
   tbl_df()%>%
-  group_by(treatment, genus_species)%>%
-  summarize(relcov=mean(relcov))%>%
+  group_by(plot_id)%>%
   mutate(rank=rank(-relcov, ties.method="average"))
 
-##RACS
-
 ggplot(data=pplots, aes(x=rank, y=relcov))+
-  geom_point(aes(color=genus_species))+
+  geom_point(aes(color=genus_species), size=3)+
+  geom_line(aes(group=plot_id), size=0.2)+
   facet_wrap(~treatment)
 
-pplots_common<-pplots%>%
-  filter(rank<11)
-
-ggplot(data=pplots_common, aes(x=rank, y=relcov))+
-  geom_point(aes(color=genus_species))+
-  facet_wrap(~treatment)
-
-ggplot(data=pplots, aes(x=rank, y=relcov))+
-  geom_point(aes(color=genus_species))+
-  facet_wrap(~treatment)
 
 ###NMDS
 pplots_wide<-dat%>%
@@ -59,35 +49,28 @@ ggplot(scores2, aes(x=NMDS1, y=NMDS2, color=treatment))+
 wenndex<-dat%>%
   filter(project_name=="WENNDEx", calendar_year==2012)%>%
   tbl_df()%>%
-  group_by(treatment, genus_species)%>%
-  summarize(relcov=mean(relcov))%>%
+  group_by(plot_id)%>%
   mutate(rank=rank(-relcov, ties.method="average"))
 
 ggplot(data=wenndex, aes(x=rank, y=relcov))+
-  geom_point(aes(color=genus_species))+
-  facet_wrap(~treatment)
-
-wenndex_common<-wenndex%>%
-  filter(rank<11)
-
-ggplot(data=wenndex_common, aes(x=rank, y=relcov))+
-  geom_point(aes(color=genus_species))+
+  geom_point(aes(color=genus_species), size=3)+
+  geom_line(aes(group=plot_id), size=0.2)+
   facet_wrap(~treatment)
 
 ###NMDS
 wenndex_wide<-dat%>%
-  filter(project_name=="WENNDEx", calendar_year==2012)%>%
+  filter(project_name=="WENNDEx", calendar_year==2006)%>%
   select(treatment, plot_id, genus_species, relcov)%>%
   spread(genus_species, relcov, fill=0)
 
 plots<-wenndex_wide[,1:2]
-mds<-metaMDS(wenndex_wide[,3:39], autotransform=FALSE, shrink=FALSE)
+mds<-metaMDS(wenndex_wide[,3:36], autotransform=FALSE, shrink=FALSE)
 mds
 
-adonis(wenndex_wide[,3:39]~treatment, wenndex_wide)
+adonis(wenndex_wide[,3:36]~treatment, wenndex_wide)
 
 #differences in dispersion?
-dist<-vegdist(wenndex_wide[,3:39])
+dist<-vegdist(wenndex_wide[,3:36])
 betadisp<-betadisper(dist,wenndex_wide$treatment,type="centroid")
 betadisp
 permutest(betadisp)
@@ -103,20 +86,29 @@ ggplot(scores2, aes(x=NMDS1, y=NMDS2, color=treatment))+
 herbdiv<-dat%>%
   filter(project_name=="herbdiv", calendar_year==2015)%>%
   tbl_df()%>%
-  group_by(treatment, genus_species)%>%
-  summarize(relcov=mean(relcov))%>%
+  group_by(plot_id)%>%
   mutate(rank=rank(-relcov, ties.method="average"))
 
 ggplot(data=herbdiv, aes(x=rank, y=relcov))+
-  geom_point(aes(color=genus_species))+
+  geom_point(aes(color=genus_species), size=3)+
+  geom_line(aes(group=plot_id), size=0.2)+
+  theme(legend.position = "none")+
   facet_wrap(~treatment)
 
-herbdiv_common<-herbdiv%>%
-  filter(rank<11)
+###look at 5F through time
 
-ggplot(data=herbdiv_common, aes(x=rank, y=relcov))+
-  geom_point(aes(color=genus_species))+
-  facet_wrap(~treatment)
+herbdiv5<-dat%>%
+  filter(project_name=="herbdiv", treatment=="1NF")%>%
+  tbl_df()%>%
+  group_by(calendar_year, plot_id)%>%
+  mutate(rank=rank(-relcov, ties.method="average"))
+
+ggplot(data=herbdiv5, aes(x=rank, y=relcov))+
+  geom_point(aes(color=genus_species), size=3)+
+  geom_line(aes(group=plot_id), size=0.2)+
+  theme(legend.position = "none")+
+  facet_wrap(~calendar_year)
+
 
 ###NMDS
 herbdiv_wide<-dat%>%
