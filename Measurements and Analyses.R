@@ -6,6 +6,8 @@ library(Kendall)
 library(ggplot2)
 library(gridExtra)
 library(reldist)
+library(grid)
+library(gtable)
 
 sim<-read.csv("~/Documents/SESYNC/SESYNC_RACs/R Files/SimCom.csv")%>%
   separate(timestep, c("v","time"), sep=1)%>%
@@ -89,7 +91,7 @@ codyndat_diversity <- group_by(codyndat_clean, site_project_comm, experiment_yea
   tbl_df()%>%
   group_by(site_project_comm, experiment_year)%>%
   summarize(S=mean(S),
-            E_Q=mean(E_q),
+            E_Q=mean(E_q, na.rm=T),
             Gini=mean(Gini),
             E_simp=mean(E_simp))
 
@@ -100,7 +102,7 @@ sim_diversity<-group_by(sim, ComType, time, rep)%>%
             E_simp=E_simp(abundance))%>%
   group_by(ComType, time)%>%
   summarize(S=mean(S),
-            E_Q=mean(E_q),
+            E_Q=mean(E_q, na.rm=T),
             Gini=mean(Gini),
             E_simp=mean(E_simp))
 
@@ -390,98 +392,202 @@ for(i in 1:length(ComType_u)) {
 sim_bray_curtis<-bray_curtis
 
 ####Looking at the shape of the curve - cc
+###this compares the areas of difference between two curves that are consequtive time steps for a plot.
 
-d_output=data.frame(id=c(), experiment_year=c(), Darea=c())#expeiment year is year of timestep2
+#codyn dat first
+d_output=data.frame(site_project_comm=c(), experiment_year=c(), plot_id=c(), Darea=c())#expeiment year is year of timestep2
 
-spc_id<-unique(codyndat_clean$id)
+spc<-unique(codyndat_clean$site_project_comm)
 
-for (i in 1:length(spc_id)){
+for (i in 1:length(spc)){
   subset<-codyndat_clean%>%
-    filter(id==spc_id[i])
-  id<-spc_id[i]
-  
+    filter(site_project_comm==spc[i])
+ 
   ranks<-subset%>%
-  filter(abundance!=0)%>%
-  group_by(calendar_year, treatment, plot_id)%>%
-  mutate(rank=rank(-relcov, ties.method="average"),
-         maxrank=max(rank),
-         relrank=rank/maxrank)%>%
-  arrange(relrank)%>%
-  mutate(cumabund=cumsum(relcov))
+    filter(abundance!=0)%>%
+    group_by(experiment_year, plot_id)%>%
+    mutate(rank=rank(-abundance, ties.method="average"),
+           maxrank=max(rank),
+           relrank=rank/maxrank)%>%
+    arrange(abundance)%>%
+    mutate(cumabund=cumsum(abundance))%>%
+    ungroup()
 
-result <- average_test %>%
-  group_by(plot_id) %>%
-  do({
-    y <- unique(.$calendar_year)###assumption this is a length 2 list
-    df1 <- filter(., calendar_year==y[[1]])
-    df2 <- filter(., calendar_year==y[[2]])
-    sf1 <- stepfun(df1$relrank, c(0, df1$cumabund))
-    sf2 <- stepfun(df2$relrank, c(0, df2$cumabund))
-    r <- c(0, df1$relrank, df2$relrank)
-    data.frame(Dmax=max(abs(sf1(r) - sf2(r))))#do has to output a dataframe
-  })
-
-d_output=data.frame(id=c(), experiment_year=c(), Dmax=c(), Darea=c())#expeiment year is year of timestep2
-
-spc_id<-unique(codyndat_rank$id)
-
-for (i in 1:length(spc_id)){
-  subset<-codyndat_rank%>%
-    filter(id==spc_id[i])
-  id<-spc_id[i]
+  spc_id2<-spc[i]
   
-  splist<-subset%>%
-    select(species)%>%
-    unique()
-  sppool<-length(splist$species)
-  
-  #now get all timestep within an experiment
-  timestep<-sort(unique(subset$experiment_year))    
+  timestep<-sort(unique(ranks$experiment_year))    
   
   for(i in 1:(length(timestep)-1)) {#minus 1 will keep me in year bounds NOT WORKING
-    subset_t1<-subset%>%
+    subset_t1<-ranks%>%
       filter(experiment_year==timestep[i])
     
-    subset_t2<-subset%>%
+    plots_t1<-subset_t1%>%
+      select(plot_id)%>%
+      unique()
+    
+    subset_t2<-ranks%>%
       filter(experiment_year==timestep[i+1])
     
-    subset_t12<-merge(subset_t1, subset_t2, by=c("species","id"), all=T)%>%
-      filter(abundance.x!=0|abundance.y!=0)
+    plots_t2<-subset_t2%>%
+      select(plot_id)%>%
+      unique()
     
-    MRSc<-mean(abs(subset_t12$rank.x-subset_t12$rank.y))/nrow(subset_t12)
-    MRSt<-mean(abs(subset_t12$rank.x-subset_t12$rank.y))/sppool
-    MRSnc<-mean(abs(subset_t12$rank.x-subset_t12$rank.y))
-    n<-nrow(subset_t12)
-    MRSm<-mean(abs(subset_t12$rank.x-subset_t12$rank.y))/(n+n/2-n/4+1.5)
+    plots_bothyrs<-merge(plots_t1, plots_t2, by="plot_id")
+#dataset of two years    
+    subset_t12<-rbind(subset_t1, subset_t2)
     
-    #RC<-abs(cor(subset_t12$rank.x, subset_t12$rank.y, method="kendall"))
+##dropping plots that were not measured both years
+    subset_t12_2<-merge(plots_bothyrs, subset_t12, by="plot_id")
     
-    metrics<-data.frame(id=id, experiment_year=timestep[i+1], MRSc=MRSc, MRSnc=MRSnc, MRSt=MRSt, MRSm=MRSm)#spc_id
-    ##calculate differences for these year comparison and rbind to what I want.
+#dropping plots with only 1 species in any of the two years    
+    drop<-subset_t12_2%>%
+      group_by(experiment_year, plot_id)%>%
+      mutate(numplots=length(plot_id))%>%
+      ungroup()%>%
+      group_by(plot_id)%>%
+      mutate(min=min(numplots))%>%
+      select(plot_id, min)%>%
+      unique()
     
-    reordering=rbind(metrics, reordering)  
+    subset_t12_3<-merge(subset_t12_2, drop, by="plot_id")%>%
+      filter(min!=1)%>%
+      ungroup()%>%
+      group_by(experiment_year, plot_id)%>%
+      arrange(rank)%>%
+      ungroup()
+    
+    result <- subset_t12_3 %>%
+    group_by(plot_id) %>%
+    do({
+      y <- unique(.$experiment_year)###assumption this is a length 2 list
+      df1 <- filter(., experiment_year==y[[1]])
+      df2 <- filter(., experiment_year==y[[2]])
+      sf1 <- stepfun(df1$relrank, c(0, df1$cumabund))
+      sf2 <- stepfun(df2$relrank, c(0, df2$cumabund))
+      r <- sort(unique(c(0, df1$relrank, df2$relrank)))
+      h <- abs(sf1(r) - sf2(r))
+      w <- c(diff(r), 0)
+      data.frame(Dstar=sum(w*h))#do has to output a dataframe
+  })
+
+    d_output1=data.frame(site_project_comm=spc_id2, experiment_year=timestep[i+1], plot_id=result$plot_id, Dstar=result$Dstar)#expeiment year is year of timestep2
+    
+    d_output<-rbind(d_output, d_output1)
+  }
+}
+codyndat_dstar<-d_output%>% 
+  group_by(site_project_comm, experiment_year)%>%
+  summarise(Dstar=mean(Dstar))
+
+####Looking at the shape of the curve - cc
+#sim dataset
+d_output=data.frame(site_project_comm=c(), experiment_year=c(), plot_id=c(), Darea=c())#expeiment year is year of timestep2
+
+com<-unique(sim$ComType)
+
+for (i in 1:length(com)){
+  subset<-sim%>%
+    filter(ComType==com[i])
+  
+  ranks<-subset%>%
+    filter(abundance!=0)%>%
+    group_by(time, rep)%>%
+    mutate(rank=rank(-abundance, ties.method="average"),
+           maxrank=max(rank),
+           relrank=rank/maxrank)%>%
+    arrange(abundance)%>%
+    mutate(cumabund=cumsum(abundance))%>%
+    ungroup()
+  
+  com_id2<-com[i]
+  
+  timestep<-sort(unique(ranks$time))    
+  
+  for(i in 1:(length(timestep)-1)) {#minus 1 will keep me in year bounds NOT WORKING
+    subset_t1<-ranks%>%
+      filter(time==timestep[i])
+    
+    plots_t1<-subset_t1%>%
+      select(rep)%>%
+      unique()
+    
+    subset_t2<-ranks%>%
+      filter(time==timestep[i+1])
+    
+    plots_t2<-subset_t2%>%
+      select(rep)%>%
+      unique()
+    
+    plots_bothyrs<-merge(plots_t1, plots_t2, by="rep")
+    #dataset of two years    
+    subset_t12<-rbind(subset_t1, subset_t2)
+    
+    ##dropping plots that were not measured both years
+    subset_t12_2<-merge(plots_bothyrs, subset_t12, by="rep")
+    
+    #dropping plots with only 1 species in any of the two years    
+    drop<-subset_t12_2%>%
+      group_by(time, rep)%>%
+      mutate(numplots=length(rep))%>%
+      ungroup()%>%
+      group_by(rep)%>%
+      mutate(min=min(numplots))%>%
+      select(rep, min)%>%
+      unique()
+    
+    subset_t12_3<-merge(subset_t12_2, drop, by="rep")%>%
+      filter(min!=1)%>%
+      ungroup()%>%
+      group_by(time, rep)%>%
+      arrange(rank)%>%
+      ungroup()
+    
+    result <- subset_t12_3 %>%
+      group_by(rep) %>%
+      do({
+        y <- unique(.$time)###assumption this is a length 2 list
+        df1 <- filter(., time==y[[1]])
+        df2 <- filter(., time==y[[2]])
+        sf1 <- stepfun(df1$relrank, c(0, df1$cumabund))
+        sf2 <- stepfun(df2$relrank, c(0, df2$cumabund))
+        r <- sort(unique(c(0, df1$relrank, df2$relrank)))
+        h <- abs(sf1(r) - sf2(r))
+        w <- c(diff(r), 0)
+        data.frame(Dstar=sum(w*h))#do has to output a dataframe
+      })
+    
+    d_output1=data.frame(ComType=com_id2, time=timestep[i+1], rep=result$rep, Dstar=result$Dstar)#expeiment year is year of timestep2
+    
+    d_output<-rbind(d_output, d_output1)
   }
 }
 
+sim_dstar<-d_output%>% 
+  group_by(ComType, time)%>%
+  summarise(Dstar=mean(Dstar))
 
+  
 ####MERGING TO A SINGE DATASET
 #codyn
 merge1<-merge(codyndat_diversity, codyndat_gains_loss, by=c("site_project_comm","experiment_year"))
 merge2<-merge(merge1, codyndat_reorder, by=c("site_project_comm","experiment_year"))
-codyndat_allmetrics<-merge(merge2, codyndat_braycurtis, by=c("site_project_comm","experiment_year"))
-
+merge3<-merge(merge2, codyndat_braycurtis, by=c("site_project_comm","experiment_year"))
+codyndat_allmetrics<-merge(merge3, codyndat_dstar, by=c("site_project_comm","experiment_year"))
 
 #sim
 merge1<-merge(sim_diversity, sim_gains_loss, by=c("ComType","time"))
 merge2<-merge(merge1, sim_reorder, by=c("ComType","time"))
-sim_allmetrics<-merge(merge2, sim_bray_curtis, by=c("ComType","time"))
+merge3<-merge(merge2, sim_bray_curtis, by=c("ComType","time"))
+sim_allmetrics<-merge(merge3, sim_dstar, by=c("ComType","time"))
 
 #graphing this
-pairs(codyndat_allmetrics[,c(3:4,7:11)])
-pairs(sim_allmetrics[,c(3:4,7:11)])
+pairs(codyndat_allmetrics[,c(3:4,7:12)])
+pairs(sim_allmetrics[,c(3:4,7:12)])
 
 ##correlations CODYN
 cor.test(codyndat_allmetrics$S, codyndat_allmetrics$E_Q)
+cor.test(codyndat_allmetrics$S, codyndat_allmetrics$Gini)
+cor.test(codyndat_allmetrics$S, codyndat_allmetrics$E_simp)
 cor.test(codyndat_allmetrics$S, codyndat_allmetrics$MRSc)
 cor.test(codyndat_allmetrics$E_Q, codyndat_allmetrics$MRSc)
 cor.test(codyndat_allmetrics$S, codyndat_allmetrics$gain)
@@ -500,17 +606,24 @@ cor.test(codyndat_allmetrics$E_Q, codyndat_allmetrics$dispersion_diff)
 cor.test(codyndat_allmetrics$MRSc, codyndat_allmetrics$dispersion_diff)
 cor.test(codyndat_allmetrics$gain, codyndat_allmetrics$dispersion_diff)
 cor.test(codyndat_allmetrics$loss, codyndat_allmetrics$dispersion_diff)
+cor.test(codyndat_allmetrics$S, codyndat_allmetrics$Dstar)
+cor.test(codyndat_allmetrics$E_Q, codyndat_allmetrics$Dstar)
+cor.test(codyndat_allmetrics$MRSc, codyndat_allmetrics$Dstar)
+cor.test(codyndat_allmetrics$gain, codyndat_allmetrics$Dstar)
+cor.test(codyndat_allmetrics$loss, codyndat_allmetrics$Dstar)
+cor.test(codyndat_allmetrics$mean_change, codyndat_allmetrics$Dstar)
+cor.test(codyndat_allmetrics$dispersion_diff, codyndat_allmetrics$Dstar)
 
 ##correlations SIM
 cor.test(sim_allmetrics$S, sim_allmetrics$E_Q)
 cor.test(sim_allmetrics$S, sim_allmetrics$MRSc)
 cor.test(sim_allmetrics$E_Q, sim_allmetrics$MRSc)
-cor.test(codyndat_allmetrics$S, codyndat_allmetrics$gain)
-cor.test(codyndat_allmetrics$E_Q, codyndat_allmetrics$gain)
-cor.test(codyndat_allmetrics$MRSc, codyndat_allmetrics$gain)
-cor.test(codyndat_allmetrics$S, codyndat_allmetrics$loss)
-cor.test(codyndat_allmetrics$E_Q, codyndat_allmetrics$loss)
-cor.test(codyndat_allmetrics$MRSc, codyndat_allmetrics$loss)
+cor.test(sim_allmetrics$S, sim_allmetrics$gain)
+cor.test(sim_allmetrics$E_Q, sim_allmetrics$gain)
+cor.test(sim_allmetrics$MRSc, sim_allmetrics$gain)
+cor.test(sim_allmetrics$S, sim_allmetrics$loss)
+cor.test(sim_allmetrics$E_Q, sim_allmetrics$loss)
+cor.test(sim_allmetrics$MRSc, sim_allmetrics$loss)
 cor.test(sim_allmetrics$S, sim_allmetrics$mean_change)
 cor.test(sim_allmetrics$E_Q, sim_allmetrics$mean_change)
 cor.test(sim_allmetrics$MRSc, sim_allmetrics$mean_change)
@@ -521,6 +634,13 @@ cor.test(sim_allmetrics$E_Q, sim_allmetrics$dispersion_diff)
 cor.test(sim_allmetrics$MRSc, sim_allmetrics$dispersion_diff)
 cor.test(sim_allmetrics$gain, sim_allmetrics$dispersion_diff)
 cor.test(sim_allmetrics$loss, sim_allmetrics$dispersion_diff)
+cor.test(sim_allmetrics$S, sim_allmetrics$Dstar)
+cor.test(sim_allmetrics$E_Q, sim_allmetrics$Dstar)
+cor.test(sim_allmetrics$MRSc, sim_allmetrics$Dstar)
+cor.test(sim_allmetrics$gain, sim_allmetrics$Dstar)
+cor.test(sim_allmetrics$loss, sim_allmetrics$Dstar)
+cor.test(sim_allmetrics$mean_change, sim_allmetrics$Dstar)
+cor.test(sim_allmetrics$dispersion_diff, sim_allmetrics$Dstar)
 
 ###Supplental figure of averaging.
 ave_codyndat_allmetrics<-codyndat_allmetrics%>%
@@ -535,4 +655,631 @@ ave_codyndat_allmetrics<-codyndat_allmetrics%>%
 pairs(ave_codyndat_allmetrics[,c(2:8)])
 
 
+##graphing this
+theme_set(theme_bw(10))
+
+###Codyn graphs
+
+simgraph<-merge(codyndat_allmetrics, codyndat_info, by="site_project_comm")
+
+#richness y axis
+se<-ggplot(data=codyndat_graphs, aes(x=E_Q, y=S))+
+  geom_point(size=0.5, aes(color=taxa))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_smooth(aes(group=site_project_comm, color=taxa), method="lm", se=F, size=.25, alpha=0.5)+
+  geom_smooth(method="lm", se=F, color="black")+
+  scale_y_continuous(limit=c(0,90))+
+  xlab("Evenness")+
+  ylab("Richness")
+sg<-ggplot(data=codyndat_graphs, aes(x=gain, y=S))+
+  geom_point(size=0.5, aes(color=taxa))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_smooth(aes(group=site_project_comm, color=taxa), method="lm", se=F, size=.25, alpha=0.5)+
+  geom_smooth(method="lm", se=F, color="black")+
+  xlab("")+
+  scale_y_continuous(limit=c(0,90))+
+  ylab("")
+sl<-ggplot(data=codyndat_graphs, aes(x=loss, y=S))+
+  geom_point(size=0.5, aes(color=taxa))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_smooth(aes(group=site_project_comm, color=taxa), method="lm", se=F, size=.25, alpha=0.5)+
+  geom_smooth(method="lm", se=F, color="black")+
+  xlab("")+
+  scale_y_continuous(limit=c(0,90))+
+  ylab("")
+sr<-ggplot(data=codyndat_graphs, aes(x=MRSc, y=S))+
+  geom_point(size=0.5, aes(color=taxa))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_smooth(aes(group=site_project_comm, color=taxa), method="lm", se=F, size=.25, alpha=0.5)+
+  geom_smooth(method="lm", se=F, color="black")+
+  xlab("")+
+  scale_y_continuous(limit=c(0,90))+
+  ylab("")
+sm<-ggplot(data=codyndat_graphs, aes(x=mean_change, y=S))+
+  geom_point(size=0.5, aes(color=taxa))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_smooth(aes(group=site_project_comm, color=taxa), method="lm", se=F, size=.25, alpha=0.5)+
+  geom_smooth(method="lm", se=F, color="black")+
+  xlab("")+
+  scale_y_continuous(limit=c(0,90))+
+  ylab("")
+sd<-ggplot(data=codyndat_graphs, aes(x=dispersion_diff, y=S))+
+  geom_point(size=0.5, aes(color=taxa))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_smooth(aes(group=site_project_comm, color=taxa), method="lm", se=F, size=.25, alpha=0.5)+
+  geom_smooth(method="lm", se=F, color="black")+
+  xlab("")+
+  scale_y_continuous(limit=c(0,90))+
+  ylab("")
+sds<-ggplot(data=codyndat_graphs, aes(x=Dstar, y=S))+
+  geom_point(size=0.5, (aes(color=taxa)))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_smooth(aes(group=site_project_comm, color=taxa), method="lm", se=F, size=.25, alpha=0.5)+
+  geom_smooth(method="lm", se=F, color="black")+
+  scale_y_continuous(limit=c(0,90))+
+  xlab("")+
+  ylab("")
+
+#evenness y-axis
+eg<-ggplot(data=codyndat_graphs, aes(x=gain, y=E_Q))+
+  geom_point(size=0.5, (aes(color=taxa)))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_smooth(aes(group=site_project_comm, color=taxa), method="lm", se=F, size=.25, alpha=0.5)+
+  geom_smooth(method="lm", se=F, color="black")+
+  scale_y_continuous(limit=c(0,1))+
+  xlab("Sp. Gains")+
+  ylab("Evenness")
+el<-ggplot(data=codyndat_graphs, aes(x=loss, y=E_Q))+
+  geom_point(size=0.5, (aes(color=taxa)))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_smooth(aes(group=site_project_comm, color=taxa), method="lm", se=F, size=.25, alpha=0.5)+
+  geom_smooth(method="lm", se=F, color="black")+
+  scale_y_continuous(limit=c(0,1))+
+  xlab("")+
+  ylab("")
+er<-ggplot(data=codyndat_graphs, aes(x=MRSc, y=E_Q))+
+  geom_point(size=0.5, (aes(color=taxa)))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_smooth(aes(group=site_project_comm, color=taxa), method="lm", se=F, size=.25, alpha=0.5)+
+  geom_smooth(method="lm", se=F, color="black")+
+  scale_y_continuous(limit=c(0,1))+
+  xlab("")+
+  ylab("")
+em<-ggplot(data=codyndat_graphs, aes(x=mean_change, y=E_Q))+
+  geom_point(size=0.5, (aes(color=taxa)))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_smooth(aes(group=site_project_comm, color=taxa), method="lm", se=F, size=.25, alpha=0.5)+
+  geom_smooth(method="lm", se=F, color="black")+
+  scale_y_continuous(limit=c(0,1))+
+  xlab("")+
+  ylab("")
+ed<-ggplot(data=codyndat_graphs, aes(x=dispersion_diff, y=E_Q))+
+  geom_point(size=0.5, (aes(color=taxa)))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_smooth(aes(group=site_project_comm, color=taxa), method="lm", se=F, size=.25, alpha=0.5)+
+  geom_smooth(method="lm", se=F, color="black")+
+  scale_y_continuous(limit=c(0,1))+
+  xlab("")+
+  ylab("")
+eds<-ggplot(data=codyndat_graphs, aes(x=Dstar, y=E_Q))+
+  geom_point(size=0.5, (aes(color=taxa)))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_smooth(aes(group=site_project_comm, color=taxa), method="lm", se=F, size=.25, alpha=0.5)+
+  geom_smooth(method="lm", se=F, color="black")+
+  scale_y_continuous(limit=c(0,1))+
+  xlab("")+
+  ylab("")
+
+#gain y-axis
+gl<-ggplot(data=codyndat_graphs, aes(x=loss, y=gain))+
+  geom_point(size=0.5, (aes(color=taxa)))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_smooth(aes(group=site_project_comm, color=taxa), method="lm", se=F, size=.25, alpha=0.5)+
+  geom_smooth(method="lm", se=F, color="black")+
+  scale_y_continuous(limit=c(0,1))+
+  xlab("Sp. Losses")+
+  ylab("Sp. Gains")
+gr<-ggplot(data=codyndat_graphs, aes(x=MRSc, y=gain))+
+  geom_point(size=0.5, (aes(color=taxa)))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_smooth(aes(group=site_project_comm, color=taxa), method="lm", se=F, size=.25, alpha=0.5)+
+  geom_smooth(method="lm", se=F, color="black")+
+  scale_y_continuous(limit=c(0,1))+
+  xlab("")+
+  ylab("")
+gm<-ggplot(data=codyndat_graphs, aes(x=mean_change, y=gain))+
+  geom_point(size=0.5, (aes(color=taxa)))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_smooth(aes(group=site_project_comm, color=taxa), method="lm", se=F, size=.25, alpha=0.5)+
+  geom_smooth(method="lm", se=F, color="black")+
+  scale_y_continuous(limit=c(0,1))+
+  xlab("")+
+  ylab("")
+gd<-ggplot(data=codyndat_graphs, aes(x=dispersion_diff, y=gain))+
+  geom_point(size=0.5, (aes(color=taxa)))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_smooth(aes(group=site_project_comm, color=taxa), method="lm", se=F, size=.25, alpha=0.5)+
+  geom_smooth(method="lm", se=F, color="black")+
+  scale_y_continuous(limit=c(0,1))+
+  xlab("")+
+  ylab("")
+gds<-ggplot(data=codyndat_graphs, aes(x=Dstar, y=gain))+
+  geom_point(size=0.5, (aes(color=taxa)))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_smooth(aes(group=site_project_comm, color=taxa), method="lm", se=F, size=.25, alpha=0.5)+
+  geom_smooth(method="lm", se=F, color="black")+
+  scale_y_continuous(limit=c(0,1))+
+  xlab("")+
+  ylab("")
+
+##losses y-axis
+lr<-ggplot(data=codyndat_graphs, aes(x=MRSc, y=loss))+
+  geom_point(size=0.5, (aes(color=taxa)))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_smooth(aes(group=site_project_comm, color=taxa), method="lm", se=F, size=.25, alpha=0.5)+
+  geom_smooth(method="lm", se=F, color="black")+
+  scale_y_continuous(limit=c(0,1))+
+  xlab("Reordering")+
+  ylab("Sp. Losses")
+lm<-ggplot(data=codyndat_graphs, aes(x=mean_change, y=loss))+
+  geom_point(size=0.5, (aes(color=taxa)))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_smooth(aes(group=site_project_comm, color=taxa), method="lm", se=F, size=.25, alpha=0.5)+
+  geom_smooth(method="lm", se=F, color="black")+
+  scale_y_continuous(limit=c(0,1))+
+  xlab("")+
+  ylab("")
+ld<-ggplot(data=codyndat_graphs, aes(x=dispersion_diff, y=loss))+
+  geom_point(size=0.5, (aes(color=taxa)))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_smooth(aes(group=site_project_comm, color=taxa), method="lm", se=F, size=.25, alpha=0.5)+
+  geom_smooth(method="lm", se=F, color="black")+
+  scale_y_continuous(limit=c(0,1))+
+  xlab("")+
+  ylab("")
+lds<-ggplot(data=codyndat_graphs, aes(x=Dstar, y=loss))+
+  geom_point(size=0.5, (aes(color=taxa)))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_smooth(aes(group=site_project_comm, color=taxa), method="lm", se=F, size=.25, alpha=0.5)+
+  geom_smooth(method="lm", se=F, color="black")+
+  scale_y_continuous(limit=c(0,1))+
+  xlab("")+
+  ylab("")
+
+#reorder y-axis
+rm<-ggplot(data=codyndat_graphs, aes(x=mean_change, y=MRSc))+
+  geom_point(size=0.5, (aes(color=taxa)))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_smooth(aes(group=site_project_comm, color=taxa), method="lm", se=F, size=.25, alpha=0.5)+
+  geom_smooth(method="lm", se=F, color="black")+
+  scale_y_continuous(limit=c(0,.4))+
+  xlab("Changes Community")+
+  ylab("Reordering")
+rd<-ggplot(data=codyndat_graphs, aes(x=dispersion_diff, y=MRSc))+
+  geom_point(size=0.5, (aes(color=taxa)))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_smooth(aes(group=site_project_comm, color=taxa), method="lm", se=F, size=.25, alpha=0.5)+
+  geom_smooth(method="lm", se=F, color="black")+
+  scale_y_continuous(limit=c(0,.4))+
+  xlab("")+
+  ylab("")
+rds<-ggplot(data=codyndat_graphs, aes(x=Dstar, y=MRSc))+
+  geom_point(size=0.5, (aes(color=taxa)))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_smooth(aes(group=site_project_comm, color=taxa), method="lm", se=F, size=.25, alpha=0.5)+
+  geom_smooth(method="lm", se=F, color="black")+
+  scale_y_continuous(limit=c(0,.4))+
+  xlab("")+
+  ylab("")
+
+#mean change y-axis
+md<-ggplot(data=codyndat_graphs, aes(x=dispersion_diff, y=mean_change))+
+  geom_point(size=0.5, (aes(color=taxa)))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_smooth(aes(group=site_project_comm, color=taxa), method="lm", se=F, size=.25, alpha=0.5)+
+  geom_smooth(method="lm", se=F, color="black")+
+  scale_y_continuous(limit=c(0,1))+
+  xlab("Dispersion")+
+  ylab("Community Change")
+mds<-ggplot(data=codyndat_graphs, aes(x=Dstar, y=mean_change))+
+  geom_point(size=0.5, (aes(color=taxa)))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_smooth(aes(group=site_project_comm, color=taxa), method="lm", se=F, size=.25, alpha=0.5)+
+  geom_smooth(method="lm", se=F, color="black")+
+  scale_y_continuous(limit=c(0,1))+
+  xlab("")+
+  ylab("")
+
+#dispersion y axis
+dds<-ggplot(data=codyndat_graphs, aes(x=Dstar, y=dispersion_diff))+
+  geom_point(size=0.5, (aes(color=taxa)))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_smooth(aes(group=site_project_comm, color=taxa), method="lm", se=F, size=.25, alpha=0.5)+
+  geom_smooth(method="lm", se=F, color="black")+
+  scale_y_continuous(limit=c(-.3,.4))+
+  xlab("D Star")+
+  ylab("Dispersion")
+
+legend=gtable_filter(ggplot_gtable(ggplot_build(dds)), "guide-box") 
+grid.draw(legend)
+
+#blank
+blankPlot <- ggplot()+geom_blank(aes(1,1))+
+  theme(
+    plot.background = element_blank(), 
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(), 
+    panel.border = element_blank(),
+    panel.background = element_blank(),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    axis.text.x = element_blank(), 
+    axis.text.y = element_blank(),
+    axis.ticks = element_blank()
+  )
+
+grid.arrange(arrangeGrob(se+theme(legend.position="none"),
+                         sg+theme(legend.position="none"),
+                         sl+theme(legend.position="none"),
+                         sr+theme(legend.position="none"),
+                         sm+theme(legend.position="none"),
+                         sd+theme(legend.position="none"),
+                         sds+theme(legend.position="none"),
+                         blankPlot,
+                          eg+theme(legend.position="none"),
+                         el+theme(legend.position="none"),
+                         er+theme(legend.position="none"),
+                         em+theme(legend.position="none"),
+                         ed+theme(legend.position="none"),
+                         eds+theme(legend.position="none"),
+                         blankPlot,
+                         blankPlot,
+                         gl+theme(legend.position="none"),
+                         gr+theme(legend.position="none"),
+                         gm+theme(legend.position="none"),
+                         gd+theme(legend.position="none"),
+                         gds+theme(legend.position="none"),
+                         blankPlot,
+                         blankPlot,
+                         blankPlot,
+                         lr+theme(legend.position="none"),
+                         lm+theme(legend.position="none"),
+                         ld+theme(legend.position="none"),
+                         lds+theme(legend.position="none"),
+                         blankPlot,
+                         blankPlot,
+                         blankPlot,
+                         blankPlot,
+                         rm+theme(legend.position="none"),
+                         rd+theme(legend.position="none"),
+                         rds+theme(legend.position="none"),
+                         blankPlot,
+                         blankPlot,
+                         blankPlot,
+                         blankPlot,
+                         blankPlot,
+                         md+theme(legend.position="none"),
+                         mds+theme(legend.position="none"),
+                         blankPlot,
+                         blankPlot,
+                         blankPlot,
+                         blankPlot,
+                         blankPlot,
+                         blankPlot,
+                         dds+theme(legend.position="none"),
+                         ncol=7), legend, 
+             widths=unit.c(unit(1, "npc") - legend$width, legend$width),nrow=1)
+
+###sim graphs
+simgraph<-sim_allmetrics%>%
+  separate(ComType, c("Simulated_Evenness","Simulated_Richness"), sep="_", remove = F)
+
+
+#richness y axis
+se<-ggplot(data=simgraph, aes(x=E_Q, y=S))+
+  geom_point(size=2, aes(color=Simulated_Evenness, shape=Simulated_Richness ))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_smooth(aes(group=ComType), method="lm", se=F, size=.25, alpha=0.5)+
+  geom_smooth(method="lm", se=F, color="black")+
+  scale_y_continuous(limit=c(0,50))+
+  xlab("Evenness")+
+  ylab("Richness")
+sg<-ggplot(data=simgraph, aes(x=gain, y=S))+
+  geom_point(size=2, aes(color=Simulated_Evenness, shape=Simulated_Richness ))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_smooth(aes(group=ComType), method="lm", se=F, size=.25, alpha=0.5)+
+  geom_smooth(method="lm", se=F, color="black")+
+  xlab("")+
+  scale_y_continuous(limit=c(0,50))+
+  ylab("")
+sl<-ggplot(data=simgraph, aes(x=loss, y=S))+
+  geom_point(size=2, aes(color=Simulated_Evenness, shape=Simulated_Richness ))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_smooth(aes(group=ComType), method="lm", se=F, size=.25, alpha=0.5)+
+  geom_smooth(method="lm", se=F, color="black")+
+  xlab("")+
+  scale_y_continuous(limit=c(0,50))+
+  ylab("")
+sr<-ggplot(data=simgraph, aes(x=MRSc, y=S))+
+  geom_point(size=2, aes(color=Simulated_Evenness, shape=Simulated_Richness ))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_smooth(aes(group=ComType), method="lm", se=F, size=.25, alpha=0.5)+
+  geom_smooth(method="lm", se=F, color="black")+
+  xlab("")+
+  scale_y_continuous(limit=c(0,50))+
+  ylab("")
+sm<-ggplot(data=simgraph, aes(x=mean_change, y=S))+
+  geom_point(size=2, aes(color=Simulated_Evenness, shape=Simulated_Richness ))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_smooth(aes(group=ComType), method="lm", se=F, size=.25, alpha=0.5)+
+  geom_smooth(method="lm", se=F, color="black")+
+  xlab("")+
+  scale_y_continuous(limit=c(0,50))+
+  ylab("")
+sd<-ggplot(data=simgraph, aes(x=dispersion_diff, y=S))+
+  geom_point(size=2, aes(color=Simulated_Evenness, shape=Simulated_Richness ))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_smooth(aes(group=ComType), method="lm", se=F, size=.25, alpha=0.5)+
+  geom_smooth(method="lm", se=F, color="black")+
+  xlab("")+
+  scale_y_continuous(limit=c(0,50))+
+  ylab("")
+sds<-ggplot(data=simgraph, aes(x=Dstar, y=S))+
+  geom_point(size=2, aes(color=Simulated_Evenness, shape=Simulated_Richness ))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_smooth(aes(group=ComType), method="lm", se=F, size=.25, alpha=0.5)+
+  geom_smooth(method="lm", se=F, color="black")+
+  scale_y_continuous(limit=c(0,50))+
+  xlab("")+
+  ylab("")
+
+#evenness y-axis
+eg<-ggplot(data=simgraph, aes(x=gain, y=E_Q))+
+  geom_point(size=2, aes(color=Simulated_Evenness, shape=Simulated_Richness ))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_smooth(aes(group=ComType), method="lm", se=F, size=.25, alpha=0.5)+
+  geom_smooth(method="lm", se=F, color="black")+
+  scale_y_continuous(limit=c(0,.6))+
+  xlab("Sp. Gains")+
+  ylab("Evenness")
+el<-ggplot(data=simgraph, aes(x=loss, y=E_Q))+
+  geom_point(size=2, aes(color=Simulated_Evenness, shape=Simulated_Richness ))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_smooth(aes(group=ComType), method="lm", se=F, size=.25, alpha=0.5)+
+  geom_smooth(method="lm", se=F, color="black")+
+  scale_y_continuous(limit=c(0,.6))+
+  xlab("")+
+  ylab("")
+er<-ggplot(data=simgraph, aes(x=MRSc, y=E_Q))+
+  geom_point(size=2, aes(color=Simulated_Evenness, shape=Simulated_Richness ))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_smooth(aes(group=ComType), method="lm", se=F, size=.25, alpha=0.5)+
+  geom_smooth(method="lm", se=F, color="black")+
+  scale_y_continuous(limit=c(0,.6))+
+  xlab("")+
+  ylab("")
+em<-ggplot(data=simgraph, aes(x=mean_change, y=E_Q))+
+  geom_point(size=2, aes(color=Simulated_Evenness, shape=Simulated_Richness ))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_smooth(aes(group=ComType), method="lm", se=F, size=.25, alpha=0.5)+
+  geom_smooth(method="lm", se=F, color="black")+
+  scale_y_continuous(limit=c(0,.6))+
+  xlab("")+
+  ylab("")
+ed<-ggplot(data=simgraph, aes(x=dispersion_diff, y=E_Q))+
+  geom_point(size=2, aes(color=Simulated_Evenness, shape=Simulated_Richness ))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_smooth(aes(group=ComType), method="lm", se=F, size=.25, alpha=0.5)+
+  geom_smooth(method="lm", se=F, color="black")+
+  scale_y_continuous(limit=c(0,.6))+
+  xlab("")+
+  ylab("")
+eds<-ggplot(data=simgraph, aes(x=Dstar, y=E_Q))+
+  geom_point(size=2, aes(color=Simulated_Evenness, shape=Simulated_Richness ))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_smooth(aes(group=ComType), method="lm", se=F, size=.25, alpha=0.5)+
+  geom_smooth(method="lm", se=F, color="black")+
+  scale_y_continuous(limit=c(0,.6))+
+  xlab("")+
+  ylab("")
+
+#gain y-axis
+gl<-ggplot(data=simgraph, aes(x=loss, y=gain))+
+  geom_point(size=2, aes(color=Simulated_Evenness, shape=Simulated_Richness ))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_smooth(aes(group=ComType), method="lm", se=F, size=.25, alpha=0.5)+
+  geom_smooth(method="lm", se=F, color="black")+
+  scale_y_continuous(limit=c(0,.1))+
+  xlab("Sp. Losses")+
+  ylab("Sp. Gains")
+gr<-ggplot(data=simgraph, aes(x=MRSc, y=gain))+
+  geom_point(size=2, aes(color=Simulated_Evenness, shape=Simulated_Richness ))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_smooth(aes(group=ComType), method="lm", se=F, size=.25, alpha=0.5)+
+  geom_smooth(method="lm", se=F, color="black")+
+  scale_y_continuous(limit=c(0,.1))+
+  xlab("")+
+  ylab("")
+gm<-ggplot(data=simgraph, aes(x=mean_change, y=gain))+
+  geom_point(size=2, aes(color=Simulated_Evenness, shape=Simulated_Richness ))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_smooth(aes(group=ComType), method="lm", se=F, size=.25, alpha=0.5)+
+  geom_smooth(method="lm", se=F, color="black")+
+  scale_y_continuous(limit=c(0,.1))+
+  xlab("")+
+  ylab("")
+gd<-ggplot(data=simgraph, aes(x=dispersion_diff, y=gain))+
+  geom_point(size=2, aes(color=Simulated_Evenness, shape=Simulated_Richness ))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_smooth(aes(group=ComType), method="lm", se=F, size=.25, alpha=0.5)+
+  geom_smooth(method="lm", se=F, color="black")+
+  scale_y_continuous(limit=c(0,.1))+
+  xlab("")+
+  ylab("")
+gds<-ggplot(data=simgraph, aes(x=Dstar, y=gain))+
+  geom_point(size=2, aes(color=Simulated_Evenness, shape=Simulated_Richness ))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_smooth(aes(group=ComType), method="lm", se=F, size=.25, alpha=0.5)+
+  geom_smooth(method="lm", se=F, color="black")+
+  scale_y_continuous(limit=c(0,.1))+
+  xlab("")+
+  ylab("")
+
+##losses y-axis
+lr<-ggplot(data=simgraph, aes(x=MRSc, y=loss))+
+  geom_point(size=2, aes(color=Simulated_Evenness, shape=Simulated_Richness ))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_smooth(aes(group=ComType), method="lm", se=F, size=.25, alpha=0.5)+
+  geom_smooth(method="lm", se=F, color="black")+
+  scale_y_continuous(limit=c(0,.1))+
+  xlab("Reordering")+
+  ylab("Sp. Losses")
+lm<-ggplot(data=simgraph, aes(x=mean_change, y=loss))+
+  geom_point(size=2, aes(color=Simulated_Evenness, shape=Simulated_Richness ))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_smooth(aes(group=ComType), method="lm", se=F, size=.25, alpha=0.5)+
+  geom_smooth(method="lm", se=F, color="black")+
+  scale_y_continuous(limit=c(0,.1))+
+  xlab("")+
+  ylab("")
+ld<-ggplot(data=simgraph, aes(x=dispersion_diff, y=loss))+
+  geom_point(size=2, aes(color=Simulated_Evenness, shape=Simulated_Richness ))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_smooth(aes(group=ComType), method="lm", se=F, size=.25, alpha=0.5)+
+  geom_smooth(method="lm", se=F, color="black")+
+  scale_y_continuous(limit=c(0,.1))+
+  xlab("")+
+  ylab("")
+lds<-ggplot(data=simgraph, aes(x=Dstar, y=loss))+
+  geom_point(size=2, aes(color=Simulated_Evenness, shape=Simulated_Richness ))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_smooth(aes(group=ComType), method="lm", se=F, size=.25, alpha=0.5)+
+  geom_smooth(method="lm", se=F, color="black")+
+  scale_y_continuous(limit=c(0,.1))+
+  xlab("")+
+  ylab("")
+
+#reorder y-axis
+rm<-ggplot(data=simgraph, aes(x=mean_change, y=MRSc))+
+  geom_point(size=2, aes(color=Simulated_Evenness, shape=Simulated_Richness ))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_smooth(aes(group=ComType), method="lm", se=F, size=.25, alpha=0.5)+
+  geom_smooth(method="lm", se=F, color="black")+
+  scale_y_continuous(limit=c(0,.24))+
+  xlab("Changes Community")+
+  ylab("Reordering")
+rd<-ggplot(data=simgraph, aes(x=dispersion_diff, y=MRSc))+
+  geom_point(size=2, aes(color=Simulated_Evenness, shape=Simulated_Richness ))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_smooth(aes(group=ComType), method="lm", se=F, size=.25, alpha=0.5)+
+  geom_smooth(method="lm", se=F, color="black")+
+  scale_y_continuous(limit=c(0,.24))+
+  xlab("")+
+  ylab("")
+rds<-ggplot(data=simgraph, aes(x=Dstar, y=MRSc))+
+  geom_point(size=2, aes(color=Simulated_Evenness, shape=Simulated_Richness ))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_smooth(aes(group=ComType), method="lm", se=F, size=.25, alpha=0.5)+
+  geom_smooth(method="lm", se=F, color="black")+
+  scale_y_continuous(limit=c(0,.24))+
+  xlab("")+
+  ylab("")
+
+#mean change y-axis
+md<-ggplot(data=simgraph, aes(x=dispersion_diff, y=mean_change))+
+  geom_point(size=2, aes(color=Simulated_Evenness, shape=Simulated_Richness ))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_smooth(aes(group=ComType), method="lm", se=F, size=.25, alpha=0.5)+
+  geom_smooth(method="lm", se=F, color="black")+
+  scale_y_continuous(limit=c(0,.1))+
+  xlab("Dispersion")+
+  ylab("Community Change")
+mds<-ggplot(data=simgraph, aes(x=Dstar, y=mean_change))+
+  geom_point(size=2, aes(color=Simulated_Evenness, shape=Simulated_Richness ))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_smooth(aes(group=ComType), method="lm", se=F, size=.25, alpha=0.5)+
+  geom_smooth(method="lm", se=F, color="black")+
+  scale_y_continuous(limit=c(0,.1))+
+  xlab("")+
+  ylab("")
+
+#dispersion y axis
+dds<-ggplot(data=simgraph, aes(x=Dstar, y=dispersion_diff))+
+  geom_point(size=2, aes(color=Simulated_Evenness, shape=Simulated_Richness ))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  geom_smooth(aes(group=ComType), method="lm", se=F, size=.25, alpha=0.5)+
+  geom_smooth(method="lm", se=F, color="black")+
+  scale_y_continuous(limit=c(-.02,.02))+
+  xlab("D Star")+
+  ylab("Dispersion")
+
+legend=gtable_filter(ggplot_gtable(ggplot_build(dds)), "guide-box") 
+grid.draw(legend)
+
+#blank
+blankPlot <- ggplot()+geom_blank(aes(1,1))+
+  theme(
+    plot.background = element_blank(), 
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(), 
+    panel.border = element_blank(),
+    panel.background = element_blank(),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    axis.text.x = element_blank(), 
+    axis.text.y = element_blank(),
+    axis.ticks = element_blank()
+  )
+
+grid.arrange(arrangeGrob(se+theme(legend.position="none"),
+                         sg+theme(legend.position="none"),
+                         sl+theme(legend.position="none"),
+                         sr+theme(legend.position="none"),
+                         sm+theme(legend.position="none"),
+                         sd+theme(legend.position="none"),
+                         sds+theme(legend.position="none"),
+                         blankPlot,
+                         eg+theme(legend.position="none"),
+                         el+theme(legend.position="none"),
+                         er+theme(legend.position="none"),
+                         em+theme(legend.position="none"),
+                         ed+theme(legend.position="none"),
+                         eds+theme(legend.position="none"),
+                         blankPlot,
+                         blankPlot,
+                         gl+theme(legend.position="none"),
+                         gr+theme(legend.position="none"),
+                         gm+theme(legend.position="none"),
+                         gd+theme(legend.position="none"),
+                         gds+theme(legend.position="none"),
+                         blankPlot,
+                         blankPlot,
+                         blankPlot,
+                         lr+theme(legend.position="none"),
+                         lm+theme(legend.position="none"),
+                         ld+theme(legend.position="none"),
+                         lds+theme(legend.position="none"),
+                         blankPlot,
+                         blankPlot,
+                         blankPlot,
+                         blankPlot,
+                         rm+theme(legend.position="none"),
+                         rd+theme(legend.position="none"),
+                         rds+theme(legend.position="none"),
+                         blankPlot,
+                         blankPlot,
+                         blankPlot,
+                         blankPlot,
+                         blankPlot,
+                         md+theme(legend.position="none"),
+                         mds+theme(legend.position="none"),
+                         blankPlot,
+                         blankPlot,
+                         blankPlot,
+                         blankPlot,
+                         blankPlot,
+                         blankPlot,
+                         dds+theme(legend.position="none"),
+                         ncol=7), legend, 
+             widths=unit.c(unit(1, "npc") - legend$width, legend$width),nrow=1)
 
