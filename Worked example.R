@@ -8,7 +8,7 @@ library(ggplot2)
 library(vegan)
 library(gridExtra)
 
-dat<-read.csv("SpeciesRelativeAbundance_Dec2016.csv")
+dat<-read.csv("~/Dropbox/converge_diverge/datasets/Longform/SpeciesRelativeAbundance_Dec2016.csv")
 
 ##pplots
 pplots<-dat%>%
