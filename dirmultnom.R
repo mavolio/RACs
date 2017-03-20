@@ -13,11 +13,13 @@
 #' adds one to enforce richness equal to `alpha`
 #'
 #' @import Matrix
-#' @examples
+#' 
+#' @example 
 #' # Generate 5 samples with a fixed parameterization
-#' rDM(n=5, m=1000, alpha=10, beta=10, gamma=20, theta=10, sigma=1000)
+#' samp <- rDM(n=5, m=1000, alpha=10, beta=10, gamma=20, theta=10, sigma=1000)
+#' as.matrix(samp)
 #' 
-#' 
+#' @example 
 #' # Compare the relationship between evenness and richness
 #' # across a range of parameter settings.
 #' library(ggplot2)
@@ -43,7 +45,7 @@
 #'   scale_y_continuous(limits=c(0, 1)) +
 #'   scale_x_continuous(trans='log2')
 #' 
-#'     
+#' @example 
 #' # Compare pairwise similarities for samples within and across function calls
 #' library(ggplot2)
 #' library(vegan)
