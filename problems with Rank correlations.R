@@ -87,3 +87,43 @@ MRS<-mean(abs(subset_t12$rank.x-subset_t12$rank.y))/nrow(subset_t12)
 RC<-cor(subset_t12$rank.x, subset_t12$rank.y, method="kendall")
 
 
+#trouble shooting E_Q
+test1 <- group_by(codyndat_clean, site_project_comm, experiment_year, plot_id) %>% 
+  summarize(S=S(abundance),
+            E_q=E_q(abundance),
+            Gini=Gini(abundance),
+            E_simp=E_simp(abundance))
+
+##when there is only 1 species get NA
+##when a community is perfectly even, also get NA, that is a problem EX: SGS_UNUN_5A_15!!
+
+x<-c(10, 10, 10)
+z<-4
+
+
+#first if statment says return a 1 if an even community.
+  
+E_q<-function(x){
+  x1<-x[x!=0]
+  if (length(x1)==1) {
+    return(NA)
+  }
+   if (abs(max(x1) - min(x1)) < .Machine$double.eps^0.5) {##bad idea to test for zero, so this is basically doing the same thing testing for a very small number
+    return(1)
+  }
+   r<-rank(x1, ties.method = "average")
+  r_scale<-r/max(r)
+  x_log<-log(x1)
+  fit<-lm(r_scale~x_log)
+  b<-fit$coefficients[[2]]
+  2/pi*atan(b)
+}
+E_q(x)
+
+test<-codyndat%>%
+  filter(plot_id=="PUPL5", abundance!=0, experiment_year==1993)
+
+
+y<-test$abundance
+E_q(y)
+
