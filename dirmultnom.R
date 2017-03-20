@@ -30,16 +30,22 @@
 #'   theta=c(0.01, 0.1, 1, 10, 100, 1000),   #
 #'   sigma=c(1, 10, 100, 1000)               #
 #' )
-#' sims <- mapply(rDM, n=1, m=1000, gamma=max(param$alpha),
+#' sims <- mapply(rDM, n=25, m=1000, gamma=max(param$alpha),
 #'                alpha=param$alpha,
-#'                beta=param$beta, 
+#'                beta=param$beta,
 #'                theta=param$theta,
 #'                sigma=param$sigma,
 #'                SIMPLIFY=FALSE
 #' )
-#' param$richness <- sapply(sims, function(sim) length(sim@x))
-#' param$evenness <- sapply(sims, function(sim) (diversity(sim@x, 'invsimpson') - 1) / (length(sim@x) - 1))
-#' ggplot(param, aes(x=richness, y=evenness, color=log10(theta))) +
+#' param$avg_richness <- sapply(sims,
+#'                              function(sim) mean(specnumber(as.matrix(sim)))
+#' )
+#' param$avg_evenness <- sapply(sims,
+#'                              function(sim) {
+#'                                x <- as.matrix(sim)
+#'                                mean((diversity(x, 'invsimpson') - 1) / (specnumber(x) - 1))
+#'                              })
+#' ggplot(param, aes(x=avg_richness, y=avg_evenness, color=log10(theta))) +
 #'   facet_grid(sigma ~ beta) +
 #'   geom_point() +
 #'   scale_y_continuous(limits=c(0, 1)) +
