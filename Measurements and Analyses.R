@@ -409,7 +409,7 @@ for (i in 1:length(spc)){
     mutate(rank=rank(-abundance, ties.method="average"),
            maxrank=max(rank),
            relrank=rank/maxrank)%>%
-    arrange(abundance)%>%
+    arrange(-abundance)%>%
     mutate(cumabund=cumsum(abundance))%>%
     ungroup()
 
@@ -495,7 +495,7 @@ for (i in 1:length(com)){
     mutate(rank=rank(-abundance, ties.method="average"),
            maxrank=max(rank),
            relrank=rank/maxrank)%>%
-    arrange(abundance)%>%
+    arrange(-abundance)%>%
     mutate(cumabund=cumsum(abundance))%>%
     ungroup()
   
