@@ -1,9 +1,10 @@
 #' Sample a Dirichlet Multinomial distribution over a random subset of integers 
 #' ranging from one to a maximum (gamma) diversity to simulate a local assemblage.
 #'
-#' @n Number of samples, potentially representing `n` repeated measures of 
+#' @n Number of replicates for each of `m` samples.
+#' @m Number of samples, potentially representing `n` repeated measures of 
 #' abundance within the same community.
-#' @m Number of individuals in a sample.
+#' @size Number of individuals in a sample.
 #' @gamma "Global" species richness (maximum richness in pooled samples)
 #' @alpha "Local" species richness (richness in each sample)
 #' @beta Variability among the alpha species chosen from a pool of size gamma
@@ -12,11 +13,11 @@
 #' @shift Adjust abundance of all species after dirichlet multinomial sample; the default shift
 #' adds one to enforce richness equal to `alpha`
 #'
-#' @import Matrix
+#' @import slam
 #' 
 #' @example 
 #' # Generate 5 samples with a fixed parameterization
-#' samp <- rDM(n=5, m=1000, alpha=10, beta=10, gamma=20, theta=10, sigma=1000)
+#' samp <- rDM(n=25, m=1000, alpha=10, beta=1, gamma=20, theta=0, sigma=1)
 #' as.matrix(samp)
 #' 
 #' @example 
@@ -87,39 +88,48 @@
 #'   xlab('Repeated measure from one assemblage') +
 #'   ylab('Bray-Curtis Dissimilarity')
 #'   
-rDM <- function(n, m, gamma, alpha, beta, theta, sigma, shift=TRUE) {
+rDM <- function(n, m, size, gamma, alpha, beta, lambda, theta, sigma, shift=TRUE) {
 
-  ## does succession allow species turnover too?
-  
   # Choose sampling probability for each of gamma species, where
   # beta increases species turnover between function calls
-  prob <- rgamma(gamma, beta)
+  # FIXME not exactly sure what beta will do
+  prob <- rgamma(gamma, lambda)
   prob <- prob / sum(prob)
-  prob <- sort(prob, decreasing=TRUE)
-  
+  pos <- sample.int(gamma, gamma, prob=(rank(prob)/gamma) ^ (1/beta))
+  prob <- prob[pos]
+
   # Choose a subset of alpha (maximum local species richness) species
-  # according to prob
-  j <- sample(1:gamma, alpha, prob=prob)
+  # according to prob, for each of n communities
+  J <- replicate(m, sample.int(gamma, alpha, prob=prob))
+  J <- t(J)
+
+  # Set the mean of a Dirichlet distribution as
+  # a power of the probs of the alpha species within each 
+  # sample, and the sum of the Dirichlet params to sigma
+  prob <- prob^(1/theta)
+  prob <- matrix(prob[J], nrow=m)
+  prob <- prob / rowSums(prob)
+  a <- sigma * prob
+
+  # Sample one Dirichlet for each community
+  p <- matrix(rgamma(m * alpha, a), nrow=m)
+  p <- p / rowSums(p)
   
-  # Choose a mean relative abundance (on the alpha-simplex), where
-  # theta increases evenness by centering the mean
-  x <- rgamma(alpha, theta)
-  x <- x / sum(x)
-  
-  # Choose n dirichlet multinomial samples, where
-  # sigma decreases turnover between samples
-  a <- t(matrix(rgamma(n * alpha, x * sigma), nrow=alpha))
-  a <- a / rowSums(a)
+  # Sample n Multinomials for each community
   if (shift) {
     s <- as.integer(shift)
-    abund <- apply(a, 1, rmultinom, n=1, size=(m-s*alpha)) + s
+    abund <- apply(p, 1, rmultinom, n=n, size=(size - s*alpha)) + s
   } else {
-    abund <- apply(a, 1, rmultinom, n=1, size=m)
+    abund <- apply(p, 1, rmultinom, n=n, size=size)
   }
-  
+  abund <- array(abund, dim=c(alpha, n, m))
+  abund <- aperm(abund, c(2,1,3))
+
   # Assign to species number (out of 1:gamma), by
   # populating a sparse array of abundances
-  ji <- which(abund > 0, arr.ind=TRUE)
-  sparseMatrix(i=ji[, 2], j=j[ji[, 1]], x=abund[ji], dims=c(n, gamma))
+  ijk <- which(abund > 0, arr.ind=TRUE)
+  iJk <- ijk
+  iJk[, 2] <- J[ijk[, c(3, 2)]]
+  simple_sparse_array(i=iJk, v=abund[ijk], dim=c(n, gamma, m))
 }
 
