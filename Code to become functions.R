@@ -11,7 +11,8 @@ library(reldist)
 corre<-read.csv("~/Dropbox/converge_diverge/datasets/Longform/SpeciesRelativeAbundance_Dec2016.csv")%>%
   filter(project_name=="pplots"|project_name=="herbdiv"|project_name=="WENNDEx")%>%
   mutate(site_project_comm=paste(site_code, project_name, community_type,sep="_"))%>%
-  select(-X)
+  select(-X)%>%
+  mutate(id=paste(site_project_comm, plot_id, treatment, sep="::"))
 
 #function to calculate richness
 #' @x the vector of abundances of each species
@@ -69,84 +70,202 @@ gains_loss<-merge(loss, gain, by=c("calendar_year","id"))%>%
   summarize(gain=mean(appearance),
             loss=mean(disappearance))
 
-##reordering
+ggplot(data=subset(gains_loss,site_project_comm=="KNZ_pplots_0"), aes(x=calendar_year, y=gain, group=treatment))+
+  geom_point(size=3, aes(color=treatment))+
+  scale_color_manual(values=c("green","blue","blue","blue","red","purple","purple","purple"))+
+  geom_line()
 
-##for this to work need zero abundances to be filled in for all species.
+ggplot(data=subset(gains_loss,site_project_comm=="KNZ_pplots_0"), aes(x=calendar_year, y=loss, group=treatment))+
+  geom_point(size=3, aes(color=treatment))+
+  scale_color_manual(values=c("green","blue","blue","blue","red","purple","purple","purple"))+
+  geom_line()
 
-corre_zero_filled<-data.frame(site_code=c(),project_name=c(), community_type=c(), calendar_year=c(), treatment=c(), plot_id=c(), genus_species=c(), relcov=c())
+##reordering through time
+reordering=data.frame(id=c(), calendar_year=c(), MRSc=c())
 
 explist<-unique(corre$site_project_comm)
 
 for (i in 1:length(explist)){
+  ##get zero abundances to be filled in for all species.
+  ##this works the first time only
   subset<-corre%>%
     filter(site_project_comm==explist[i])%>%
-    spread(genus_species, relcov, fill=0)%>%
-    gather_(genus_species, relcov,colnames(10:ncol(subset)))###why can't i get this to work??
-}
-
-
-##add ranks dropping zeros
-corre_rank_pres<-corre%>%
-  filter(relcov!=0)%>%
-  tbl_df()%>%
-  group_by(site_project_comm, calendar_year, treatment, plot_id)%>%
-  mutate(rank=rank(-relcov, ties.method = "average"))%>%
-  tbl_df()
-
-###make zero abundant species have the rank S+1 (the size of the species pool plus 1)
-##pull out zeros
-corre_zeros<-corre%>%
-  filter(relcov==0)
-##get species richness for each year
-corre_S<-group_by(corre, site_project_comm, calendar_year, plot_id)%>%
-  summarize(S=S(relcov))
-##merge together make zero abundances rank S+1
-corre_zero_rank<-merge(corre_zeros, corre_S, by=c("site_project_comm","calendar_year","plot_id"))%>%
-  mutate(rank=S+1)%>%
-  select(-S)%>%
-  tbl_df()
-##combine all
-corre_rank<-rbind(codyndat_rank_pres, codyndat_zero_rank)
-
-##calculate reordering between time steps 3 ways, rank correlations, mean rank shifts not corrected, and mean ranks shifts corrected for the size of the speceis pool
-
-reordering=data.frame(id=c(), experiment_year=c(), MRSc=c())#expeiment year is year of timestep2
-
-spc_id<-unique(codyndat_rank$id)
-
-for (i in 1:length(spc_id)){
-  subset<-codyndat_rank%>%
-    filter(id==spc_id[i])
-  id<-spc_id[i]
+    spread(genus_species, relcov, fill=0)
+  wide<-subset%>%
+    gather(genus_species, relcov,11:ncol(subset))
   
-  splist<-subset%>%
-    select(species)%>%
-    unique()
-  sppool<-length(splist$species)
+  ##add ranks dropping zeros
+  rank_pres<-wide%>%
+    filter(relcov!=0)%>%
+    tbl_df()%>%
+    group_by(site_project_comm, calendar_year, treatment, plot_id)%>%
+    mutate(rank=rank(-relcov, ties.method = "average"))%>%
+    tbl_df()
   
-  #now get all timestep within an experiment
-  timestep<-sort(unique(subset$experiment_year))    
+  ###make zero abundant species have the rank S+1 (the size of the species pool plus 1)
+  ##pull out zeros
+  zeros<-wide%>%
+    filter(relcov==0)
+  ##get species richness for each year
+  rich<-group_by(wide, site_project_comm, calendar_year, plot_id)%>%
+    summarize(S=S(relcov))
+  ##merge together make zero abundances rank S+1
+  zero_rank<-merge(zeros, rich, by=c("site_project_comm","calendar_year","plot_id"))%>%
+    mutate(rank=S+1)%>%
+    select(-S)%>%
+    tbl_df()
+  ##combine all
+  rank<-rbind(rank_pres, zero_rank)
   
-  for(i in 1:(length(timestep)-1)) {#minus 1 will keep me in year bounds NOT WORKING
-    subset_t1<-subset%>%
-      filter(experiment_year==timestep[i])
+  #get uniuque id's
+  spc_id<-unique(subset$id)
+  
+  for (i in 1:length(spc_id)){
+    subset2<-rank%>%
+      filter(id==spc_id[i])
+    id<-spc_id[i]
     
-    subset_t2<-subset%>%
-      filter(experiment_year==timestep[i+1])
+    #now get all timestep within an experiment
+    timestep<-sort(unique(subset2$calendar_year))    
     
-    subset_t12<-merge(subset_t1, subset_t2, by=c("species","id"), all=T)%>%
-      filter(abundance.x!=0|abundance.y!=0)
-    
-    MRSc<-mean(abs(subset_t12$rank.x-subset_t12$rank.y))/nrow(subset_t12)
-    
-    metrics<-data.frame(id=id, experiment_year=timestep[i+1], MRSc=MRSc)#spc_id
-    ##calculate differences for these year comparison and rbind to what I want.
-    
-    reordering=rbind(metrics, reordering)  
+    for(i in 1:(length(timestep)-1)) {#minus 1 will keep me in year bounds NOT WORKING
+      subset_t1<-subset2%>%
+        filter(calendar_year==timestep[i])
+      
+      subset_t2<-subset2%>%
+        filter(calendar_year==timestep[i+1])
+      
+      subset_t12<-merge(subset_t1, subset_t2, by=c("genus_species","id"), all=T)%>%
+        filter(relcov.x!=0|relcov.y!=0)
+      
+      MRSc<-mean(abs(subset_t12$rank.x-subset_t12$rank.y))/nrow(subset_t12)
+      
+      metrics<-data.frame(id=id, calendar_year=timestep[i+1], MRSc=MRSc)#spc_id
+      ##calculate differences for these year comparison and rbind to what I want.
+      
+      reordering=rbind(metrics, reordering)  
+    }
   }
 }
 
-codyndat_reorder<-reordering%>%
-  separate(id, c("site_project_comm","plot_id"), sep="::")%>%
-  group_by(site_project_comm, experiment_year)%>%
+reorder_raw<-reordering%>%
+  separate(id, c("site_project_comm","plot_id", "treatment"), sep="::")
+
+summary(aov(MRSc ~ treatment*calendar_year + Error(plot_id/calendar_year), data=subset(reorder_raw, site_project_comm=="KNZ_pplots_0")))
+
+reorder_means<-reorder_raw%>%
+  group_by(site_project_comm, calendar_year, treatment)%>%
   summarise(MRSc=mean(MRSc))
+
+ggplot(data=subset(reorder_means,site_project_comm=="KNZ_pplots_0"), aes(x=calendar_year, y=MRSc, group=treatment))+
+  geom_point(size=3, aes(color=treatment))+
+  scale_color_manual(values=c("green","blue","blue","blue","red","purple","purple","purple"))+
+  geom_line()
+
+ggplot(data=subset(reorder_means,site_project_comm=="SEV_WENNDEx_0"), aes(x=calendar_year, y=MRSc, group=treatment))+
+  geom_point(size=3, aes(color=treatment))+
+  scale_color_manual(values=c("green","red","blue","purple","black","red","blue","purple"))+
+  geom_line()
+
+ggplot(data=subset(reorder_means,site_project_comm=="NIN_herbdiv_0"), aes(x=calendar_year, y=MRSc, group=treatment))+
+  geom_point(size=3, aes(color=treatment))+
+  scale_color_manual(values=c("purple","green","purple","black","purple","black","purple","black", "purple","black"))+
+  geom_line()
+
+####comparing control versus treatment plots
+
+###need a contorl and treatment column
+corre2<-corre%>%
+  mutate(trt=ifelse(site_code=="KNZ"&treatment=="N1P0", "C", ifelse(site_code=="NIN"&treatment=="1NF","C", ifelse(site_code=="SEV"&treatment=="C","C","T"))))
+
+reordering_ct=data.frame(site_project_comm=c(), treatment=c(), calendar_year=c(), MRSc_diff=c(), spdiffc=c())
+
+explist<-unique(corre2$site_project_comm)
+
+for (i in 1:length(explist)){
+  ##get zero abundances to be filled in for all species.
+  ##this works the first time only
+  subset<-corre2%>%
+    filter(site_project_comm==explist[i])%>%
+    spread(genus_species, relcov, fill=0)
+  
+  spc<-explist[i]
+  
+  ##make wide and get averages of each species by treatment
+  wide<-subset%>%
+    gather(genus_species, relcov,12:ncol(subset))%>%
+    group_by(site_project_comm, calendar_year, treatment, trt,genus_species)%>%
+    summarize(relcov=mean(relcov))
+  
+  ##add ranks dropping zeros
+  rank_pres<-wide%>%
+    filter(relcov!=0)%>%
+    tbl_df()%>%
+    group_by(site_project_comm, calendar_year, treatment, trt)%>%
+    mutate(rank=rank(-relcov, ties.method = "average"))%>%
+    tbl_df()
+  
+  ###make zero abundant species have the rank S+1 (the size of the species pool plus 1)
+  ##pull out zeros
+  zeros<-wide%>%
+    filter(relcov==0)
+  ##get species richness for each year
+  rich<-group_by(wide, site_project_comm, calendar_year, treatment)%>%
+    summarize(S=S(relcov))
+  ##merge together make zero abundances rank S+1
+  zero_rank<-merge(zeros, rich, by=c("site_project_comm","calendar_year", "treatment"))%>%
+    mutate(rank=S+1)%>%
+    select(-S)%>%
+    tbl_df()
+  ##combine all
+  rank<-rbind(rank_pres, zero_rank)
+  
+  timestep<-sort(unique(rank$calendar_year)) 
+  for(i in 1:(length(timestep))){
+    
+    time<-rank%>%
+    filter(calendar_year==timestep[i])
+  
+    time_id<-timestep[i]
+    
+  #fitler out control plots
+  control<-time%>%
+    filter(trt=="C")
+  
+  treat_list<-unique(subset(time, trt!="C")$treatment)
+  
+  for (i in 1:length(treat_list)){
+    treat<-time%>%
+      filter(treatment==treat_list[i])
+    
+    treat_id<-treat_list[i]
+      
+      subset_ct<-merge(control, treat, by=c("site_project_comm", "calendar_year","genus_species"), all=T)%>%
+        filter(relcov.x!=0|relcov.y!=0)
+      
+      MRSc_diff<-mean(abs(subset_ct$rank.x-subset_ct$rank.y))/nrow(subset_ct)
+      spdiff<-subset_ct%>%
+        filter(relcov.x==0|relcov.y==0)
+      
+      spdiffc<-nrow(spdiff)/nrow(subset_ct)
+      
+      metrics<-data.frame(site_project_comm=spc, treatment=treat_id, calendar_year=time_id, MRSc_diff=MRSc_diff, spdiffc=spdiffc)#spc_id
+      ##calculate differences for these year comparison and rbind to what I want.
+      
+      reordering_ct=rbind(metrics, reordering_ct)  
+    }
+  }
+}
+
+reorder_ct_raw<-reordering_ct
+
+ggplot(subset(reorder_ct_raw, site_project_comm=="KNZ_pplots_0"), aes(x=calendar_year, y=MRSc_diff))+
+  geom_point(aes(color=treatment))+
+  geom_line(aes(group=treatment))+
+  scale_color_manual(values=c("blue","blue","blue", "red","purple","purple","purple"))
+
+ggplot(subset(reorder_ct_raw, site_project_comm=="KNZ_pplots_0"), aes(x=calendar_year, y=spdiffc))+
+  geom_point(aes(color=treatment))+
+  geom_line(aes(group=treatment))+
+  scale_color_manual(values=c("blue","blue","blue", "red","purple","purple","purple"))
+

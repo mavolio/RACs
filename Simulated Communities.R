@@ -98,7 +98,7 @@ comm2<-community%>%
 
 write.csv(comm2, "~/Documents/SESYNC/SESYNC_RACs/R Files/SimCom.csv")
 
-###just have a single community with no replicates
+###just have a single community with no replicates - not doing b/c this is not a good idea
 kappa <- c(0.4, 2, 10)
 m <- c(5, 20, 50) 
 df <- expand.grid(kappa = kappa, m = m)
