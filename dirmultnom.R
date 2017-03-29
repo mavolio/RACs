@@ -88,48 +88,89 @@
 #'   xlab('Repeated measure from one assemblage') +
 #'   ylab('Bray-Curtis Dissimilarity')
 #'   
-rDM <- function(n, m, size, gamma, alpha, beta, lambda, theta, sigma, shift=TRUE) {
+rabundance <- function(n, size, sites, iterations, alpha, gamma, gamma_rho, site_rho, sigma, theta, shift=TRUE) {
+  require(MASS)
+#  require(tidyr)
+#  require(slam)
 
-  # Choose sampling probability for each of gamma species, where
-  # beta increases species turnover between function calls
-  # FIXME not exactly sure what beta will do
-  prob <- rgamma(gamma, lambda)
-  prob <- prob / sum(prob)
-  pos <- sample.int(gamma, gamma, prob=(rank(prob)/gamma) ^ (1/beta))
-  prob <- prob[pos]
-
-  # Choose a subset of alpha (maximum local species richness) species
-  # according to prob, for each of n communities
-  J <- replicate(m, sample.int(gamma, alpha, prob=prob))
-  J <- t(J)
-
-  # Set the mean of a Dirichlet distribution as
-  # a power of the probs of the alpha species within each 
-  # sample, and the sum of the Dirichlet params to sigma
-  prob <- prob^(1/theta)
-  prob <- matrix(prob[J], nrow=m)
-  prob <- prob / rowSums(prob)
-  a <- sigma * prob
-
-  # Sample one Dirichlet for each community
-  p <- matrix(rgamma(m * alpha, a), nrow=m)
-  p <- p / rowSums(p)
+  jj <- gamma * sites
+  kk <- iterations + 1
   
-  # Sample n Multinomials for each community
+  # initial parameters
+  a <- diag(sigma, jj)
+  bdf <- expand.grid(species=1:gamma, site=1:sites)
+  bdf <- lapply(bdf, factor)
+  b <- model.matrix( ~ -1 + species, data=bdf)
+  b <- cbind(b, model.matrix( ~ -1 + site, data=bdf))
+  
+  # species correlation
+  gamma_mu <- matrix(0, nrow=gamma)
+  gamma_Sigma <- matrix(gamma_rho, nrow=gamma, ncol=gamma)
+  diag(gamma_Sigma) <- 1
+  gamma_Sigma <- t(chol(gamma_Sigma))
+  
+  # site correlation
+  site_mu <- matrix(0, nrow=sites)
+  site_Sigma <- matrix(site_rho, nrow=sites, ncol=sites)
+  diag(site_Sigma) <- 1
+  site_Sigma <- t(chol(site_Sigma))
+  
+  # update b with correlations
+  zero <- matrix(0, nrow=gamma, ncol=sites)
+  Sigma <- rbind(
+    cbind(gamma_Sigma, zero),
+    cbind(t(zero), site_Sigma))
+  b <- b %*% Sigma
+  nn <- gamma + sites
+
+  # initialize at long run expectation
+  # (assuming -1 < eigs(a) < 1)
+  Sigma <- solve(diag(1, jj) - a %*% t(a), b %*% t(b))
+  x <- matrix(0, nrow=jj, ncol=kk)
+  x[, 1] <- mvrnorm(1, mu=rep(0, jj), Sigma=Sigma)
+  
+  # simulate
+  for (i in 2:kk) {
+    x[, i] <- a %*% x[, i-1] + b %*% rnorm(nn, 0, 1)
+  }
+  x <- x[, 2:kk]
+  dim(x) <- c(gamma, sites, iterations)
+  
+  # exp transform
+  x <- exp(x)
+  
+  # select alpha species from x
+  I <- apply(x, c(2, 3), function(x) sample.int(gamma, alpha, prob = x))
+  ijk <- which(I > 0, arr.ind=TRUE)
+  ijk[, 1] <- c(I)
+  x <- x[ijk]
+  dim(x) <- c(alpha, sites, iterations)
+  
+  # apply evenness power transform
+  x <- x^(1/theta)
+  
+  # normalize to probabilities
+  p <- x / rep(apply(x, c(2, 3), sum), each=alpha)
+  
+  # sample n multinomials for each site and iteration
   if (shift) {
     s <- as.integer(shift)
-    abund <- apply(p, 1, rmultinom, n=n, size=(size - s*alpha)) + s
+    abund <- apply(p, c(2, 3), rmultinom, n=n, size=(size - s * alpha)) + s
   } else {
-    abund <- apply(p, 1, rmultinom, n=n, size=size)
+    abund <- apply(p, c(2, 3), rmultinom, n=n, size=size)
   }
-  abund <- array(abund, dim=c(alpha, n, m))
-  abund <- aperm(abund, c(2,1,3))
+  dim(abund) <- c(alpha, n, sites, iterations)
 
-  # Assign to species number (out of 1:gamma), by
-  # populating a sparse array of abundances
-  ijk <- which(abund > 0, arr.ind=TRUE)
-  iJk <- ijk
-  iJk[, 2] <- J[ijk[, c(3, 2)]]
-  simple_sparse_array(i=iJk, v=abund[ijk], dim=c(n, gamma, m))
+  # assign to species number (out of 1:gamma)
+  ijkl <- which(abund > 0, arr.ind=TRUE)
+  Ijkl <- ijkl
+  Ijkl[ , 1] <- I[matrix(ijkl[ , c(1, 3, 4)], ncol=3)]
+  
+  # return result as data frame
+  result <- data.frame(Ijkl)
+  result <- as.data.frame(lapply(result, factor))
+  colnames(result) <- c('species', 'rep', 'site', 'iteration')
+  result$abundance <- abund[ijkl]
+  return(result)
 }
 
