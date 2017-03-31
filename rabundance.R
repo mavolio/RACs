@@ -87,44 +87,63 @@
 #'   geom_point() +
 #'   xlab('Repeated measure from one assemblage') +
 #'   ylab('Bray-Curtis Dissimilarity')
-#'   
-rabundance <- function(n, size, sites, iterations, alpha, gamma, gamma_rho, site_rho, sigma, theta, shift=TRUE) {
+#'
+rabundance <- function(n, size, sites, iterations, alpha,
+                       gamma, site_rho, sigma, theta, shift=TRUE) {
+  
   require(MASS)
-#  require(tidyr)
-#  require(slam)
-
+  
   jj <- gamma * sites
   kk <- iterations + 1
   
-  # initial parameters
+  # autoregressive (VARX(1)) parameters
   a <- diag(sigma, jj)
   bdf <- expand.grid(species=1:gamma, site=1:sites)
   bdf <- lapply(bdf, factor)
   b <- model.matrix( ~ -1 + species, data=bdf)
-  b <- cbind(b, model.matrix( ~ -1 + site, data=bdf))
+  if (sites > 1) {
+    b <- cbind(b, model.matrix( ~ -1 + site, data=bdf))
+  } else {
+    b <- cbind(b, 1)
+  }
   
   # species correlation
-  gamma_mu <- matrix(0, nrow=gamma)
-  gamma_Sigma <- matrix(gamma_rho, nrow=gamma, ncol=gamma)
+  # fixed at max negative compound symmetry
+  gamma_Sigma <- matrix(-1/(gamma-1), nrow=gamma, ncol=gamma) # FIXME negative gamma_rho causing error
   diag(gamma_Sigma) <- 1
-  gamma_Sigma <- t(chol(gamma_Sigma))
+  gamma_Sigma_q <- tryCatch(
+    chol(gamma_Sigma),
+    error=function(e){
+      q <- chol(gamma_Sigma, TRUE)
+      r <- attr(q, 'rank')
+      q[-(1:r), -(1:r)] <- 0
+      q[, order(attr(q, 'pivot'))]
+    }
+  )
   
   # site correlation
-  site_mu <- matrix(0, nrow=sites)
   site_Sigma <- matrix(site_rho, nrow=sites, ncol=sites)
   diag(site_Sigma) <- 1
-  site_Sigma <- t(chol(site_Sigma))
+  site_Sigma_q <- tryCatch(
+    chol(site_Sigma),
+    error=function(e){
+      q <- chol(site_Sigma, TRUE)
+      r <- attr(q, 'rank')
+      q[-(1:r), -(1:r)] <- 0
+      q[, order(attr(q, 'pivot'))]
+    }
+  )
   
   # update b with correlations
-  zero <- matrix(0, nrow=gamma, ncol=sites)
-  Sigma <- rbind(
-    cbind(gamma_Sigma, zero),
-    cbind(t(zero), site_Sigma))
-  b <- b %*% Sigma
+  off_diagonal <- matrix(0, nrow=gamma, ncol=sites)
+  Sigma_q <- rbind(
+    cbind(t(gamma_Sigma_q), off_diagonal),
+    cbind(t(off_diagonal), t(site_Sigma_q)))
+  b <- b %*% Sigma_q
   nn <- gamma + sites
 
   # initialize at long run expectation
-  # (assuming -1 < eigs(a) < 1)
+  # (assuming -1 < eigen(a)$values < 1)
   Sigma <- solve(diag(1, jj) - a %*% t(a), b %*% t(b))
   x <- matrix(0, nrow=jj, ncol=kk)
   x[, 1] <- mvrnorm(1, mu=rep(0, jj), Sigma=Sigma)
@@ -133,13 +152,14 @@ rabundance <- function(n, size, sites, iterations, alpha, gamma, gamma_rho, site
   for (i in 2:kk) {
     x[, i] <- a %*% x[, i-1] + b %*% rnorm(nn, 0, 1)
   }
-  x <- x[, 2:kk]
-  dim(x) <- c(gamma, sites, iterations)
   
-  # exp transform
-  x <- exp(x)
+  # center and exp transform
+  x <- x - apply(x, 1, mean)
+  x <- x[, 2:kk, drop=FALSE]
+  x <- exp(x / max(x))
   
   # select alpha species from x
+  dim(x) <- c(gamma, sites, iterations)
   I <- apply(x, c(2, 3), function(x) sample.int(gamma, alpha, prob = x))
   ijk <- which(I > 0, arr.ind=TRUE)
   ijk[, 1] <- c(I)
@@ -173,4 +193,3 @@ rabundance <- function(n, size, sites, iterations, alpha, gamma, gamma_rho, site
   result$abundance <- abund[ijkl]
   return(result)
 }
-
