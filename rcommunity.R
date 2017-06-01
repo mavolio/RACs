@@ -19,35 +19,30 @@
 #' Valid parameter values are
 #' \itemize{
 #' \item{`n`, `size`, `alpha`, `gamma`, `sites`, `iterations`, and `shift`: positive integer}
-#' \item{`theta`: real number in (0, Inf)}
+#' \item{`sigma`, `theta`: real number in (0, Inf)}
 #' \item{`beta`: real number in [0, 1]}
-#' \item{`sigma`: real number in (-1, 1)}
 #' }
 #'
 #' @import slam
 #' @examples
 #' # Generate 5 samples from a single Multinomial distribution
-#' samp <- rcommunity(n = 5, size = 100, sites = 1, iterations = 1, alpha = 10, gamma = 20, beta = 1, sigma = 0, theta = 1)
+#' samp <- rcommunity(n = 5, size = 100, sites = 1, iterations = 1, alpha = 10, gamma = 20, beta = 0, sigma = 1)
 #' 
 #' # Generate a multivariate time series across sites, each of three site-by-iteration
 #' # samples returning abundances for two species drawn from a common three-species pool
 #' demo <- rcommunity(n = 3, size = 100, sites = 3, iterations = 20,
-#'                   alpha = 2, gamma = 3,
-#'                   beta = 0, sigma = 0.9, theta = 0.4)
+#'                   alpha = 3, gamma = 3,
+#'                   beta = 0, sigma = 100, theta = 1)
 #' \dontrun{
 #' library(ggplot2)
 #' ggplot(demo, aes(x = iteration, y = abundance, color = species)) +
 #'   geom_point() +
-#'   facet_wrap(~ site, nrow = 3)
+#'   facet_wrap(~ site, nrow = 3, labeller = label_both)
 #' }
 #'
 rcommunity <- function(n, size, alpha, gamma, theta = 1,
                        sites = 1, beta = 1,
-                       iterations = 1, sigma = 0, shift=TRUE) {
-  
-  if (beta > 1 | beta < 0) {
-    stop("A parameter is outside the allowed range, see ?rcommunity.")
-  }
+                       iterations = 1, sigma = 1, shift=TRUE) {
   
   jj <- gamma * sites
   kk <- iterations
@@ -59,7 +54,7 @@ rcommunity <- function(n, size, alpha, gamma, theta = 1,
   #     positive correlation (1 - beta)
   ## species_Sigma <- matrix(-1/(gamma-1), nrow=gamma, ncol=gamma) # (too) variably negative correlation
   species_Sigma <- matrix(0, nrow=gamma, ncol=gamma) # no correlation
-  diag(species_Sigma) <- 1
+  diag(species_Sigma) <- sigma
   species_Sigma_q <- chol.safe(species_Sigma)
   
   site_Sigma <- matrix(1 - beta, nrow=sites, ncol=sites)
@@ -71,7 +66,7 @@ rcommunity <- function(n, size, alpha, gamma, theta = 1,
 
   # autoregressive process [VARX(1)]
   # x_{t+1} = a %*% x_t + b %*% w_t
-  a <- diag(sigma, jj)
+  a <- diag(sigma / (1 + sigma), jj)
   b <- t(Sigma_q)
   nn <- ncol(b)
   # initialize at long run expectation
@@ -84,22 +79,17 @@ rcommunity <- function(n, size, alpha, gamma, theta = 1,
     x[, i] <- a %*% x[, i-1] + b %*% rnorm(nn)
   }
   
-  # scale, transform and reshape x
-  ## x <- x - apply(x, 1, mean) # try without centering
-  x <- scale(c(x))
-  x <- exp(x - max(x))
+  # select alpha species using x as weights
   dim(x) <- c(gamma, sites, iterations)
-    
-  # select alpha species from x
-  I <- apply(x, c(2, 3), function(x) sample.int(gamma, alpha, prob = x))
+  I <- apply(exp(x - max(x)), c(2, 3), function(x) sample.int(gamma, alpha, prob = x))
   Ijk <- arrayInd(1:length(I), dim(I))
   Ijk[, 1] <- c(I)
   
   # apply evenness power transform and normalize to probabilities
-  p <- x[Ijk]
-  dim(p) <- c(alpha, sites, iterations)
-  p <- p^(1/theta)
-  p <- p / rep(apply(p, c(2, 3), sum), each=alpha)
+  y <- scale(x[Ijk])
+  dim(y) <- c(alpha, sites, iterations)
+  y <- exp(y - max(y))^(1/theta)
+  p <- y / rep(apply(y, c(2, 3), sum), each=alpha)
   
   # sample n multinomials for each site and iteration
   if (shift) {

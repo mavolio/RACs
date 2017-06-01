@@ -32,8 +32,8 @@ S<-function(x){
   length(x1)
 }
 
-#function to calculate EQ evenness from Smith and Wilson 1996
-#' @x the vector of abundances of each species
+#' function to calculate EQ evenness from Smith and Wilson 1996
+#' @param x the vector of abundances of each species
 #' if all abundances are equal it returns a 1
 E_q<-function(x){
   x1<-x[x!=0]
@@ -51,11 +51,11 @@ E_q<-function(x){
   2/pi*atan(b)
 }
 
-#function to calculate E1/D (inverse of Simpson's) from Smith and Wilson 1996
-#' @S the number of species in the sample
-#' @x the vector of abundances of each species
-#' @N the total abundance
-#' @p the vector of relative abundances of each species
+#' function to calculate E1/D (inverse of Simpson's) from Smith and Wilson 1996
+#' @param S the number of species in the sample
+#' @param x the vector of abundances of each species
+#' @param N the total abundance
+#' @param p the vector of relative abundances of each species
 E_simp<-function(x, S=length(x[x!=0]), N=sum(x[x!=0]), ps=x[x!=0]/N, p2=ps*ps ){
   D<-sum(p2)
   (1/D)/S
