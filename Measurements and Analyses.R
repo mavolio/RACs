@@ -8,12 +8,12 @@ library(gridExtra)
 library(reldist)
 library(grid)
 library(gtable)
+library(purrr)
 
-sim<-read.csv("~/Documents/SESYNC/SESYNC_RACs/R Files/SimCom.csv")%>%
-  separate(timestep, c("v","time"), sep=1)%>%
-  select(-X, -kappa, -m, -v)%>%
-  mutate(time=as.numeric(time),
-         id=paste(ComType, rep, sep="::"))
+sim<-read.csv("~/Documents/SESYNC/SESYNC_RACs/R Files/SimCom_June.csv")%>%
+  mutate(time=as.numeric(iteration),
+         id2=paste(id, site, sep="::"))%>%
+  select(-X, -sample, -iteration)
   
 codyndat<-read.csv("~/Dropbox/CoDyn/R Files/11_06_2015_v7/relative cover_nceas and converge_12012015_cleaned.csv")%>%
   gather(species, abundance, sp1:sp99)%>%
@@ -95,12 +95,12 @@ codyndat_diversity <- group_by(codyndat_clean, site_project_comm, experiment_yea
             Gini=mean(Gini),
             E_simp=mean(E_simp))
 
-sim_diversity<-group_by(sim, ComType, time, rep)%>%
+sim_diversity<-group_by(sim, id, site, time)%>%
   summarize(S=S(abundance),
             E_q=E_q(abundance),
             Gini=Gini(abundance),
             E_simp=E_simp(abundance))%>%
-  group_by(ComType, time)%>%
+  group_by(id, time)%>%
   summarize(S=mean(S),
             E_Q=mean(E_q, na.rm=T),
             Gini=mean(Gini),
@@ -120,11 +120,11 @@ codyndat_gains_loss<-merge(codyndat_gain, codyndat_loss, by=c("experiment_year",
   summarize(gain=mean(appearance),
             loss=mean(disappearance))
 
-sim_loss<-turnover(df=sim, time.var="time", species.var="species", abundance.var="abundance", replicate.var="id", metric="disappearance")
-sim_gain<-turnover(df=sim, time.var="time", species.var="species", abundance.var="abundance", replicate.var="id", metric="appearance")
-sim_gains_loss<-merge(sim_gain, sim_loss, by=c("time","id"))%>%
-  separate(id, c("ComType", "plot_id"), sep="::")%>%
-  group_by(ComType, time)%>%
+sim_loss<-turnover(df=sim, time.var="time", species.var="species", abundance.var="abundance", replicate.var="id2", metric="disappearance")
+sim_gain<-turnover(df=sim, time.var="time", species.var="species", abundance.var="abundance", replicate.var="id2", metric="appearance")
+sim_gains_loss<-merge(sim_gain, sim_loss, by=c("time","id2"))%>%
+  separate(id2, into=c("id", 'site'), sep="::")%>%
+  group_by(id, time)%>%
   summarize(gain=mean(appearance),
             loss=mean(disappearance))
 
@@ -202,24 +202,33 @@ codyndat_reorder<-reordering%>%
   summarise(MRSc=mean(MRSc))
 
 ##SIM dataset
+##add in zeros
 
-##add ranks dropping zeros
+##add ranks 
 sim_rank_pres<-sim%>%
   filter(abundance!=0)%>%
   tbl_df()%>%
-  group_by(ComType, time, rep)%>%
+  group_by(id, time, site)%>%
   mutate(rank=rank(-abundance, ties.method = "average"))%>%
   tbl_df()
 
+#adding zeros
+sim_addzero <- sim %>%
+  group_by(id) %>%
+  nest() %>%
+  mutate(spread_df = purrr::map(data, ~spread(., key=species, value=abundance, fill=0) %>%
+                                  gather(key=species, value=abundance, -site, -time, -id2))) %>%
+  unnest(spread_df)
+
 ###make zero abundant species have the rank S+1 (the size of the species pool plus 1)
 ##pull out zeros
-sim_zeros<-sim%>%
+sim_zeros<-sim_addzero%>%
   filter(abundance==0)
 ##get species richness for each year
-sim_S<-group_by(sim, ComType, time, rep)%>%
+sim_S<-group_by(sim, id, time, site, id2)%>%
   summarize(S=S(abundance))
 ##merge together make zero abundances rank S+1
-sim_zero_rank<-merge(sim_zeros, sim_S, by=c("ComType","time","rep"))%>%
+sim_zero_rank<-merge(sim_zeros, sim_S, by=c("id","time","site", "id2"))%>%
   mutate(rank=S+1)%>%
   select(-S)%>%
   tbl_df()
@@ -230,12 +239,12 @@ sim_rank<-rbind(sim_rank_pres, sim_zero_rank)
 
 reordering=data.frame(id=c(), time=c(), MRSc=c())#expeiment year is year of timestep2
 
-spc_id<-unique(sim_rank$id)
+spc_id<-unique(sim_rank$id2)
 
 for (i in 1:length(spc_id)){
   subset<-sim_rank%>%
-    filter(id==spc_id[i])
-  id<-spc_id[i]
+    filter(id2==spc_id[i])
+  id2<-spc_id[i]
   #now get all timestep within an experiment
   timestep<-sort(unique(subset$time))    
   
@@ -246,12 +255,12 @@ for (i in 1:length(spc_id)){
     subset_t2<-subset%>%
       filter(time==timestep[i+1])
     
-    subset_t12<-merge(subset_t1, subset_t2, by=c("species","id"), all=T)%>%
+    subset_t12<-merge(subset_t1, subset_t2, by=c("species","id2"), all=T)%>%
       filter(abundance.x!=0|abundance.y!=0)
     
     MRSc<-mean(abs(subset_t12$rank.x-subset_t12$rank.y))/nrow(subset_t12)
    
-    metrics<-data.frame(id=id, time=timestep[i+1], MRSc=MRSc)#spc_id
+    metrics<-data.frame(id2=id2, time=timestep[i+1], MRSc=MRSc)#spc_id
     ##calculate differences for these year comparison and rbind to what I want.
     
     reordering=rbind(metrics, reordering)  
@@ -259,8 +268,8 @@ for (i in 1:length(spc_id)){
 }
 
 sim_reorder<-reordering%>%
-  separate(id, c("ComType","rep"), sep="::")%>%
-  group_by(ComType, time)%>%
+  separate(id2, c("id","site"), sep="::")%>%
+  group_by(id, time)%>%
   summarise(MRSc=mean(MRSc))
 
 #####Calculating Bray-Curtis both comparing the mean community change between consequtive time steps and the change in dispersion between two time steps.
@@ -334,18 +343,18 @@ codyndat_braycurtis<-bray_curtis
 #Sim dataset
 
 #make a new dataframe with just the label;
-ComType_u<-unique(sim$ComType)
+id_u<-unique(sim$id)
 
 #makes an empty dataframe
-bray_curtis=data.frame(ComType=c(), time=c(), bc_mean_change=c(), bc_dispersion_diff=c()) 
+bray_curtis=data.frame(id=c(), time=c(), bc_mean_change=c(), bc_dispersion_diff=c()) 
 
 #Calculating bc mean change and dispersion
-for(i in 1:length(ComType_u)) {
+for(i in 1:length(id_u)) {
   
   #subsets out each dataset
   subset=sim%>%
-    filter(ComType==ComType_u[i])%>%
-    select(ComType, time, species, abundance, rep)
+    filter(id==id_u[i])%>%
+    select(id, time, species, abundance, site)
   
   #get years
   timestep<-sort(unique(subset$time))
@@ -365,26 +374,26 @@ for(i in 1:length(ComType_u)) {
   
   ##extracting only the comparisions we want year x to year x=1.
   ###(experiment_year is year x+1
-  cent_dist_yrs=data.frame(ComType=ComType_u[i],
+  cent_dist_yrs=data.frame(id=id_u[i],
                            time=timestep[2:length(timestep)],
                            mean_change=diag(cent_dist[2:nrow(cent_dist),1:(ncol(cent_dist)-1)]))
   
   #collecting and labeling distances to centroid from betadisper to get a measure of dispersion and then take the mean for a year
-  disp2=data.frame(ComType=ComType_u[i],
+  disp2=data.frame(id=id_u[i],
                    time=species$time,
-                   rep=species$rep,
+                   site=species$site,
                    dist=disp$distances)%>%
     tbl_df%>%
-    group_by(ComType, time)%>%
+    group_by(id, time)%>%
     summarize(dispersion=mean(dist))
   
   ##subtract consequtive years subtracts year x+1 - x. So if it is positive there was greater dispersion in year x+1 and if negative less dispersion in year x+1
-  disp_yrs=data.frame(ComType=ComType_u[i],
+  disp_yrs=data.frame(id=id_u[i],
                       time=timestep[2:length(timestep)],
                       dispersion_diff=diff(disp2$dispersion))
   
   #merge together change in mean and dispersion data
-  distances<-merge(cent_dist_yrs, disp_yrs, by=c("ComType","time"))
+  distances<-merge(cent_dist_yrs, disp_yrs, by=c("id","time"))
   
   #pasting dispersions into the dataframe made for this analysis
   bray_curtis=rbind(distances, bray_curtis)  
@@ -481,17 +490,17 @@ codyndat_dstar<-d_output%>%
 
 ####Looking at the shape of the curve - cc
 #sim dataset
-d_output=data.frame(site_project_comm=c(), experiment_year=c(), plot_id=c(), Darea=c())#expeiment year is year of timestep2
+d_output=data.frame(id=c(), time=c(), site=c(), Darea=c())#expeiment year is year of timestep2
 
-com<-unique(sim$ComType)
+com<-unique(sim$id)
 
 for (i in 1:length(com)){
   subset<-sim%>%
-    filter(ComType==com[i])
+    filter(id==com[i])
   
   ranks<-subset%>%
     filter(abundance!=0)%>%
-    group_by(time, rep)%>%
+    group_by(time, site)%>%
     mutate(rank=rank(-abundance, ties.method="average"),
            maxrank=max(rank),
            relrank=rank/maxrank)%>%
@@ -508,42 +517,42 @@ for (i in 1:length(com)){
       filter(time==timestep[i])
     
     plots_t1<-subset_t1%>%
-      select(rep)%>%
+      select(site)%>%
       unique()
     
     subset_t2<-ranks%>%
       filter(time==timestep[i+1])
     
     plots_t2<-subset_t2%>%
-      select(rep)%>%
+      select(site)%>%
       unique()
     
-    plots_bothyrs<-merge(plots_t1, plots_t2, by="rep")
+    plots_bothyrs<-merge(plots_t1, plots_t2, by="site")
     #dataset of two years    
     subset_t12<-rbind(subset_t1, subset_t2)
     
     ##dropping plots that were not measured both years
-    subset_t12_2<-merge(plots_bothyrs, subset_t12, by="rep")
+    subset_t12_2<-merge(plots_bothyrs, subset_t12, by="site")
     
     #dropping plots with only 1 species in any of the two years    
     drop<-subset_t12_2%>%
-      group_by(time, rep)%>%
-      mutate(numplots=length(rep))%>%
+      group_by(time, site)%>%
+      mutate(numplots=length(site))%>%
       ungroup()%>%
-      group_by(rep)%>%
+      group_by(site)%>%
       mutate(min=min(numplots))%>%
-      select(rep, min)%>%
+      select(site, min)%>%
       unique()
     
-    subset_t12_3<-merge(subset_t12_2, drop, by="rep")%>%
+    subset_t12_3<-merge(subset_t12_2, drop, by="site")%>%
       filter(min!=1)%>%
       ungroup()%>%
-      group_by(time, rep)%>%
+      group_by(time, site)%>%
       arrange(rank)%>%
       ungroup()
     
     result <- subset_t12_3 %>%
-      group_by(rep) %>%
+      group_by(site) %>%
       do({
         y <- unique(.$time)###assumption this is a length 2 list
         df1 <- filter(., time==y[[1]])
@@ -556,14 +565,14 @@ for (i in 1:length(com)){
         data.frame(Dstar=sum(w*h))#do has to output a dataframe
       })
     
-    d_output1=data.frame(ComType=com_id2, time=timestep[i+1], rep=result$rep, Dstar=result$Dstar)#expeiment year is year of timestep2
+    d_output1=data.frame(id=com_id2, time=timestep[i+1], site=result$site, Dstar=result$Dstar)#expeiment year is year of timestep2
     
     d_output<-rbind(d_output, d_output1)
   }
 }
 
 sim_dstar<-d_output%>% 
-  group_by(ComType, time)%>%
+  group_by(id, time)%>%
   summarise(Dstar=mean(Dstar))
 
   
@@ -575,14 +584,25 @@ merge3<-merge(merge2, codyndat_braycurtis, by=c("site_project_comm","experiment_
 codyndat_allmetrics<-merge(merge3, codyndat_dstar, by=c("site_project_comm","experiment_year"))
 
 #sim
-merge1<-merge(sim_diversity, sim_gains_loss, by=c("ComType","time"))
-merge2<-merge(merge1, sim_reorder, by=c("ComType","time"))
-merge3<-merge(merge2, sim_bray_curtis, by=c("ComType","time"))
-sim_allmetrics<-merge(merge3, sim_dstar, by=c("ComType","time"))
+merge1<-merge(sim_diversity, sim_gains_loss, by=c("id","time"))
+merge2<-merge(merge1, sim_reorder, by=c("id","time"))
+merge3<-merge(merge2, sim_bray_curtis, by=c("id","time"))
+sim_allmetrics<-merge(merge3, sim_dstar, by=c("id","time"))%>%
+  separate(id, into=c("alpha","even","comtype","rep"), sep="_")%>%
+  group_by(alpha, even, comtype, time)%>%
+  summarize(S=mean(S), E_Q=mean(E_Q), gain=mean(gain), loss=mean(loss), MRSc=mean(MRSc), mean_change=mean(mean_change), dispersion_diff=mean(dispersion_diff), Dstar=mean(Dstar))%>%
+  mutate(comtype2=as.factor(comtype))
 
 #graphing this
 pairs(codyndat_allmetrics[,c(3:4,7:12)])
-pairs(sim_allmetrics[,c(3:4,7:12)])
+
+panel.pearson <- function(x, y, ...) {
+  horizontal <- (par("usr")[1] + par("usr")[2]) / 2; 
+  vertical <- (par("usr")[3] + par("usr")[4]) / 2; 
+  text(horizontal, vertical, format(abs(cor(x,y)), digits=2)) 
+}
+
+pairs(sim_allmetrics[,c(5:12)], col=sim_allmetrics$comtype2, upper.panel = panel.pearson)
 
 ##correlations CODYN
 cor.test(codyndat_allmetrics$S, codyndat_allmetrics$E_Q)
@@ -1283,3 +1303,30 @@ grid.arrange(arrangeGrob(se+theme(legend.position="none"),
                          ncol=7), legend, 
              widths=unit.c(unit(1, "npc") - legend$width, legend$width),nrow=1)
 
+#######example in paper for curve comparision.
+time<-c(1,1,1,1,1,1,2,2,2,2,2,2)
+sp<-c(1,2,3,4,5,6,1,3,4,6,7,8)
+relrank<-c(0.333,0.5, 0.667, 0.167, 1, 0.833, 0.167, 0.583, 0.333, 1, 0.833, 0.583)
+cumabund<-c(90,110,125,50,132,131,70,130,110,163,161,150)
+
+df<-data.frame(time, sp, relrank, cumabund)%>%
+  arrange(relrank)
+
+result <- df %>%
+  do({
+    y <- unique(.$time)###assumption this is a length 2 list
+    df1 <- filter(., time==y[[1]])
+    df2 <- filter(., time==y[[2]])
+    sf1 <- stepfun(df1$relrank, c(0, df1$cumabund))
+    sf2 <- stepfun(df2$relrank, c(0, df2$cumabund))
+    r <- sort(unique(c(0, df1$relrank, df2$relrank)))
+    h <- abs(sf1(r) - sf2(r))
+    w <- c(diff(r), 0)
+    data.frame(Dstar=sum(w*h))#do has to output a dataframe
+  })
+
+ggplot(df, aes(x=relrank, y=cumabund, group=time))+
+  geom_step(color=time)+
+  xlab("Relative Rank")+
+  ylab("Cumulative Abundance")+
+  theme_bw()

@@ -6,6 +6,151 @@ library(Kendall)
 library(ggplot2)
 library(gridExtra)
 library(reldist)
+library(lazyeval)
+
+#####  Parameters and argument set up ###########
+
+df_data<-read.csv("~/Documents/SESYNC/SESYNC_RACs/R Files/SimCom_June.csv")%>%
+  mutate(col_abundance_id=abundance,
+         col_time_id=iteration,
+         col_plot_id=site,
+         col_experiment_id=id,
+         col_species_id=species)%>%
+  select(-X, -site, -iteration, -sample, -species, -abundance, -id)
+
+###### Functions used in this script and sourced from other files
+
+### Add function S
+S <- function(x){
+  x1<-x[x!=0]
+  length(x1)
+}
+
+debug(reorder_fun)
+test <- reorder_fun(df_data=df_data,
+                    col_abundance_id="abundance",
+                    col_time_id="iteration",
+                    col_plot_id="site",
+                    col_experiment_id="id",
+                    col_species_id="species")
+############## START SCRIPT ############################
+#### start building the function
+
+reorder_fun <- function(df_data,
+                        col_abundance_id,
+                        col_time_id,
+                        col_plot_id,
+                        col_experiment_id,
+                        col_species_id){
+  ## This function adds calculated species reordering in a plot between two consecutive time points
+    ### INPUTS: a dataframe with 5 columns:
+    #1) site/project/exeriment id
+    #2) time 
+    #3) plot
+    #4) speices name
+    #5) abundance
+  ### OUTPUTS: a dataframe with reordering in it and four
+    #1) site/project/experiment id
+    #2) time
+    #3) plot
+    #4) reordering
+  
+  require("dplyr")
+  require("lazyeval")
+  require("tidyr")
+  
+  ###### Begin script #######
+  ##add ranks 
+  ##without dpylr
+
+rank_pres_sp_fun <- function(df_data,
+                          col_abundance_id,
+                          col_time_id,
+                          col_plot_id,
+                          col_experiment_id,
+                          col_species_id){
+  df_data$id<-paste(df_data$col_experiment_id, df_data$col_time_id, df_data$col_plot_id, sep="::" )
+  
+  unique<-unique(df_data$id)
+  
+  rank_output<-data.frame(id=c(), col_species_id=c(), col_abundance_id=c(), col_time_id=c(), col_plot_id=c(), col_experiment_id=c(), rank=c())
+  
+  test <- lapply(1:length(unique),
+         FUN= ranking_fun,
+         df_data=df_data,
+         col_abundance_id=col_abundance_id)
+
+  test <- lapply(1:length(unique),
+                 FUN= ranking_fun,
+                 df_data=df_data,
+                 col_abundance_id=col_abundance_id)
+  
+  test <- mclapply(1:length(unique),
+                 FUN= ranking_fun,
+                 df_data=df_data,
+                 col_abundance_id=col_abundance_id,
+                 mc.preschedule = FALSE,
+                 mc.cores= detectCores())
+  
+  ranking_fun <- function(i,df_data,col_abundance_id){
+    #for (i in 1:length(unique)){
+    subset<-subset(df_data, id==unique[i])
+    rank_pres<-subset(subset, col_abundance_id!=0)
+    rank_pres$rank<-rank(-rank_pres$col_abundance_id, ties.method = "average")
+    
+    rank_output<-rbind(rank_output, rank_pres)
+    return(rank_output)
+  }
+  
+  return(rank_output)
+}
+  
+  
+  rank_pres2<-aggregate(-col_abundance_id~col_experiment_id+col_time_id+col_plot_id+col_species_id, rank, data=rank_pres1)
+  
+    rank_pres<-df_data%>%
+    filter(abundance!=0)%>%
+    tbl_df()%>%
+    group_by(id, iteration, site)%>%
+    mutate(rank=rank(-abundance,ties.method = "average"))%>%
+    tbl_df()
+  
+  return(rank_pres)
+}
+
+
+  
+  #adding zeros
+  addzero <- df_data %>%
+    group_by(col_experiment_id) %>%
+    nest() %>%
+    mutate(spread_df = purrr::map(data, ~spread(., key=col_species_id, value=col_abundance_id, fill=0) %>%
+                                    gather(key=col_species_id, value=col_abundance_id, -col_plot_id, -col_time_id))) %>%
+    unnest(spread_df)
+  
+  ###make zero abundant species have the rank S+1 (the size of the species pool plus 1)
+  ##pull out zeros
+  zeros<-sim_addzero%>%
+    filter(col_abundance_id==0)
+  ##get species richness for each year
+  richness<-group_by(df_data, col_experiment_id, col_time_id, col_plot_id)%>%
+    summarize(S=S(col_abundance_id))
+  ##merge together make zero abundances rank S+1
+  zero_rank<-merge(sim_zeros, richness, by=c(col_experiment_id,col_time_id,col_plot_id))%>%
+    mutate(rank=S+1)%>%
+    select(-S)%>%
+    tbl_df()
+  ##combine all
+  rank<-rbind(rank_pres, zero_rank)
+  
+  #prepare return dim_df
+  #reorder_obj<- list(dim_df,col_names)
+  #names(reorder_obj)<- c("dim_data_frame","col_names")
+  
+  return(rank)
+}
+
+
 
 ###get corre dataset to work on and focus on familiar examples
 corre<-read.csv("~/Dropbox/converge_diverge/datasets/Longform/SpeciesRelativeAbundance_Dec2016.csv")%>%
@@ -128,7 +273,7 @@ for (i in 1:length(explist)){
     #now get all timestep within an experiment
     timestep<-sort(unique(subset2$calendar_year))    
     
-    for(i in 1:(length(timestep)-1)) {#minus 1 will keep me in year bounds NOT WORKING
+    for(i in 1:(length(timestep)-1)) {#minus 1 will keep me in year bounds
       subset_t1<-subset2%>%
         filter(calendar_year==timestep[i])
       
@@ -172,7 +317,7 @@ ggplot(data=subset(reorder_means,site_project_comm=="NIN_herbdiv_0"), aes(x=cale
   scale_color_manual(values=c("purple","green","purple","black","purple","black","purple","black", "purple","black"))+
   geom_line()
 
-####comparing control versus treatment plots
+########comparing control versus treatment plots
 
 ###need a contorl and treatment column
 corre2<-corre%>%
@@ -244,6 +389,7 @@ for (i in 1:length(explist)){
         filter(relcov.x!=0|relcov.y!=0)
       
       MRSc_diff<-mean(abs(subset_ct$rank.x-subset_ct$rank.y))/nrow(subset_ct)
+      
       spdiff<-subset_ct%>%
         filter(relcov.x==0|relcov.y==0)
       
