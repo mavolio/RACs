@@ -1,3 +1,8 @@
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(vegan)
+library(codyn)
 # targets
 # richness: 5, 20, 50
 # evenness (inv Simpsons as E1/D from Smith & Wilson 1996): 0.2, 0.5, 0.8
@@ -104,3 +109,54 @@ ggplot(param, aes(x=avg_turnover, y=avg_beta_diversity, color = scenario)) +
   scale_y_continuous(limits = c(0, 4), breaks = c(1.5, 3.5), minor_breaks = NULL) +
   xlab('codyn turnover') +
   ylab('pooled S / alpha')
+
+####TO USE
+#combining params and sim dataframes
+#make sites and iterations 10
+#
+grid_param <- expand.grid(
+  rep = 1:3,
+  alpha = c(5, 20, 50),
+  theta = c(0.5, 1, 2)
+)
+#add a uniqu id column of scenario, alpha and theta
+param <- rbind(
+  mutate(grid_param, scenario = 'a',
+         beta = 1,
+         sigma = 5,
+         gamma = round(10 * alpha)),
+  mutate(grid_param,
+         scenario = 'b',
+         beta = 0.1,
+         sigma = 5,
+         gamma = round(1.2 * alpha)),
+  mutate(grid_param,
+         scenario = 'c',
+         beta = 1,
+         sigma = 300,
+         gamma = round(10 * alpha)),
+  mutate(grid_param,
+         scenario = 'd',
+         beta = 0.1,
+         sigma = 0.1,
+         gamma = round(2 * alpha))
+)
+param$id<-paste(param$alpha, param$theta, param$scenario, param$rep, sep="_")
+
+sims <- mapply(rcommunity, n = 1, size = 1000, sites = 10, iterations = 10,
+               gamma = param$gamma,
+               alpha = param$alpha,
+               theta = param$theta,
+               beta = param$beta,
+               sigma = param$sigma,
+               SIMPLIFY = FALSE
+)
+
+df<-data.frame()
+for (i in 1:nrow(param)){
+  sim<-sims[[i]]
+  sim$id<-param[i,"id"]##take for row i the id column
+  df<-rbind(df, sim)
+}
+
+write.csv(df, "~/Documents/SESYNC/SESYNC_RACs/R Files/SimCom_June.csv")

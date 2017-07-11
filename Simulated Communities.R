@@ -129,3 +129,6 @@ comm3<-community1%>%
 
 write.csv(comm3, "~/Documents/SESYNC/SESYNC_RACs/R Files/SimCom_noreps.csv")
 
+###ignore all above, using new appraoch March 29, 2017
+
+test<-rabundance(n=1,size=1000, sites=10, iterations=10, alpha = 5, gamma = 50, theta = 10, gamma_rho = 0.6, site_rho = 0.8, sigma = 0.7)
