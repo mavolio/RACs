@@ -8,7 +8,7 @@ library(gridExtra)
 library(reldist)
 library(lazyeval)
 
-##this is not working!!!
+##this is not working!dalkjfslda;kjdf;!!
 
 #####  Parameters and argument set up ###########
 
