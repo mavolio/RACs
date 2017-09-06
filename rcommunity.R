@@ -69,11 +69,18 @@ rcommunity <- function(n, size, alpha, gamma, theta = 1,
   a <- diag(sigma / (1 + sigma), jj)
   b <- t(Sigma_q)
   nn <- ncol(b)
-  # initialize at long run expectation
+  # initialize at stationary solution
   # (assuming -1 < eigen(a)$values < 1)
-  eq_Sigma <- solve(diag(1, jj) - a %*% t(a), b %*% t(b))
+  ## from here to "## there" is the general solution
+  # eq_Sigma <- solve(diag(1, jj) - a %*% t(a), b %*% t(b))
+  # x <- matrix(0, nrow=jj, ncol=kk)
+  # x[, 1] <- mvnfast::rmvn(1, mu=rep(0, jj), sigma=eq_Sigma)
+  ## there
+  ## from here to "## there" works (faster) in case
+  ## a is diagonal with all a_{ii} equal
   x <- matrix(0, nrow=jj, ncol=kk)
-  x[, 1] <- MASS::mvrnorm(1, mu=rep(0, jj), Sigma=eq_Sigma)
+  x[, 1] <- (1 - a[[1, 1]]^2)^(-1/2) * b %*% matrix(rnorm(jj), ncol = 1)
+  ## there
   # simulate
   for (i in seq_len(kk - 1) + 1) {
     x[, i] <- a %*% x[, i-1] + b %*% rnorm(nn)
