@@ -40,9 +40,9 @@
 #'   facet_wrap(~ site, nrow = 3, labeller = label_both)
 #' }
 #'
-rcommunity <- function(n, size, alpha, gamma, theta = 1,
-                       sites = 1, beta = 1,
-                       iterations = 1, sigma = 1, shift=TRUE) {
+rcommunity <- function(n, size, alpha, gamma,
+                       theta = 1, beta = 1, sigma = 1,
+                       sites = 1, iterations = 1, shift=TRUE) {
   
   jj <- gamma * sites
   kk <- iterations
@@ -86,9 +86,9 @@ rcommunity <- function(n, size, alpha, gamma, theta = 1,
     x[, i] <- a %*% x[, i-1] + b %*% rnorm(nn)
   }
   
-  # select alpha species using x as weights
+  # select max alpha species in x
   dim(x) <- c(gamma, sites, iterations)
-  I <- apply(exp(x - max(x)), c(2, 3), function(x) sample.int(gamma, alpha, prob = x))
+  I <- apply(x, c(2, 3), function(z) which(rank(-z) <= alpha))
   Ijk <- arrayInd(1:length(I), dim(I))
   Ijk[, 1] <- c(I)
   
