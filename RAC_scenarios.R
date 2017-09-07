@@ -13,8 +13,8 @@ library(codyn)
 param <- expand.grid(
   rep = 1:50,
   alpha = c(5, 20, 50),
-  gamma = 80,
-  theta = c(0.5, 1, 2)
+  gamma = 120,
+  theta = c(0.7, 1.4, 2.5)
 )
 # run simulations
 sims <- mapply(rcommunity, n = 1, size = 1000,
@@ -46,28 +46,25 @@ ggplot(param, aes(x = avg_richness, y = avg_evenness, color = theta)) +
 grid_param <- expand.grid(
   rep = 1:5,
   alpha = c(5, 20, 50),
-  theta = c(0.5, 1, 2)
+  theta = c(0.7, 1.4, 2.5)
 )
 param <- rbind(
-  mutate(grid_param, scenario = 'a',
+  mutate(grid_param, scenario = 'a', # high beta diversity, high turnover
+         gamma = 10 * alpha,
          beta = 1,
-         sigma = 5,
-         gamma = round(10 * alpha)),
-  mutate(grid_param,
-         scenario = 'b',
+         sigma = 0.3),
+  mutate(grid_param, scenario = 'b', # low beta diversity, low turnover
+         gamma = 3 * alpha,
          beta = 0.1,
-         sigma = 5,
-         gamma = round(1.2 * alpha)),
-  mutate(grid_param,
-         scenario = 'c',
+         sigma = 0.03),
+  mutate(grid_param, scenario = 'c', # high beta diversity, low turnover
+         gamma = 10 * alpha,
          beta = 1,
-         sigma = 300,
-         gamma = round(10 * alpha)),
-  mutate(grid_param,
-         scenario = 'd',
+         sigma = 0.02),
+  mutate(grid_param, scenario = 'd', # low beta diversity, high turnover
+         gamma = 3 * alpha,
          beta = 0.1,
-         sigma = 0.1,
-         gamma = round(2 * alpha))
+         sigma = 0.7)
 )
 # run simulations
 sims <- mapply(rcommunity, n = 1, size = 1000, sites = 3, iterations = 3,
