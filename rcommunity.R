@@ -54,7 +54,7 @@ rcommunity <- function(n, size, alpha, gamma, theta = 1,
   #     positive correlation (1 - beta)
   ## species_Sigma <- matrix(-1/(gamma-1), nrow=gamma, ncol=gamma) # (too) variably negative correlation
   species_Sigma <- matrix(0, nrow=gamma, ncol=gamma) # no correlation
-  diag(species_Sigma) <- sigma
+  diag(species_Sigma) <- 1 - (1 - sigma)^2
   species_Sigma_q <- chol.safe(species_Sigma)
   
   site_Sigma <- matrix(1 - beta, nrow=sites, ncol=sites)
@@ -66,7 +66,7 @@ rcommunity <- function(n, size, alpha, gamma, theta = 1,
 
   # autoregressive process [VARX(1)]
   # x_{t+1} = a %*% x_t + b %*% w_t
-  a <- diag(sigma / (1 + sigma), jj)
+  a <- diag(1 - sigma, jj)
   b <- t(Sigma_q)
   nn <- ncol(b)
   # initialize at stationary solution
