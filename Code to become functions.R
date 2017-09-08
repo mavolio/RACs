@@ -8,6 +8,8 @@ library(gridExtra)
 library(reldist)
 library(lazyeval)
 
+##this is not working!dalkjfslda;kjdf;!!
+
 #####  Parameters and argument set up ###########
 
 df_data<-read.csv("~/Documents/SESYNC/SESYNC_RACs/R Files/SimCom_June.csv")%>%
