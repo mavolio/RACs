@@ -112,31 +112,27 @@ ggplot(param, aes(x=avg_turnover, y=avg_beta_diversity, color = scenario)) +
 #make sites and iterations 10
 #
 grid_param <- expand.grid(
-  rep = 1:3,
+  rep = 1:5,
   alpha = c(5, 20, 50),
-  theta = c(0.5, 1, 2)
+  theta = c(0.7, 1.4, 2.5)
 )
-#add a uniqu id column of scenario, alpha and theta
 param <- rbind(
-  mutate(grid_param, scenario = 'a',
+  mutate(grid_param, scenario = 'a', # high beta diversity, high turnover
+         gamma = 10 * alpha,
          beta = 1,
-         sigma = 5,
-         gamma = round(10 * alpha)),
-  mutate(grid_param,
-         scenario = 'b',
+         sigma = 0.3),
+  mutate(grid_param, scenario = 'b', # low beta diversity, low turnover
+         gamma = 3 * alpha,
          beta = 0.1,
-         sigma = 5,
-         gamma = round(1.2 * alpha)),
-  mutate(grid_param,
-         scenario = 'c',
+         sigma = 0.03),
+  mutate(grid_param, scenario = 'c', # high beta diversity, low turnover
+         gamma = 10 * alpha,
          beta = 1,
-         sigma = 300,
-         gamma = round(10 * alpha)),
-  mutate(grid_param,
-         scenario = 'd',
+         sigma = 0.02),
+  mutate(grid_param, scenario = 'd', # low beta diversity, high turnover
+         gamma = 3 * alpha,
          beta = 0.1,
-         sigma = 0.1,
-         gamma = round(2 * alpha))
+         sigma = 0.7)
 )
 param$id<-paste(param$alpha, param$theta, param$scenario, param$rep, sep="_")
 
@@ -146,6 +142,7 @@ sims <- mapply(rcommunity, n = 1, size = 1000, sites = 10, iterations = 10,
                theta = param$theta,
                beta = param$beta,
                sigma = param$sigma,
+               shift=F,# allows richness to vary
                SIMPLIFY = FALSE
 )
 
@@ -156,4 +153,4 @@ for (i in 1:nrow(param)){
   df<-rbind(df, sim)
 }
 
-write.csv(df, "~/Documents/SESYNC/SESYNC_RACs/R Files/SimCom_June.csv")
+write.csv(df, "~/Dropbox/SESYNC/SESYNC_RACs/R Files/SimCom_Sept.csv")
