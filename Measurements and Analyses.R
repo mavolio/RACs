@@ -575,7 +575,7 @@ sim_dstar<-d_output%>%
   group_by(id, time)%>%
   summarise(Dstar=mean(Dstar))
 
-#######trying to look at spatail differences.
+#######trying to look at spatial differences.
 sim_subset<-sim%>%
   separate(id, into=c("alpha", "even", "comtype", "rep"), sep="_")%>%
   filter(time==1&rep==1)%>%
@@ -611,7 +611,8 @@ ggplot(data=sp_output, aes(x=NMDS1, y=NMDS2, color=comtype))+
 merge1<-merge(codyndat_diversity, codyndat_gains_loss, by=c("site_project_comm","experiment_year"))
 merge2<-merge(merge1, codyndat_reorder, by=c("site_project_comm","experiment_year"))
 merge3<-merge(merge2, codyndat_braycurtis, by=c("site_project_comm","experiment_year"))
-codyndat_allmetrics<-merge(merge3, codyndat_dstar, by=c("site_project_comm","experiment_year"))
+merge4<-merge(merge3, codyndat_dstar, by=c("site_project_comm","experiment_year"))
+codyndat_allmetrics<-merge(merge4, codyndat_info, by="site_project_comm")
 
 #sim
 merge1<-merge(sim_diversity, sim_gains_loss, by=c("id","time"))
@@ -625,8 +626,6 @@ sim_allmetrics<-merge(merge3, sim_dstar, by=c("id","time"))%>%
 sim_allmetrics$comtype2<-as.factor(sim_allmetrics$comtype)
 
 #graphing this
-pairs(codyndat_allmetrics[,c(3:4,7:12)])
-
 panel.pearson <- function(x, y, ...) {
   horizontal <- (par("usr")[1] + par("usr")[2]) / 2; 
   vertical <- (par("usr")[3] + par("usr")[4]) / 2; 
@@ -634,6 +633,7 @@ panel.pearson <- function(x, y, ...) {
 }
 
 pairs(sim_allmetrics[,c(5:12)], col=sim_allmetrics$comtype2, upper.panel = panel.pearson)
+pairs(codyndat_allmetrics[,c(3:4,7:12)], col=codyndat_allmetrics$num_plots, upper.panel = panel.pearson)
 
 ##correlations CODYN
 cor.test(codyndat_allmetrics$S, codyndat_allmetrics$E_Q)
