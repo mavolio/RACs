@@ -10,7 +10,7 @@ library(grid)
 library(gtable)
 library(purrr)
 
-sim<-read.csv("~/Documents/SESYNC/SESYNC_RACs/R Files/SimCom_June.csv")%>%
+sim<-read.csv("~/Dropbox/SESYNC/SESYNC_RACs/R Files/SimCom_Sept.csv")%>%
   mutate(time=as.numeric(iteration),
          id2=paste(id, site, sep="::"))%>%
   select(-X, -sample, -iteration)
@@ -575,7 +575,37 @@ sim_dstar<-d_output%>%
   group_by(id, time)%>%
   summarise(Dstar=mean(Dstar))
 
-  
+#######trying to look at spatail differences.
+sim_subset<-sim%>%
+  separate(id, into=c("alpha", "even", "comtype", "rep"), sep="_")%>%
+  filter(time==1&rep==1)%>%
+  mutate(alphaeven=paste(alpha, even, sep="_"))
+
+sp_output=data.frame()
+
+id<-unique(sim_subset$alphaeven)
+
+for (i in 1:length(id)){
+  species<-sim_subset%>%
+    filter(alphaeven==id[i])%>%
+  spread(species, abundance, fill=0)
+
+mds<-metaMDS(species[,9:ncol(species)])
+
+info<-species[,1:8]
+
+scores <- data.frame(scores(mds, display="sites"))
+scores2<- cbind(info, scores)
+
+sp_output<-rbind(sp_output,scores2)
+}
+
+theme_set(theme_bw(12))
+ggplot(data=sp_output, aes(x=NMDS1, y=NMDS2, color=comtype))+
+  geom_point()+
+  scale_color_manual(values=c("black","red","green","blue"))+
+  facet_wrap(~alphaeven, ncol=3, scales="free")
+
 ####MERGING TO A SINGE DATASET
 #codyn
 merge1<-merge(codyndat_diversity, codyndat_gains_loss, by=c("site_project_comm","experiment_year"))
@@ -590,8 +620,9 @@ merge3<-merge(merge2, sim_bray_curtis, by=c("id","time"))
 sim_allmetrics<-merge(merge3, sim_dstar, by=c("id","time"))%>%
   separate(id, into=c("alpha","even","comtype","rep"), sep="_")%>%
   group_by(alpha, even, comtype, time)%>%
-  summarize(S=mean(S), E_Q=mean(E_Q), gain=mean(gain), loss=mean(loss), MRSc=mean(MRSc), mean_change=mean(mean_change), dispersion_diff=mean(dispersion_diff), Dstar=mean(Dstar))%>%
-  mutate(comtype2=as.factor(comtype))
+  summarize(S=mean(S), E_Q=mean(E_Q), gain=mean(gain), loss=mean(loss), MRSc=mean(MRSc), mean_change=mean(mean_change), dispersion_diff=mean(dispersion_diff), Dstar=mean(Dstar))
+
+sim_allmetrics$comtype2<-as.factor(sim_allmetrics$comtype)
 
 #graphing this
 pairs(codyndat_allmetrics[,c(3:4,7:12)])

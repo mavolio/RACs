@@ -40,9 +40,9 @@
 #'   facet_wrap(~ site, nrow = 3, labeller = label_both)
 #' }
 #'
-rcommunity <- function(n, size, alpha, gamma, theta = 1,
-                       sites = 1, beta = 1,
-                       iterations = 1, sigma = 1, shift=TRUE) {
+rcommunity <- function(n, size, alpha, gamma,
+                       theta = 1, beta = 1, sigma = 1,
+                       sites = 1, iterations = 1, shift=TRUE) {
   
   jj <- gamma * sites
   kk <- iterations
@@ -54,7 +54,7 @@ rcommunity <- function(n, size, alpha, gamma, theta = 1,
   #     positive correlation (1 - beta)
   ## species_Sigma <- matrix(-1/(gamma-1), nrow=gamma, ncol=gamma) # (too) variably negative correlation
   species_Sigma <- matrix(0, nrow=gamma, ncol=gamma) # no correlation
-  diag(species_Sigma) <- sigma
+  diag(species_Sigma) <- 1 - (1 - sigma)^2
   species_Sigma_q <- chol.safe(species_Sigma)
   
   site_Sigma <- matrix(1 - beta, nrow=sites, ncol=sites)
@@ -66,7 +66,7 @@ rcommunity <- function(n, size, alpha, gamma, theta = 1,
 
   # autoregressive process [VARX(1)]
   # x_{t+1} = a %*% x_t + b %*% w_t
-  a <- diag(sigma / (1 + sigma), jj)
+  a <- diag(1 - sigma, jj)
   b <- t(Sigma_q)
   nn <- ncol(b)
   # initialize at stationary solution
@@ -86,9 +86,9 @@ rcommunity <- function(n, size, alpha, gamma, theta = 1,
     x[, i] <- a %*% x[, i-1] + b %*% rnorm(nn)
   }
   
-  # select alpha species using x as weights
+  # select max alpha species in x
   dim(x) <- c(gamma, sites, iterations)
-  I <- apply(exp(x - max(x)), c(2, 3), function(x) sample.int(gamma, alpha, prob = x))
+  I <- apply(x, c(2, 3), function(z) which(rank(-z) <= alpha))
   Ijk <- arrayInd(1:length(I), dim(I))
   Ijk[, 1] <- c(I)
   

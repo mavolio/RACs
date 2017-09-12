@@ -11,7 +11,7 @@ param <- expand.grid(
   rep = 1:5,
   alpha = 2^(1:6),                        
   theta = c(0.1, 0.5, 1, 2, 10),          
-  sigma = c(0.1, 10, 100),
+  sigma = c(0.1, 0.5, 0.9),
   beta = c(0, 0.1, 0.4, 0.6)
 )
 # run simulations
@@ -54,7 +54,7 @@ ggplot(param, aes(x = avg_richness, y = avg_evenness, color = theta)) +
 param <- expand.grid(
   rep = 1:25,
   theta = c(0.1, 0.5, 1, 2, 10),          
-  sigma = c(0.1, 10, 100),
+  sigma = c(0.1, 0.5, 0.9),
   beta = c(0, 0.1, 0.4, 0.6)
 )
 # run simulations
@@ -98,11 +98,13 @@ ggplot(param, aes(x=across, y=avg_bray, fill=theta)) +
   scale_y_continuous(limits=c(0, 1)) +
   xlab('Comparisons across ...') +
   ylab('Bray-Curtis Dissimilarity')
-# Comments:
-# The main effect of increasing `sigma` is to increase similarity across iterations, and it slightly increases the variability of across site disimilarity.
-# The main effect of increasing `beta` is to increase dissimilarity across sites, and it does not effect similarity across iterations.
-# The effect of increasing theta is context dependent, although overall it causes all pairwise dissimilarities to approach a constant value (here about 0.5).
-# For high values of theta, variation among species in sampling probability that exists between sites or iterations is washed out, as anticipated.
-# These simulations do not show that `alpha` (here 16) and `gamma` (here 32) control the asymptotic (for high theta) value of disimilarity.
-
-
+# Observations: The main effect of increasing `sigma` is to increase
+# dissimilarity across iterations, although it has small and inconsistent efects
+# on dissimilarity across sites. The main effect of increasing `beta` is to 
+# increase dissimilarity across sites, and it does not effect similarity across 
+# iterations. The effect of increasing theta is context dependent, although 
+# overall it causes all pairwise dissimilarities to approach a constant value 
+# (here about 0.5). For high values of theta, variation among species in 
+# sampling probability that exists between sites or iterations is washed out, as
+# anticipated. These simulations do not show that `alpha` (here 16) and `gamma` 
+# (here 32) control the asymptotic (for high theta) value of disimilarity.
