@@ -1,15 +1,13 @@
-library(tidyr)
-library(dplyr)
+library(tidyverse)
 library(codyn)
 library(vegan)
 library(Kendall)
-library(ggplot2)
 library(gridExtra)
 library(reldist)
 library(grid)
 library(gtable)
-library(purrr)
 
+#home
 sim<-read.csv("~/Dropbox/SESYNC/SESYNC_RACs/R Files/SimCom_Sept.csv")%>%
   mutate(time=as.numeric(iteration),
          id2=paste(id, site, sep="::"))%>%
@@ -20,6 +18,19 @@ codyndat<-read.csv("~/Dropbox/CoDyn/R Files/11_06_2015_v7/relative cover_nceas a
   filter(site_code!="MISS")
 
 codyndat_info<-read.csv("~/Dropbox/CoDyn/R Files/11_06_2015_v7/siteinfo_key.csv")%>%
+  filter(site_project_comm!="")
+
+#work
+sim<-read.csv('C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\R Files/SimCom_Sept.csv')%>%
+  mutate(time=as.numeric(iteration),
+         id2=paste(id, site, sep="::"))%>%
+  select(-X, -sample, -iteration)
+
+codyndat<-read.csv('C:\\Users\\megha\\Dropbox\\CoDyn\\R Files\\11_06_2015_v7\\relative cover_nceas and converge_12012015_cleaned.csv')%>%
+  gather(species, abundance, sp1:sp99)%>%
+  filter(site_code!="MISS")
+
+codyndat_info<-read.csv("C:\\Users\\megha\\Dropbox\\CoDyn\\R Files\\11_06_2015_v7\\siteinfo_key.csv")%>%
   filter(site_project_comm!="")
 
 ###CLEANING CODYN DATASET
@@ -634,6 +645,10 @@ panel.pearson <- function(x, y, ...) {
 
 pairs(sim_allmetrics[,c(5:12)], col=sim_allmetrics$comtype2, upper.panel = panel.pearson)
 pairs(codyndat_allmetrics[,c(3:4,7:12)], col=codyndat_allmetrics$num_plots, upper.panel = panel.pearson)
+
+#how do these correlate with experiment parameters. #remove outliers
+codyndat_allmetrics2<-subset(codyndat_allmetrics, spatial_extent<10000000)
+pairs(codyndat_allmetrics2[,c(9:11, 22,23,30,32)], col=codyndat_allmetrics$num_plots, upper.panel = panel.pearson)
 
 ##correlations CODYN
 cor.test(codyndat_allmetrics$S, codyndat_allmetrics$E_Q)
