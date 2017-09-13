@@ -281,25 +281,29 @@ sim_dstar<-d_output%>%
 
 #
 ###need a contorl and treatment column
-pplots2<-pplots%>%
+
+data<-read.csv("subsetexperiments.csv")
+
+
+data2<-data%>%
   mutate(trt=ifelse(site_code=="KNZ"&treatment=="N1P0", "C", ifelse(site_code=="NIN"&treatment=="1NF","C", ifelse(site_code=="SEV"&treatment=="C","C","T"))))
 
 reordering_ct=data.frame(site_project_comm=c(), treatment=c(), calendar_year=c(), MRSc_diff=c(), spdiffc=c())
 
-explist<-unique(corre2$site_project_comm)
+explist<-unique(data2$id)
 
 for (i in 1:length(explist)){
   ##get zero abundances to be filled in for all species.
   ##this works the first time only
-  subset<-corre2%>%
-    filter(site_project_comm==explist[i])%>%
+  subset<-data2%>%
+    filter(id==explist[i])%>%
     spread(genus_species, relcov, fill=0)
   
   spc<-explist[i]
   
   ##make wide and get averages of each species by treatment
   wide<-subset%>%
-    gather(genus_species, relcov,12:ncol(subset))%>%
+    gather(genus_species, relcov, 12:ncol(subset))%>%
     group_by(site_project_comm, calendar_year, treatment, trt,genus_species)%>%
     summarize(relcov=mean(relcov))
   
