@@ -112,7 +112,7 @@ ggplot(param, aes(x=avg_turnover, y=avg_beta_diversity, color = scenario)) +
 #make sites and iterations 10
 #
 grid_param <- expand.grid(
-  rep = 1:5,
+  rep = 1:10,
   alpha = c(5, 20, 50),
   theta = c(0.7, 1.4, 2.5)
 )
@@ -153,4 +153,4 @@ for (i in 1:nrow(param)){
   df<-rbind(df, sim)
 }
 
-write.csv(df, "~/Dropbox/SESYNC/SESYNC_RACs/R Files/SimCom_Sept.csv")
+write.csv(df, "C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\R Files\\SimCom_Sept28.csv")

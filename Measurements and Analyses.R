@@ -7,8 +7,9 @@ library(reldist)
 library(grid)
 library(gtable)
 
+# Read in Data ------------------------------------------------------------
 #home
-sim<-read.csv("~/Dropbox/SESYNC/SESYNC_RACs/R Files/SimCom_Sept.csv")%>%
+sim<-read.csv("~/Dropbox/SESYNC/SESYNC_RACs/R Files/SimCom_Sept28.csv")%>%
   mutate(time=as.numeric(iteration),
          id2=paste(id, site, sep="::"))%>%
   select(-X, -sample, -iteration)
@@ -21,10 +22,12 @@ codyndat_info<-read.csv("~/Dropbox/CoDyn/R Files/11_06_2015_v7/siteinfo_key.csv"
   filter(site_project_comm!="")
 
 #work
-sim<-read.csv('C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\R Files/SimCom_Sept.csv')%>%
+sim<-read.csv('C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\R Files/SimCom_Sept28.csv')%>%
   mutate(time=as.numeric(iteration),
          id2=paste(id, site, sep="::"))%>%
-  select(-X, -sample, -iteration)
+  select(-X, -sample, -iteration)%>%
+  separate(id, into=c("alpha","theta","scenario","rep"), sep="_", remove=F)%>%
+  mutate(id3=paste(alpha, theta, scenario, sep="_"))
 
 codyndat<-read.csv('C:\\Users\\megha\\Dropbox\\CoDyn\\R Files\\11_06_2015_v7\\relative cover_nceas and converge_12012015_cleaned.csv')%>%
   gather(species, abundance, sp1:sp99)%>%
@@ -45,6 +48,11 @@ splist<-codyndat%>%
 codyndat_clean<-merge(codyndat, splist, by=c("site_code","project_name","community_type","species"))%>%
   select(-X, -sitesubplot, -site_code, -project_name, -community_type)%>%
   mutate(id=paste(site_project_comm, plot_id, sep="::"))
+
+
+
+# Richness Evenness Metrics -----------------------------------------------
+
 
 #####CALCULATING DIVERSITY METRICS WITHIN A TIME STEP FOR EACH REPLICATE AND THEN AVERAGING LATER
 
@@ -111,17 +119,31 @@ sim_diversity<-group_by(sim, id, site, time)%>%
             E_q=E_q(abundance),
             Gini=Gini(abundance),
             E_simp=E_simp(abundance))%>%
+  ungroup()%>%
   group_by(id, time)%>%
   summarize(S=mean(S),
             E_Q=mean(E_q, na.rm=T),
             Gini=mean(Gini),
+            E_simp=mean(E_simp))%>%
+  ungroup()%>%
+  separate(id, into=c("alpha","theta","scenario","rep"), sep="_", remove=F)%>%
+  mutate(id3=paste(alpha, theta, scenario, sep="_"))%>%
+  group_by(id3, time)%>%
+  summarize(S=mean(S),
+            E_Q=mean(E_Q),
+            Gini=mean(Gini),
             E_simp=mean(E_simp))
-
+  
 ###graph this
 pairs(sim_diversity[3:6])
 pairs(codyndat_diversity[3:6])
 
 #####CALCULATING DIVERSITY METRICS ACROSS CONSECUTIVE TIME STEPS
+
+
+# Gains and Losses --------------------------------------------------------
+
+
 #gains and losses
 codyndat_loss<-turnover(df=codyndat_clean, time.var="experiment_year", species.var="species", abundance.var="abundance", replicate.var="id", metric="disappearance")
 codyndat_gain<-turnover(df=codyndat_clean, time.var="experiment_year", species.var="species", abundance.var="abundance", replicate.var="id", metric="appearance")
@@ -137,7 +159,15 @@ sim_gains_loss<-merge(sim_gain, sim_loss, by=c("time","id2"))%>%
   separate(id2, into=c("id", 'site'), sep="::")%>%
   group_by(id, time)%>%
   summarize(gain=mean(appearance),
-            loss=mean(disappearance))
+            loss=mean(disappearance))%>%
+  separate(id, into=c("alpha","theta","scenario","rep"), sep="_", remove=F)%>%
+  mutate(id3=paste(alpha, theta, scenario, sep="_"))%>%
+  group_by(id3, time)%>%
+  summarize(gain=mean(gain),
+            loss=mean(loss))
+
+# Rank Shifts -------------------------------------------------------------
+
 
 ####New appraoch to Rank Shifts
 ###ranks - taking into account that all speices are not always present.
@@ -281,7 +311,14 @@ for (i in 1:length(spc_id)){
 sim_reorder<-reordering%>%
   separate(id2, c("id","site"), sep="::")%>%
   group_by(id, time)%>%
-  summarise(MRSc=mean(MRSc))
+  summarise(MRSc=mean(MRSc))%>%
+  separate(id, into=c("alpha","theta","scenario","rep"), sep="_", remove=F)%>%
+  mutate(id3=paste(alpha, theta, scenario, sep="_"))%>%
+  group_by(id3, time)%>%
+  summarize(MRSc=mean(MRSc))
+
+# Mean Change and Dispersion ----------------------------------------------
+
 
 #####Calculating Bray-Curtis both comparing the mean community change between consequtive time steps and the change in dispersion between two time steps.
 ##Doing this for all years of an experiment at one time point because want to ensure all points are in the same space.
@@ -409,7 +446,15 @@ for(i in 1:length(id_u)) {
   #pasting dispersions into the dataframe made for this analysis
   bray_curtis=rbind(distances, bray_curtis)  
 }
-sim_bray_curtis<-bray_curtis
+sim_bray_curtis<-bray_curtis%>%
+  separate(id, into=c("alpha","theta","scenario","rep"), sep="_", remove=F)%>%
+  mutate(id3=paste(alpha, theta, scenario, sep="_"))%>%
+  group_by(id3, time)%>%
+  summarize(mean_change=mean(mean_change),
+            dispersion_diff=mean(dispersion_diff))
+
+# Curve change ------------------------------------------------------------
+
 
 ####Looking at the shape of the curve - cc
 ###this compares the areas of difference between two curves that are consequtive time steps for a plot.
@@ -584,7 +629,15 @@ for (i in 1:length(com)){
 
 sim_dstar<-d_output%>% 
   group_by(id, time)%>%
-  summarise(Dstar=mean(Dstar))
+  summarise(Dstar=mean(Dstar))%>%
+  separate(id, into=c("alpha","theta","scenario","rep"), sep="_", remove=F)%>%
+  mutate(id3=paste(alpha, theta, scenario, sep="_"))%>%
+  group_by(id3, time)%>%
+  summarize(Dstar=mean(Dstar))
+  
+
+# looking at spatial differences, testing that scenarios work well --------
+
 
 #######trying to look at spatial differences.
 sim_subset<-sim%>%
@@ -617,6 +670,9 @@ ggplot(data=sp_output, aes(x=NMDS1, y=NMDS2, color=comtype))+
   scale_color_manual(values=c("black","red","green","blue"))+
   facet_wrap(~alphaeven, ncol=3, scales="free")
 
+# Merging all metrics to single datasets ----------------------------------
+
+
 ####MERGING TO A SINGE DATASET
 #codyn
 merge1<-merge(codyndat_diversity, codyndat_gains_loss, by=c("site_project_comm","experiment_year"))
@@ -626,29 +682,62 @@ merge4<-merge(merge3, codyndat_dstar, by=c("site_project_comm","experiment_year"
 codyndat_allmetrics<-merge(merge4, codyndat_info, by="site_project_comm")
 
 #sim
-merge1<-merge(sim_diversity, sim_gains_loss, by=c("id","time"))
-merge2<-merge(merge1, sim_reorder, by=c("id","time"))
-merge3<-merge(merge2, sim_bray_curtis, by=c("id","time"))
-sim_allmetrics<-merge(merge3, sim_dstar, by=c("id","time"))%>%
-  separate(id, into=c("alpha","even","comtype","rep"), sep="_")%>%
-  group_by(alpha, even, comtype, time)%>%
-  summarize(S=mean(S), E_Q=mean(E_Q), gain=mean(gain), loss=mean(loss), MRSc=mean(MRSc), mean_change=mean(mean_change), dispersion_diff=mean(dispersion_diff), Dstar=mean(Dstar))
+merge1<-merge(sim_diversity, sim_gains_loss, by=c("id3","time"))
+merge2<-merge(merge1, sim_reorder, by=c("id3","time"))
+merge3<-merge(merge2, sim_bray_curtis, by=c("id3","time"))
+sim_allmetrics<-merge(merge3, sim_dstar, by=c("id3","time"))%>%
+  separate(id3, into=c("alpha","even","comtype"), sep="_")
 
 sim_allmetrics$comtype2<-as.factor(sim_allmetrics$comtype)
+
+write.csv(codyndat_allmetrics,'C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\R Files\\codyn_allmetrics.csv')
+write.csv(sim_allmetrics,'C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\R Files\\sim_allmetrics.csv')
+
+# pair plot graphs --------------------------------------------------------
+
 
 #graphing this
 panel.pearson <- function(x, y, ...) {
   horizontal <- (par("usr")[1] + par("usr")[2]) / 2; 
   vertical <- (par("usr")[3] + par("usr")[4]) / 2; 
-  text(horizontal, vertical, format(abs(cor(x,y)), digits=2)) 
+  text(horizontal, vertical, format(cor(x,y), digits=3, cex=10)) 
 }
 
-pairs(sim_allmetrics[,c(5:12)], col=sim_allmetrics$comtype2, upper.panel = panel.pearson)
-pairs(codyndat_allmetrics[,c(3:4,7:12)], col=codyndat_allmetrics$num_plots, upper.panel = panel.pearson)
+panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...)
+{
+  usr <- par("usr"); on.exit(par(usr))
+  par(usr = c(0, 1, 0, 1))
+  r <- abs(cor(x, y))
+  txt <- format(c(r, 0.123456789), digits = digits)[1]
+  txt <- paste0(prefix, txt)
+  if(missing(cex.cor)) cex.cor <- 0.8/strwidth(txt)
+  test <- cor.test(x,y) 
+  Signif <- symnum(test$p.value, corr = FALSE, na = FALSE, 
+                   cutpoints = c(0, 0.001, 0.01, 0.05, 0.1, 1),
+                   symbols = c("***", "**", "*", ".", " ")) 
+  
+  
+  text(0.5, 0.5, txt, cex = 2)
+  text(0.8, 0.5, Signif, cex=2, col="red")
+}
+  
+  
+pairs(sim_allmetrics[,c(5:6,9:14)], col=sim_allmetrics$comtype2, labels=c("Richness","Evenness","Species \nGains","Species \nLosses","Reordering","Mean \nChange","Dispersion \nDifferences","Curve \nChange"), font.labels=2, cex.labels=2, upper.panel = panel.cor, oma=c(4,4,4,10))
+par(xpd=T)
+
+plot(sim_allmetrics$S, sim_allmetrics$E_Q, col=sim_allmetrics$comtype2)
+legend(10,0.5, legend=levels(sim_allmetrics$comtype2), fill=c("black","red","green", "blue"), pch=21)
+
+pairs(codyndat_allmetrics[,c(3:4,7:12)], col=codyndat_allmetrics$broad_ecosystem_type, upper.panel = panel.pearson)
 
 #how do these correlate with experiment parameters. #remove outliers
 codyndat_allmetrics2<-subset(codyndat_allmetrics, spatial_extent<10000000)
 pairs(codyndat_allmetrics2[,c(9:11, 22,23,30,32)], col=codyndat_allmetrics$num_plots, upper.panel = panel.pearson)
+
+
+# sepearte correlations ---------------------------------------------------
+
+
 
 ##correlations CODYN
 cor.test(codyndat_allmetrics$S, codyndat_allmetrics$E_Q)
@@ -708,6 +797,9 @@ cor.test(sim_allmetrics$loss, sim_allmetrics$Dstar)
 cor.test(sim_allmetrics$mean_change, sim_allmetrics$Dstar)
 cor.test(sim_allmetrics$dispersion_diff, sim_allmetrics$Dstar)
 
+# average for each dataset in codyn across time ---------------------------
+
+
 ###Supplental figure of averaging.
 ave_codyndat_allmetrics<-codyndat_allmetrics%>%
   group_by(site_project_comm)%>%
@@ -719,6 +811,9 @@ ave_codyndat_allmetrics<-codyndat_allmetrics%>%
             mean_change=mean(mean_change),
             dispersion_diff=mean(dispersion_diff))
 pairs(ave_codyndat_allmetrics[,c(2:8)])
+
+
+# big graph (no longer doing this) ----------------------------------------
 
 
 ##graphing this
@@ -1348,6 +1443,9 @@ grid.arrange(arrangeGrob(se+theme(legend.position="none"),
                          dds+theme(legend.position="none"),
                          ncol=7), legend, 
              widths=unit.c(unit(1, "npc") - legend$width, legend$width),nrow=1)
+
+# example of a curve comparision for the paper ----------------------------
+
 
 #######example in paper for curve comparision.
 time<-c(1,1,1,1,1,1,2,2,2,2,2,2)
