@@ -140,6 +140,23 @@ pairs(codyndat_diversity[3:6])
 
 #####CALCULATING DIVERSITY METRICS ACROSS CONSECUTIVE TIME STEPS
 
+codyndat_diversity_diff<-codyndat_diversity%>%
+  ungroup()%>%
+  group_by(site_project_comm)%>%
+  mutate(S_diff=c(NA, diff(S)),
+         E_diff=c(NA, diff(E_Q)))%>%
+  na.omit%>%
+  select(site_project_comm, experiment_year, S_diff, E_diff)
+
+
+sim_diversity_diff<-sim_diversity%>%
+  ungroup()%>%
+  group_by(id3)%>%
+  mutate(S_diff=c(NA, diff(S)),
+         E_diff=c(NA, diff(E_Q)))%>%
+  na.omit%>%
+  select(id3, time, S_diff, E_diff)
+
 
 # Gains and Losses --------------------------------------------------------
 
@@ -251,7 +268,8 @@ sim_rank_pres<-sim%>%
   tbl_df()%>%
   group_by(id, time, site)%>%
   mutate(rank=rank(-abundance, ties.method = "average"))%>%
-  tbl_df()
+  tbl_df()%>%
+  select(site, time, id, id2, species, abundance, rank)
 
 #adding zeros
 sim_addzero <- sim %>%
@@ -679,19 +697,21 @@ merge1<-merge(codyndat_diversity, codyndat_gains_loss, by=c("site_project_comm",
 merge2<-merge(merge1, codyndat_reorder, by=c("site_project_comm","experiment_year"))
 merge3<-merge(merge2, codyndat_braycurtis, by=c("site_project_comm","experiment_year"))
 merge4<-merge(merge3, codyndat_dstar, by=c("site_project_comm","experiment_year"))
-codyndat_allmetrics<-merge(merge4, codyndat_info, by="site_project_comm")
+merge5<-merge(merge4, codyndat_diversity_diff, by=c("site_project_comm","experiment_year"))
+codyndat_allmetrics<-merge(merge5, codyndat_info, by="site_project_comm")
 
 #sim
 merge1<-merge(sim_diversity, sim_gains_loss, by=c("id3","time"))
 merge2<-merge(merge1, sim_reorder, by=c("id3","time"))
 merge3<-merge(merge2, sim_bray_curtis, by=c("id3","time"))
-sim_allmetrics<-merge(merge3, sim_dstar, by=c("id3","time"))%>%
+merge4<-merge(merge3, sim_diversity_diff, by=c("id3","time"))
+sim_allmetrics<-merge(merge4, sim_dstar, by=c("id3","time"))%>%
   separate(id3, into=c("alpha","even","comtype"), sep="_")
 
 sim_allmetrics$comtype2<-as.factor(sim_allmetrics$comtype)
 
-write.csv(codyndat_allmetrics,'C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\R Files\\codyn_allmetrics.csv')
-write.csv(sim_allmetrics,'C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\R Files\\sim_allmetrics.csv')
+write.csv(codyndat_allmetrics,'C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\R Files\\codyn_allmetrics_diff.csv')
+write.csv(sim_allmetrics,'C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\R Files\\sim_allmetrics_diff.csv')
 
 # pair plot graphs --------------------------------------------------------
 
@@ -707,7 +727,7 @@ panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...)
 {
   usr <- par("usr"); on.exit(par(usr))
   par(usr = c(0, 1, 0, 1))
-  r <- abs(cor(x, y))
+  r <- cor(x, y)
   txt <- format(c(r, 0.123456789), digits = digits)[1]
   txt <- paste0(prefix, txt)
   if(missing(cex.cor)) cex.cor <- 0.8/strwidth(txt)
@@ -720,19 +740,39 @@ panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...)
   text(0.5, 0.5, txt, cex = 2)
   text(0.8, 0.5, Signif, cex=2, col="red")
 }
-  
-  
-pairs(sim_allmetrics[,c(5:6,9:14)], col=sim_allmetrics$comtype2, labels=c("Richness","Evenness","Species \nGains","Species \nLosses","Reordering","Mean \nChange","Dispersion \nDifferences","Curve \nChange"), font.labels=2, cex.labels=2, upper.panel = panel.cor, oma=c(4,4,4,10))
+
+sim_allmetrics<-sim_allmetrics%>%
+  mutate(comtype3=as.factor(paste(alpha, even, sep="_")))
+#color by turnover and sucession
+pairs(sim_allmetrics[,c(14:15,9:13,16)], col=sim_allmetrics$comtype2, labels=c("Richness \nChange", "Evenness \nChange","Species \nGains","Species \nLosses","Reordering","Mean \nChange","Dispersion \nDifferences","Curve \nChange"), font.labels=2, cex.labels=2, upper.panel = panel.cor, oma=c(4,4,4,10))
 par(xpd=T)
 
-plot(sim_allmetrics$S, sim_allmetrics$E_Q, col=sim_allmetrics$comtype2)
-legend(10,0.5, legend=levels(sim_allmetrics$comtype2), fill=c("black","red","green", "blue"), pch=21)
+#color by richness_evenness
+pairs(sim_allmetrics[,c(14:15,9:13,16)], col=sim_allmetrics$comtype3, labels=c("Richness \nChange", "Evenness \nChange","Species \nGains","Species \nLosses","Reordering","Mean \nChange","Dispersion \nDifferences","Curve \nChange"), font.labels=2, cex.labels=2, upper.panel = panel.cor, oma=c(4,4,4,10))
 
-pairs(codyndat_allmetrics[,c(3:4,7:12)], col=codyndat_allmetrics$broad_ecosystem_type, upper.panel = panel.pearson)
+## reodering static richness/eveness
+pairs(sim_allmetrics[,c(5,6,11)], col=sim_allmetrics$comtype3, labels=c("Richness", "Evenness","Reordering"), font.labels=2, cex.labels=2, upper.panel = panel.cor, oma=c(4,4,4,10))
+
+## gain loss static richness/eveness
+pairs(sim_allmetrics[,c(5,6,9:10)], col=sim_allmetrics$comtype3, labels=c("Richness", "Evenness","Gains","Losses"), font.labels=2, cex.labels=2, upper.panel = panel.cor, oma=c(4,4,4,10))
+
+## disp, mc, dstar static richness/eveness
+pairs(sim_allmetrics[,c(5,6,12,13,16)], col=sim_allmetrics$comtype3, labels=c("Richness", "Evenness","Mean \nChange","Dispersion \nDifference","Curve \nChange"), font.labels=2, cex.labels=2, upper.panel = panel.cor, oma=c(4,4,4,10))
+
+##codyn graphs
+pairs(codyndat_allmetrics[,c(3:6)],labels=c("Richness", "Evenness \n(EQ)","Evenness \n(Simpsons)","Evenness \n(Gini)"), font.labels=2, cex.labels=2, upper.panel = panel.cor,oma=c(4,4,4,10))
+par(xpd=T)
+
+pairs(codyndat_allmetrics[,c(13,14,7:12)], col=codyndat_allmetrics$broad_ecosystem_type, labels=c("Richness \nChange", "Evenness \nChange","Species \nGains","Species \nLosses","Reordering","Mean \nChange","Dispersion \nDifferences","Curve \nChange"), font.labels=2, cex.labels=2, upper.panel = panel.cor,oma=c(4,4,4,10))
+par(xpd=T)
+
 
 #how do these correlate with experiment parameters. #remove outliers
-codyndat_allmetrics2<-subset(codyndat_allmetrics, spatial_extent<10000000)
-pairs(codyndat_allmetrics2[,c(9:11, 22,23,30,32)], col=codyndat_allmetrics$num_plots, upper.panel = panel.pearson)
+codyndat_allmetrics2<-codyndat_allmetrics%>%
+  mutate(spatialExtent=log(spatial_extent),
+         plotSize=log(plot_size))
+
+pairs(codyndat_allmetrics2[,c(10:11, 23,33, 32,36,37)], labels=c("Mean \nChange","Dispersion \nDifference","MAP","MAT","Number \nPlots","Spatial \nExtent","Plot \nSize"), font.labels=2, cex.labels=2, upper.panel = panel.cor)
 
 
 # sepearte correlations ---------------------------------------------------
