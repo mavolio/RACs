@@ -140,22 +140,44 @@ pairs(codyndat_diversity[3:6])
 
 #####CALCULATING DIVERSITY METRICS ACROSS CONSECUTIVE TIME STEPS
 
-codyndat_diversity_diff<-codyndat_diversity%>%
+codyndat_diversity_diff <- group_by(codyndat_clean, site_project_comm, experiment_year, plot_id) %>% 
+  summarize(S=S(abundance),
+            E_q=E_q(abundance),
+            Gini=Gini(abundance),
+            E_simp=E_simp(abundance))%>%
   ungroup()%>%
-  group_by(site_project_comm)%>%
+  group_by(site_project_comm, plot_id)%>%
+  arrange(site_project_comm, plot_id, experiment_year)%>%
   mutate(S_diff=c(NA, diff(S)),
-         E_diff=c(NA, diff(E_Q)))%>%
-  na.omit%>%
-  select(site_project_comm, experiment_year, S_diff, E_diff)
+         E_diff=c(NA, diff(E_q)))%>%
+  ungroup()%>%
+  group_by(site_project_comm, experiment_year)%>%
+  summarize(S_diff=mean(S_diff, na.rm=T),
+            E_diff=mean(E_diff, na.rm=T))%>%
+  na.omit
 
 
-sim_diversity_diff<-sim_diversity%>%
+sim_diversity_diff<-group_by(sim, id, site, time)%>%
+  summarize(S=S(abundance),
+            E_q=E_q(abundance),
+            Gini=Gini(abundance),
+            E_simp=E_simp(abundance))%>%
   ungroup()%>%
-  group_by(id3)%>%
+  group_by(id, site)%>%
+  arrange(id, site, time)%>%
   mutate(S_diff=c(NA, diff(S)),
-         E_diff=c(NA, diff(E_Q)))%>%
+         E_diff=c(NA, diff(E_q)))%>%
+  ungroup()%>%
+  group_by(id, time)%>%
+  summarize(S_diff=mean(S_diff, na.rm=T),
+            E_diff=mean(E_diff, na.rm=T))%>%
   na.omit%>%
-  select(id3, time, S_diff, E_diff)
+  ungroup()%>%
+    separate(id, into=c("alpha","theta","scenario","rep"), sep="_", remove=F)%>%
+  mutate(id3=paste(alpha, theta, scenario, sep="_"))%>%
+  group_by(id3, time)%>%
+  summarize(S_diff=mean(S_diff),
+            E_diff=mean(E_diff))
 
 
 # Gains and Losses --------------------------------------------------------
@@ -745,7 +767,6 @@ sim_allmetrics<-sim_allmetrics%>%
   mutate(comtype3=as.factor(paste(alpha, even, sep="_")))
 #color by turnover and sucession
 pairs(sim_allmetrics[,c(14:15,9:13,16)], col=sim_allmetrics$comtype2, labels=c("Richness \nChange", "Evenness \nChange","Species \nGains","Species \nLosses","Reordering","Mean \nChange","Dispersion \nDifferences","Curve \nChange"), font.labels=2, cex.labels=2, upper.panel = panel.cor, oma=c(4,4,4,10))
-par(xpd=T)
 
 #color by richness_evenness
 pairs(sim_allmetrics[,c(14:15,9:13,16)], col=sim_allmetrics$comtype3, labels=c("Richness \nChange", "Evenness \nChange","Species \nGains","Species \nLosses","Reordering","Mean \nChange","Dispersion \nDifferences","Curve \nChange"), font.labels=2, cex.labels=2, upper.panel = panel.cor, oma=c(4,4,4,10))
