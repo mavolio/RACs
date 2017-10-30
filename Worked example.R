@@ -8,7 +8,7 @@ library(ggplot2)
 library(vegan)
 library(gridExtra)
 
-dat<-read.csv("~/Dropbox/converge_diverge/datasets/Longform/SpeciesRelativeAbundance_Dec2016.csv")
+dat<-read.csv("~/Dropbox/converge_diverge/datasets/Longform/SpeciesRelativeAbundance_Oct2017.csv")
 
 ##pplots
 pplots<-dat%>%
@@ -116,8 +116,25 @@ ggplot(data=average_test, aes(x=relrank, y=cumabund, group=interaction(calendar_
   facet_wrap(~treatment)
 
 
+theme_set(theme_bw(12))
+###read in datasets where we already hae this
+vpplots<-read.csv("CORRE_RAC_Metrics_Oct2017_allyears_2.csv")%>%
+  filter(site_project_comm=="KNZ_pplots_0")%>%
+  filter(treatment=="N1P0"|treatment=="N2P3")%>%
+  gather(metric, value, S_diff:dispersion_diff)
 
+ggplot(data=vpplots, aes(x=calendar_year, y=value, color=treatment))+
+  geom_point()+
+  geom_line()+
+  facet_wrap(~metric, ncol=3, scale="free")
 
+hpplots<-read.csv("CORRE_ContTreat_Compare_OCT2017.csv")%>%
+  filter(site_project_comm=="KNZ_pplots_0")%>%
+  filter(treatment=="N2P3")%>%
+  select(-plot_mani)%>%
+  gather(metric, value, PCSdiff:disp_diff)
 
-
-
+ggplot(data=hpplots, aes(x=calendar_year, y=value))+
+  geom_point()+
+  geom_line()+
+  facet_wrap(~metric, ncol=3, scale="free")
