@@ -8,30 +8,34 @@ library(ggplot2)
 library(vegan)
 library(gridExtra)
 
+theme_set(theme_bw(20))
+
 dat<-read.csv("~/Dropbox/converge_diverge/datasets/Longform/SpeciesRelativeAbundance_Oct2017.csv")
+
+dat<-read.csv("C:\\Users\\megha\\Dropbox\\converge_diverge\\datasets\\Longform\\SpeciesRelativeAbundance_Oct2017.csv")
 
 ##pplots
 pplots<-dat%>%
-  filter(project_name=="pplots",calendar_year==2002|calendar_year==2014)%>%
+  filter(project_name=="pplots",calendar_year==2002|calendar_year==2014, treatment=="N1P0"|treatment=="N2P3")%>%
   tbl_df()%>%
   group_by(calendar_year, plot_id)%>%
   mutate(rank=rank(-relcov, ties.method="average"),
-         treatment=factor(treatment, levels=c("N1P0","N1P1","N1P2", "N1P3","N2P0","N2P1","N2P2", "N2P3")))###need to do this b/c otherwise R will remember every treatment
+         treatment=factor(treatment, levels=c("N1P0","N2P3")))###need to do this b/c otherwise R will remember every treatment
 
 ##step 1. do NMDS of pretreatment and last year of data
 pplots_wide<-dat%>%
-  filter(project_name=="pplots",calendar_year==2002|calendar_year==2014)%>%
+  filter(project_name=="pplots",calendar_year==2002|calendar_year==2014,treatment=="N1P0"|treatment=="N2P3")%>%
   select(treatment, calendar_year, plot_id, genus_species, relcov)%>%
   spread(genus_species, relcov, fill=0)
 
 plots<-pplots_wide[,1:3]
-mds<-metaMDS(pplots_wide[,4:75], autotransform=FALSE, shrink=FALSE)
+mds<-metaMDS(pplots_wide[,4:54], autotransform=FALSE, shrink=FALSE)
 mds
 
-adonis(pplots_wide[,4:75]~treatment, pplots_wide)
+adonis(pplots_wide[,4:54]~treatment, pplots_wide)
 
 #differences in dispersion?
-dist<-vegdist(pplots_wide[,4:75])
+dist<-vegdist(pplots_wide[,4:54])
 betadisp<-betadisper(dist,pplots_wide$treatment,type="centroid")
 betadisp
 permutest(betadisp)
@@ -40,15 +44,25 @@ scores <- data.frame(scores(mds, display="sites"))  # Extracts NMDS scores for y
 scores2<- cbind(plots, scores) # binds the NMDS scores of year i to all years previously run
 
 ##facet_wrap
-toplot<-scores2%>%
-  filter(treatment=="N1P0"|treatment=="N2P0"|treatment=="N2P3")
+toplot<-scores2
 ##plot NMDS
-ggplot(toplot, aes(x=NMDS1, y=NMDS2, color=as.factor(calendar_year)))+
+ggplot(subset(toplot, treatment=="N1P0"), aes(x=NMDS1, y=NMDS2, color=as.factor(calendar_year)))+
   geom_point(size=5)+
-  facet_wrap(~treatment)
+  scale_color_manual(name="", values=c("black","lightgray"), labels=c("Pre-Treatment","Experiment Year 12"))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),legend.position = "none")
+
+ggplot(subset(toplot, treatment=="N2P3"), aes(x=NMDS1, y=NMDS2, color=as.factor(calendar_year)))+
+  geom_point(size=5)+
+  scale_color_manual(name="", values=c("black","lightgray"), labels=c("Pre-Treatment","Experiment Year 12"))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.position = "none")
+
+
+
+
+
 ##plot RACS
-ractoplot<-pplots%>%
-  filter(treatment=="N1P0"|treatment=="N2P0"|treatment=="N2P3")
+ractoplot<-pplots
+
 ggplot(data=ractoplot, aes(x=rank, y=relcov))+
   geom_point(aes(color=genus_species), size=3)+
   geom_line(aes(group=plot_id), size=0.2)+
@@ -65,11 +79,12 @@ average<-ractoplot%>%
          maxrank=max(rank),
          relrank=rank/maxrank)%>%
   arrange(relrank)%>%
-  mutate(cumabund=cumsum(relcov2))
+  mutate(cumabund=cumsum(relcov2))%>%
+  mutate(year=as.factor(calendar_year))
+  
 
-ggplot(data=average, aes(x=relrank, y=cumabund))+
-  geom_point(size=3)+
-  geom_line(size=1, aes(color=as.factor(calendar_year), group=calendar_year))+
+ggplot(data=average, aes(x=relrank, y=cumabund, color=year))+
+  geom_step(size=1)+
   facet_wrap(~treatment, ncol=2)
 
 ###cherry picked examples
