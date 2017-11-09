@@ -140,46 +140,48 @@ sim_diversity<-group_by(sim, id, site, time)%>%
 pairs(sim_diversity[3:6])
 pairs(codyndat_diversity[3:6])
 
-#####CALCULATING DIVERSITY METRICS ACROSS CONSECUTIVE TIME STEPS
+# #####CALCULATING DIVERSITY METRICS ACROSS CONSECUTIVE TIME STEPS
 
-codyndat_diversity_diff <- group_by(codyndat_clean, site_project_comm, experiment_year, plot_id) %>% 
-  summarize(S=S(abundance),
-            E_q=E_q(abundance),
-            Gini=Gini(abundance),
-            E_simp=E_simp(abundance))%>%
-  ungroup()%>%
-  group_by(site_project_comm, plot_id)%>%
-  arrange(site_project_comm, plot_id, experiment_year)%>%
-  mutate(S_diff=c(NA, diff(S)),
-         E_diff=c(NA, diff(E_q)))%>%
-  ungroup()%>%
-  group_by(site_project_comm, experiment_year)%>%
-  summarize(S_diff=mean(S_diff, na.rm=T),
-            E_diff=mean(E_diff, na.rm=T))%>%
-  na.omit
-
-
-sim_diversity_diff<-group_by(sim, id, site, time)%>%
-  summarize(S=S(abundance),
-            E_q=E_q(abundance),
-            Gini=Gini(abundance),
-            E_simp=E_simp(abundance))%>%
-  ungroup()%>%
-  group_by(id, site)%>%
-  arrange(id, site, time)%>%
-  mutate(S_diff=c(NA, diff(S)),
-         E_diff=c(NA, diff(E_q)))%>%
-  ungroup()%>%
-  group_by(id, time)%>%
-  summarize(S_diff=mean(S_diff, na.rm=T),
-            E_diff=mean(E_diff, na.rm=T))%>%
-  na.omit%>%
-  ungroup()%>%
-    separate(id, into=c("alpha","theta","scenario","rep"), sep="_", remove=F)%>%
-  mutate(id3=paste(alpha, theta, scenario, sep="_"))%>%
-  group_by(id3, time)%>%
-  summarize(S_diff=mean(S_diff),
-            E_diff=mean(E_diff))
+###NOV 2017 - this did not take into account the size of the species pool and I am no longer doing it this way.
+# 
+# codyndat_diversity_diff <- group_by(codyndat_clean, site_project_comm, experiment_year, plot_id) %>% 
+#   summarize(S=S(abundance),
+#             E_q=E_q(abundance),
+#             Gini=Gini(abundance),
+#             E_simp=E_simp(abundance))%>%
+#   ungroup()%>%
+#   group_by(site_project_comm, plot_id)%>%
+#   arrange(site_project_comm, plot_id, experiment_year)%>%
+#   mutate(S_diff=c(NA, diff(S)),
+#          E_diff=c(NA, diff(E_q)))%>%
+#   ungroup()%>%
+#   group_by(site_project_comm, experiment_year)%>%
+#   summarize(S_diff=mean(S_diff, na.rm=T),
+#             E_diff=mean(E_diff, na.rm=T))%>%
+#   na.omit
+# 
+# 
+# sim_diversity_diff<-group_by(sim, id, site, time)%>%
+#   summarize(S=S(abundance),
+#             E_q=E_q(abundance),
+#             Gini=Gini(abundance),
+#             E_simp=E_simp(abundance))%>%
+#   ungroup()%>%
+#   group_by(id, site)%>%
+#   arrange(id, site, time)%>%
+#   mutate(S_diff=c(NA, diff(S)),
+#          E_diff=c(NA, diff(E_q)))%>%
+#   ungroup()%>%
+#   group_by(id, time)%>%
+#   summarize(S_diff=mean(S_diff, na.rm=T),
+#             E_diff=mean(E_diff, na.rm=T))%>%
+#   na.omit%>%
+#   ungroup()%>%
+#     separate(id, into=c("alpha","theta","scenario","rep"), sep="_", remove=F)%>%
+#   mutate(id3=paste(alpha, theta, scenario, sep="_"))%>%
+#   group_by(id3, time)%>%
+#   summarize(S_diff=mean(S_diff),
+#             E_diff=mean(E_diff))
 
 
 # Gains and Losses --------------------------------------------------------
@@ -215,6 +217,8 @@ sim_gains_loss<-merge(sim_gain, sim_loss, by=c("time","id2"))%>%
 ###Give all species with zerio abundace the S+1 rank for that year.
 ###includes species that are not present in year X but appear in year X+1 or are present in year X and disappear in year X+1
 
+##Nov 2017 I am also calculated changes in species richenss and evenness in this step.
+
 ##Codyn dataset first
 
 ##add ranks dropping zeros
@@ -242,7 +246,7 @@ codyndat_rank<-rbind(codyndat_rank_pres, codyndat_zero_rank)
 
 ##calculate reordering between time steps 3 ways, rank correlations, mean rank shifts not corrected, and mean ranks shifts corrected for the size of the speceis pool
 
-reordering=data.frame(id=c(), experiment_year=c(), MRSc=c())#expeiment year is year of timestep2
+reordering=data.frame(id=c(), experiment_year=c(), MRSc=c(), s_diff=c(), e_diff=c())#expeiment year is year of timestep2
 
 spc_id<-unique(codyndat_rank$id)
   
@@ -271,7 +275,15 @@ for (i in 1:length(spc_id)){
     
     MRSc<-mean(abs(subset_t12$rank.x-subset_t12$rank.y))/nrow(subset_t12)
     
-    metrics<-data.frame(id=id, experiment_year=timestep[i+1], MRSc=MRSc)#spc_id
+    s_t1 <- S(subset_t12$abundance.x)
+    e_t1 <- E_q(subset_t12$abundance.x)
+    s_t2 <- S(subset_t12$abundance.y)
+    e_t2 <- E_q(subset_t12$abundance.y)
+    
+    sdiff<-abs(s_t1-s_t2)/nrow(subset_t12)
+    ediff<-abs(e_t1-e_t2)/nrow(subset_t12)
+    
+    metrics<-data.frame(id=id, experiment_year=timestep[i+1], MRSc=MRSc, s_diff=sdiff, e_diff=ediff)#spc_id
     ##calculate differences for these year comparison and rbind to what I want.
     
     reordering=rbind(metrics, reordering)  
@@ -281,7 +293,9 @@ for (i in 1:length(spc_id)){
 codyndat_reorder<-reordering%>%
   separate(id, c("site_project_comm","plot_id"), sep="::")%>%
   group_by(site_project_comm, experiment_year)%>%
-  summarise(MRSc=mean(MRSc))
+  summarise(MRSc=mean(MRSc),
+            s_diff=mean(s_diff),
+            e_diff=mean(e_diff,na.rm=T))
 
 ##SIM dataset
 ##add in zeros
@@ -320,7 +334,7 @@ sim_rank<-rbind(sim_rank_pres, sim_zero_rank)
 
 ##calculating re-ordering
 
-reordering=data.frame(id=c(), time=c(), MRSc=c())#expeiment year is year of timestep2
+reordering=data.frame(id=c(), time=c(), MRSc=c(), s_diff=c(), e_diff=c())#expeiment year is year of timestep2
 
 spc_id<-unique(sim_rank$id2)
 
@@ -343,7 +357,15 @@ for (i in 1:length(spc_id)){
     
     MRSc<-mean(abs(subset_t12$rank.x-subset_t12$rank.y))/nrow(subset_t12)
    
-    metrics<-data.frame(id2=id2, time=timestep[i+1], MRSc=MRSc)#spc_id
+    s_t1 <- S(subset_t12$abundance.x)
+    e_t1 <- E_q(as.numeric(subset_t12$abundance.x))
+    s_t2 <- S(subset_t12$abundance.y)
+    e_t2 <- E_q(as.numeric(subset_t12$abundance.y))
+    
+    sdiff<-abs(s_t1-s_t2)/nrow(subset_t12)
+    ediff<-abs(e_t1-e_t2)/nrow(subset_t12)
+    
+    metrics<-data.frame(id2=id2, time=timestep[i+1], MRSc=MRSc, s_diff=sdiff, e_diff=ediff)#spc_id
     ##calculate differences for these year comparison and rbind to what I want.
     
     reordering=rbind(metrics, reordering)  
@@ -353,11 +375,15 @@ for (i in 1:length(spc_id)){
 sim_reorder<-reordering%>%
   separate(id2, c("id","site"), sep="::")%>%
   group_by(id, time)%>%
-  summarise(MRSc=mean(MRSc))%>%
+  summarise(MRSc=mean(MRSc),
+            s_diff=mean(s_diff),
+            e_diff=mean(e_diff,na.rm=T))%>%
   separate(id, into=c("alpha","theta","scenario","rep"), sep="_", remove=F)%>%
   mutate(id3=paste(alpha, theta, scenario, sep="_"))%>%
   group_by(id3, time)%>%
-  summarize(MRSc=mean(MRSc))
+  summarize(MRSc=mean(MRSc),
+            s_diff=mean(s_diff),
+            e_diff=mean(e_diff,na.rm=T))
 
 # Mean Change and Dispersion ----------------------------------------------
 
@@ -721,27 +747,27 @@ merge1<-merge(codyndat_diversity, codyndat_gains_loss, by=c("site_project_comm",
 merge2<-merge(merge1, codyndat_reorder, by=c("site_project_comm","experiment_year"))
 merge3<-merge(merge2, codyndat_braycurtis, by=c("site_project_comm","experiment_year"))
 merge4<-merge(merge3, codyndat_dstar, by=c("site_project_comm","experiment_year"))
-merge5<-merge(merge4, codyndat_diversity_diff, by=c("site_project_comm","experiment_year"))
-codyndat_allmetrics<-merge(merge5, codyndat_info, by="site_project_comm")
+#merge5<-merge(merge4, codyndat_diversity_diff, by=c("site_project_comm","experiment_year"))
+codyndat_allmetrics<-merge(merge4, codyndat_info, by="site_project_comm")
 
 #sim
 merge1<-merge(sim_diversity, sim_gains_loss, by=c("id3","time"))
 merge2<-merge(merge1, sim_reorder, by=c("id3","time"))
 merge3<-merge(merge2, sim_bray_curtis, by=c("id3","time"))
-merge4<-merge(merge3, sim_diversity_diff, by=c("id3","time"))
-sim_allmetrics<-merge(merge4, sim_dstar, by=c("id3","time"))%>%
+#merge4<-merge(merge3, sim_diversity_diff, by=c("id3","time"))
+sim_allmetrics<-merge(merge3, sim_dstar, by=c("id3","time"))%>%
   separate(id3, into=c("alpha","even","comtype"), sep="_")
 
 sim_allmetrics$comtype2<-as.factor(sim_allmetrics$comtype)
 
-write.csv(codyndat_allmetrics,'C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\R Files\\codyn_allmetrics_diff.csv')
-write.csv(sim_allmetrics,'C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\R Files\\sim_allmetrics_diff.csv')
+write.csv(codyndat_allmetrics,'C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\R Files\\codyn_allmetrics_diff_corrected.csv')
+write.csv(sim_allmetrics,'C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\R Files\\sim_allmetrics_diff_corrected.csv')
 
 # pair plot graphs --------------------------------------------------------
 
-codyndat_allmetrics<-read.csv('C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\R Files\\codyn_allmetrics_diff.csv')%>%
+codyndat_allmetrics<-read.csv('C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\R Files\\codyn_allmetrics_diff_corrected.csv')%>%
   select(-X)
-sim_allmetrics<-read.csv('C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\R Files\\sim_allmetrics_diff.csv')%>%
+sim_allmetrics<-read.csv('C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\R Files\\sim_allmetrics_diff_corrected.csv')%>%
   select(-X)
 
 
@@ -770,10 +796,10 @@ panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...){
   text(0.8, 0.5, Signif, cex=5, col="red")
 }
 
-sim_allmetrics<-sim_allmetrics%>%
+sim_allmetrics2<-sim_allmetrics%>%
   mutate(comtype3=as.factor(paste(alpha, even, sep="_")))
 #color by turnover and sucession
-pairs(sim_allmetrics2[,c(14:15,9:13,16)], col=sim_allmetrics$comtype2, labels=c("Richness\nChange", "Evenness\nChange","Species\nGains","Species\nLosses","Reordering","Compositional\nChange","Dispersion\nChange","Curve\nChange"), font.labels=2, cex.labels=2, upper.panel = panel.cor, oma=c(4,4,4,10))
+pairs(sim_allmetrics2[,c(12:13,9:11,14:16)], col=sim_allmetrics$comtype2, labels=c("Richness\nChange", "Evenness\nChange","Species\nGains","Species\nLosses","Reordering","Compositional\nChange","Dispersion\nChange","Curve\nChange"), font.labels=2, cex.labels=2, upper.panel = panel.cor, oma=c(4,4,4,10))
 
 #color by richness_evenness
 pairs(sim_allmetrics[,c(14:15,9:13,16)], col=sim_allmetrics$comtype3, labels=c("Richness \nChange", "Evenness \nChange","Species \nGains","Species \nLosses","Reordering","Mean \nChange","Dispersion \nDifferences","Curve \nChange"), font.labels=2, cex.labels=2, upper.panel = panel.cor, oma=c(4,4,4,10))
@@ -793,7 +819,7 @@ pairs(sim_allmetrics[,c(5,6,12,13,16)], col=sim_allmetrics$comtype3, labels=c("R
 pairs(codyndat_allmetrics[,c(3:6)],labels=c("Richness", "Evenness \n(EQ)","Evenness \n(Simpsons)","Evenness \n(Gini)"), font.labels=2, cex.labels=2, upper.panel = panel.cor,oma=c(4,4,4,10))
 par(xpd=T)
 
-pairs(codyndat_allmetrics[,c(13,14,7:12)], col=codyndat_allmetrics$taxa, labels=c("Richness\nChange", "Evenness\nChange","Species\nGains","Species\nLosses","Reordering","Compositional\nChange","Dispersion\nChange","Curve\nChange"), font.labels=2, cex.labels=2, upper.panel = panel.cor,oma=c(4,4,4,10))
+pairs(codyndat_allmetrics[,c(10:11,7:9,12:14)], col=codyndat_allmetrics$taxa, labels=c("Richness\nChange", "Evenness\nChange","Species\nGains","Species\nLosses","Reordering","Compositional\nChange","Dispersion\nChange","Curve\nChange"), font.labels=2, cex.labels=2, upper.panel = panel.cor,oma=c(4,4,4,10))
 par(xpd=T)
 
 zoo<-subset(codyndat_allmetrics, taxa=="zooplankton")
