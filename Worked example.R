@@ -117,19 +117,38 @@ average<-ractoplot%>%
   mutate(cumabund=cumsum(relcov2))%>%
   mutate(year=as.character(calendar_year))
   
+ccplot<-ractoplot%>%
+  mutate(sumabund=sum(relcov),
+         relcov2=relcov/sumabund)%>%
+  mutate(rank=rank(-relcov2, ties.method="average"),
+         maxrank=max(rank),
+         relrank=rank/maxrank)%>%
+  arrange(relrank)%>%
+  mutate(cumabund=cumsum(relcov2))%>%
+  mutate(year=as.character(calendar_year))
 
-ggplot(data=subset(average, treatment=="N1P0"), aes(x=relrank, y=cumabund, color=year))+
+
+ggplot(data=subset(ccplot, treatment=="N1P0"), aes(x=relrank, y=cumabund, color=year))+
   geom_step(size=1)+
-  scale_color_manual(values=c("black","gray"))+
+  scale_color_manual(values=c("black","darkgray"))+
     theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.position = "none")+
     ylab("Cumulative Relative Abundance")+
-    xlab("Relative Rank")
-ggplot(data=subset(average, treatment=="N2P3"), aes(x=relrank, y=cumabund, color=year))+
+    xlab("Relative Rank")+
+  scale_x_continuous(breaks=c(0.25, 0.75))+
+  facet_wrap(~plot_id, ncol=3)+
+  theme(strip.background = element_blank(),strip.text.x = element_blank())
+
+
+ggplot(data=subset(ccplot, treatment=="N2P3"), aes(x=relrank, y=cumabund, color=year))+
   geom_step(size=1)+
-  scale_color_manual(values=c("black","gray"))+
+  scale_color_manual(values=c("black","darkgray"))+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.position = "none")+
   ylab("Cumulative Relative Abundance")+
-  xlab("Relative Rank")
+  xlab("Relative Rank")+
+  scale_x_continuous(breaks=c(0.25, 0.75))+
+  facet_wrap(~plot_id, ncol=3)+
+  theme(strip.background = element_blank(),strip.text.x = element_blank())
+
 
 #doing SERGL on pplots data
 S<-function(x){
@@ -153,32 +172,7 @@ E_q<-function(x){
   2/pi*atan(b)
 }
 
-##richness and evenness changes
-splis<-pplots%>%
-  ungroup()%>%
-  select(treatment, plot_id, genus_species)%>%
-  unique()%>%
-  mutate(present=1)
 
-pooledrich<-group_by(splis, treatment, plot_id)%>%
-  summarise(Stot=S(present))
-
-diversity1 <- group_by(pplots, treatment, calendar_year, plot_id) %>% 
-  summarize(S=S(relcov),
-            E_q=E_q(relcov))%>%
-  arrange(treatment, plot_id, calendar_year)%>%
-  group_by(plot_id)%>%
-  mutate(S_diff=c(NA,diff(S)),
-         E_diff=c(NA,diff(E_q)))%>%
-  na.omit
-
-diversity<-merge(diversity1, pooledrich, by=c("plot_id", 'treatment'))%>%
-  mutate(SpDiff=abs(S_diff/Stot),
-         EDiff=abs(E_diff/Stot))
-
-##gains and losses
-loss<-turnover(df=pplots, time.var="calendar_year", species.var="genus_species", abundance.var="relcov", replicate.var="plot_id", metric="disappearance")
-gain<-turnover(df=pplots, time.var="calendar_year", species.var="genus_species", abundance.var="relcov", replicate.var="plot_id", metric="appearance")
 
 ##rank shift
 rank_pres<-pplots%>%
@@ -212,7 +206,7 @@ rank<-rbind(rank_pres, zero_rank)
 
 ##calculate reordering between time steps 3 ways, rank correlations, mean rank shifts not corrected, and mean ranks shifts corrected for the size of the speceis pool
 
-reordering=data.frame(plot_id=c(), calendar_year=c(), MRSc=c())#expeiment year is year of timestep2
+reordering=data.frame(id=c(), experiment_year=c(), S=c(), E=c(), R=c(), G=c(), L=c())#expeiment year is year of timestep2
 
 spc_id<-unique(rank$plot_id)
 
@@ -239,9 +233,26 @@ for (i in 1:length(spc_id)){
     subset_t12<-merge(subset_t1, subset_t2, by=c("genus_species","plot_id"), all=T)%>%
       filter(relcov.x!=0|relcov.y!=0)
     
+    #reodering
     MRSc<-mean(abs(subset_t12$rank.x-subset_t12$rank.y))/nrow(subset_t12)
     
-    metrics<-data.frame(plot_id=id, calendar_year=timestep[i+1], MRSc=MRSc)#spc_id
+    #evnness and richenss
+    s_t1 <- S(subset_t12$relcov.x)
+    e_t1 <- E_q(subset_t12$relcov.x)
+    s_t2 <- S(subset_t12$relcov.y)
+    e_t2 <- E_q(subset_t12$relcov.y)
+    
+    sdiff<-abs(s_t1-s_t2)/nrow(subset_t12)
+    ediff<-abs(e_t1-e_t2)/nrow(subset_t12)
+    
+    #gains and losses
+    subset_t12$gain<-ifelse(subset_t12$relcov.x==0, 1, 0)
+    subset_t12$loss<-ifelse(subset_t12$relcov.y==0, 1, 0)
+    
+    gain<-sum(subset_t12$gain)/nrow(subset_t12)
+    loss<-sum(subset_t12$loss)/nrow(subset_t12)
+    
+    metrics<-data.frame(plot_id=id, calendar_year=timestep[i+1], S=sdiff, E=ediff, R=MRSc, G=gain, L=loss)
     ##calculate differences for these year comparison and rbind to what I want.
     
     reordering=rbind(metrics, reordering)  
@@ -322,45 +333,47 @@ timestep<-sort(unique(rel_ranks$calendar_year))
     d_output<-rbind(d_output, d_output1)
   }
 
-merge1<-merge(diversity, gain, by=c("plot_id", "calendar_year"))
-merge2<-merge(merge1, loss, by=c("plot_id", "calendar_year"))
-merge3<-merge(merge2, reordering, by=c("plot_id", "calendar_year"))
-allmetrics<-merge(merge3, d_output, by=c("plot_id", "calendar_year"))%>%
+trts<-pplots%>%
+  ungroup()%>%
+  select(plot_id, treatment)%>%
+  unique()
+
+merge1<-merge(reordering, d_output, by=c("plot_id", "calendar_year"))
+allmetrics<-merge(merge1, trts, by="plot_id")%>%
   gather(metric, value, S:Dstar)%>%
   group_by(treatment, calendar_year, metric)%>%
     summarize(vmean=mean(value),
               vn=length(plot_id),
               vsd=sd(value))%>%
-  mutate(vse=vsd/sqrt(vn))%>%
-  filter(metric!="Stot"&metric!="S_diff"&metric!="S"&metric!="E_q"&metric!="E_diff")
+  mutate(vse=vsd/sqrt(vn))
             
 theme_set(theme_bw(12))
-S<-ggplot(data=subset(allmetrics, metric=="SpDiff"), aes(x=treatment, y=vmean))+
+S<-ggplot(data=subset(allmetrics, metric=="S"), aes(x=treatment, y=vmean))+
   geom_bar(stat="identity",position=position_dodge())+
   geom_errorbar(aes(ymin=vmean-vse, ymax=vmean+vse), width=.2)+
   scale_x_discrete(name="Treatment", labels=c("Control", "N+P"))+
   ylab("Richness Changes")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
-E<-ggplot(data=subset(allmetrics, metric=="EDiff"), aes(x=treatment, y=vmean))+
+E<-ggplot(data=subset(allmetrics, metric=="E"), aes(x=treatment, y=vmean))+
   geom_bar(stat="identity",position=position_dodge())+
   geom_errorbar(aes(ymin=vmean-vse, ymax=vmean+vse), width=.2)+
   scale_x_discrete(name="Treatment", labels=c("Control", "N+P"))+
   ylab("Evenness Changes")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
-R<-ggplot(data=subset(allmetrics, metric=="MRSc"), aes(x=treatment, y=vmean))+
+R<-ggplot(data=subset(allmetrics, metric=="R"), aes(x=treatment, y=vmean))+
   geom_bar(stat="identity",position=position_dodge())+
   geom_errorbar(aes(ymin=vmean-vse, ymax=vmean+vse), width=.2)+
   scale_x_discrete(name="Treatment", labels=c("Control", "N+P"))+
   ylab("Rank Changes")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
   annotate('text', label="*", x=1.5, y = 0.25, size=10)
-G<-ggplot(data=subset(allmetrics, metric=="appearance"), aes(x=treatment, y=vmean))+
+G<-ggplot(data=subset(allmetrics, metric=="G"), aes(x=treatment, y=vmean))+
   geom_bar(stat="identity",position=position_dodge())+
   geom_errorbar(aes(ymin=vmean-vse, ymax=vmean+vse), width=.2)+
   scale_x_discrete(name="Treatment", labels=c("Control", "N+P"))+
   ylab("Speices Gains")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
-L<-ggplot(data=subset(allmetrics, metric=="disappearance"), aes(x=treatment, y=vmean))+
+L<-ggplot(data=subset(allmetrics, metric=="L"), aes(x=treatment, y=vmean))+
   geom_bar(stat="identity",position=position_dodge())+
   geom_errorbar(aes(ymin=vmean-vse, ymax=vmean+vse), width=.2)+
   scale_x_discrete(name="Treatment", labels=c("Control", "N+P"))+
@@ -373,38 +386,84 @@ C<-ggplot(data=subset(allmetrics, metric=="Dstar"), aes(x=treatment, y=vmean))+
   ylab("Curve Changes")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 
-grid.arrange(S, E, C, R, G, L, ncol=3)
+grid.arrange(S, E,R, G, L, C, ncol=3)
 
-allmetrics_full<-merge(merge3, d_output, by=c("plot_id", "calendar_year"))%>%
+allmetrics_full<-allmetrics<-merge(merge1, trts, by="plot_id")%>%
   gather(metric, value, S:Dstar)
 
-t.test(value~treatment, data=subset(allmetrics_full, metric=="SpDiff")) # p = 0.261
-t.test(value~treatment, data=subset(allmetrics_full, metric=="EDiff"))  # p = 0.354
-t.test(value~treatment, data=subset(allmetrics_full, metric=="MRSc"))  # p < 0.001
-t.test(value~treatment, data=subset(allmetrics_full, metric=="appearance")) # p = 0.196
-t.test(value~treatment, data=subset(allmetrics_full, metric=="disappearance")) # p = 0.088
+t.test(value~treatment, data=subset(allmetrics_full, metric=="S")) # p = 0.261
+t.test(value~treatment, data=subset(allmetrics_full, metric=="E"))  # p = 0.354
+t.test(value~treatment, data=subset(allmetrics_full, metric=="R"))  # p < 0.001
+t.test(value~treatment, data=subset(allmetrics_full, metric=="G")) # p = 0.196
+t.test(value~treatment, data=subset(allmetrics_full, metric=="L")) # p = 0.088
 t.test(value~treatment, data=subset(allmetrics_full, metric=="Dstar")) # p = 0.0422
 
 # theme_set(theme_bw(12))
 # ###read in datasets where we already have this
 # 
-# vpplots<-read.csv("C:\\Users\\megha\\Dropbox\\converge_diverge\\datasets\\Longform\\CORRE_RAC_Metrics_Oct2017_allyears_2.csv")%>%
-#   filter(site_project_comm=="KNZ_pplots_0")%>%
-#   filter(treatment=="N1P0"|treatment=="N2P3")%>%
-#   gather(metric, value, S_diff:dispersion_diff)
-# 
-# ggplot(data=vpplots, aes(x=calendar_year, y=value, color=treatment))+
-#   geom_point()+
-#   geom_line()+
-#   facet_wrap(~metric, ncol=3, scale="free")
-# 
-hpplots<-read.csv("CORRE_ContTreat_Compare_OCT2017.csv")%>%
+vpplots<-read.csv("C:\\Users\\megha\\Dropbox\\converge_diverge\\datasets\\Longform\\CORRE_RAC_Metrics_Nov2017.csv")%>%
   filter(site_project_comm=="KNZ_pplots_0")%>%
-  filter(treatment=="N2P3"&calendar_year==2011|treatment=="N2P3"&calendar_year==2002)%>%
-  select(-plot_mani)%>%
-  gather(metric, value, PCSdiff:disp_diff)
+  filter(treatment=="N1P0"|treatment=="N2P3")%>%
+  gather(metric, value, S:L)
 
-# ggplot(data=hpplots, aes(x=calendar_year, y=value))+
-#   geom_point()+
-#   geom_line()+
-#   facet_wrap(~metric, ncol=3, scale="free")
+ggplot(data=vpplots, aes(x=calendar_year, y=value, color=treatment))+
+  geom_point()+
+  geom_line()+
+  facet_wrap(~metric, ncol=3, scale="free")
+
+hpplots<-read.csv("C:\\Users\\megha\\Dropbox\\converge_diverge\\datasets\\Longform\\CORRE_ContTreat_Compare_Nov2017.csv")%>%
+  filter(site_project_comm=="KNZ_pplots_0")%>%
+  filter(treatment=="N2P3"|treatment=="N2P3")%>%
+  select(-plot_mani)%>%
+  gather(metric, value, Sd:disp_diff)
+
+ggplot(data=hpplots, aes(x=calendar_year, y=value))+
+  geom_point()+
+  geom_line()+
+  facet_wrap(~metric, ncol=3, scale="free")
+
+####doing curve change
+average_test<-pplots%>%
+  group_by(calendar_year, treatment, genus_species)%>%
+  summarize(relcov=mean(relcov))%>%
+  mutate(rank=rank(-relcov, ties.method="average"),
+         maxrank=max(rank),
+         relrank=rank/maxrank)%>%
+  arrange(relrank)%>%
+  mutate(cumabund=cumsum(relcov))
+
+##compare in 2002
+pretreat<-subset(average_test, calendar_year==2002)
+
+result <- pretreat %>%
+  group_by(treatment) %>%
+  do({
+    y <- unique(.$treatment)###assumption this is a length 2 list
+    df1 <- filter(., treatment==y[[1]])
+    df2 <- filter(., treatment==y[[2]])
+    sf1 <- stepfun(df1$relrank, c(0, df1$cumabund))
+    sf2 <- stepfun(df2$relrank, c(0, df2$cumabund))
+    r <- sort(unique(c(0, df1$relrank, df2$relrank)))
+    h <- abs(sf1(r) - sf2(r))
+    w <- c(diff(r), 0)
+    data.frame(
+     Dstar=sum(w*h))
+  })
+
+trt<-pplots%>%
+  tbl_df()%>%
+  select(plot_id, treatment)%>%
+  unique()
+results_test<-merge(result, trt, by="plot_id")
+
+plot(results_test$Dmax, results_test$Dstar)
+
+boxplot(results_test$Dmax~results_test$treatment)
+boxplot(results_test$Dstar~results_test$treatment)
+anova(lm(Dstar~treatment, data=results_test))
+TukeyHSD(aov(Dstar~treatment, data=results_test))
+
+ggplot(data=average_test, aes(x=relrank, y=cumabund, group=interaction(calendar_year,plot_id)))+
+  geom_point(size=3, aes(color=as.factor(calendar_year)))+
+  geom_step(size=1, aes(color=as.factor(plot_id)))+##should we graph with geom_step?
+  facet_wrap(~treatment)
