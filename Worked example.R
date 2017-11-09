@@ -154,7 +154,16 @@ E_q<-function(x){
 }
 
 ##richness and evenness changes
-diversity <- group_by(pplots, treatment, calendar_year, plot_id) %>% 
+splis<-pplots%>%
+  ungroup()%>%
+  select(treatment, plot_id, genus_species)%>%
+  unique()%>%
+  mutate(present=1)
+
+pooledrich<-group_by(splis, treatment, plot_id)%>%
+  summarise(Stot=S(present))
+
+diversity1 <- group_by(pplots, treatment, calendar_year, plot_id) %>% 
   summarize(S=S(relcov),
             E_q=E_q(relcov))%>%
   arrange(treatment, plot_id, calendar_year)%>%
@@ -162,6 +171,10 @@ diversity <- group_by(pplots, treatment, calendar_year, plot_id) %>%
   mutate(S_diff=c(NA,diff(S)),
          E_diff=c(NA,diff(E_q)))%>%
   na.omit
+
+diversity<-merge(diversity1, pooledrich, by=c("plot_id", 'treatment'))%>%
+  mutate(SpDiff=abs(S_diff/Stot),
+         EDiff=abs(E_diff/Stot))
 
 ##gains and losses
 loss<-turnover(df=pplots, time.var="calendar_year", species.var="genus_species", abundance.var="relcov", replicate.var="plot_id", metric="disappearance")
@@ -313,28 +326,64 @@ merge1<-merge(diversity, gain, by=c("plot_id", "calendar_year"))
 merge2<-merge(merge1, loss, by=c("plot_id", "calendar_year"))
 merge3<-merge(merge2, reordering, by=c("plot_id", "calendar_year"))
 allmetrics<-merge(merge3, d_output, by=c("plot_id", "calendar_year"))%>%
-  group_by(treatment)%>%
-  summarize(sdiff=mean(S_diff),
-            ediff=mean(E_diff),
-            gain=mean(appearance),
-            loss=mean(disappearance),
-            reorder=mean(MRSc),
-            cc=mean(Dstar),
-            n=length(plot_id),
-            sdsdiff=sd(S_diff),
-            sdediff=sd(E_diff),
-            sdgain=sd(appearance),
-            sdloss=sd(disappearance),
-            sdreorder=sd(MRSc),
-            sdcc=sd(Dstar))%>%
-  mutate(seS=sdsdiff/sqrt(n),
-         seE=sdsdiff/sqrt(n),
-         se=sdsdiff/sqrt(n),
-         seS=sdsdiff/sqrt(n),
-         seS=sdsdiff/sqrt(n),
-         )
+  gather(metric, value, S:Dstar)%>%
+  group_by(treatment, calendar_year, metric)%>%
+    summarize(vmean=mean(value),
+              vn=length(plot_id),
+              vsd=sd(value))%>%
+  mutate(vse=vsd/sqrt(vn))%>%
+  filter(metric!="Stot"&metric!="S_diff"&metric!="S"&metric!="E_q"&metric!="E_diff")
             
+theme_set(theme_bw(12))
+S<-ggplot(data=subset(allmetrics, metric=="SpDiff"), aes(x=treatment, y=vmean))+
+  geom_bar(stat="identity",position=position_dodge())+
+  geom_errorbar(aes(ymin=vmean-vse, ymax=vmean+vse), width=.2)+
+  scale_x_discrete(name="Treatment", labels=c("Control", "N+P"))+
+  ylab("Richness Changes")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+E<-ggplot(data=subset(allmetrics, metric=="EDiff"), aes(x=treatment, y=vmean))+
+  geom_bar(stat="identity",position=position_dodge())+
+  geom_errorbar(aes(ymin=vmean-vse, ymax=vmean+vse), width=.2)+
+  scale_x_discrete(name="Treatment", labels=c("Control", "N+P"))+
+  ylab("Evenness Changes")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+R<-ggplot(data=subset(allmetrics, metric=="MRSc"), aes(x=treatment, y=vmean))+
+  geom_bar(stat="identity",position=position_dodge())+
+  geom_errorbar(aes(ymin=vmean-vse, ymax=vmean+vse), width=.2)+
+  scale_x_discrete(name="Treatment", labels=c("Control", "N+P"))+
+  ylab("Rank Changes")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  annotate('text', label="*", x=1.5, y = 0.25, size=10)
+G<-ggplot(data=subset(allmetrics, metric=="appearance"), aes(x=treatment, y=vmean))+
+  geom_bar(stat="identity",position=position_dodge())+
+  geom_errorbar(aes(ymin=vmean-vse, ymax=vmean+vse), width=.2)+
+  scale_x_discrete(name="Treatment", labels=c("Control", "N+P"))+
+  ylab("Speices Gains")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+L<-ggplot(data=subset(allmetrics, metric=="disappearance"), aes(x=treatment, y=vmean))+
+  geom_bar(stat="identity",position=position_dodge())+
+  geom_errorbar(aes(ymin=vmean-vse, ymax=vmean+vse), width=.2)+
+  scale_x_discrete(name="Treatment", labels=c("Control", "N+P"))+
+  ylab("Species Losses")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+C<-ggplot(data=subset(allmetrics, metric=="Dstar"), aes(x=treatment, y=vmean))+
+  geom_bar(stat="identity",position=position_dodge())+
+  geom_errorbar(aes(ymin=vmean-vse, ymax=vmean+vse), width=.2)+
+  scale_x_discrete(name="Treatment", labels=c("Control", "N+P"))+
+  ylab("Curve Changes")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 
+grid.arrange(S, E, C, R, G, L, ncol=3)
+
+allmetrics_full<-merge(merge3, d_output, by=c("plot_id", "calendar_year"))%>%
+  gather(metric, value, S:Dstar)
+
+t.test(value~treatment, data=subset(allmetrics_full, metric=="SpDiff")) # p = 0.261
+t.test(value~treatment, data=subset(allmetrics_full, metric=="EDiff"))  # p = 0.354
+t.test(value~treatment, data=subset(allmetrics_full, metric=="MRSc"))  # p < 0.001
+t.test(value~treatment, data=subset(allmetrics_full, metric=="appearance")) # p = 0.196
+t.test(value~treatment, data=subset(allmetrics_full, metric=="disappearance")) # p = 0.088
+t.test(value~treatment, data=subset(allmetrics_full, metric=="Dstar")) # p = 0.0422
 
 # theme_set(theme_bw(12))
 # ###read in datasets where we already have this
@@ -349,12 +398,12 @@ allmetrics<-merge(merge3, d_output, by=c("plot_id", "calendar_year"))%>%
 #   geom_line()+
 #   facet_wrap(~metric, ncol=3, scale="free")
 # 
-# hpplots<-read.csv("C:\\Users\\megha\\Dropbox\\converge_diverge\\datasets\\Longform\\CORRE_ContTreat_Compare_OCT2017.csv")%>%
-#   filter(site_project_comm=="KNZ_pplots_0")%>%
-#   filter(treatment=="N2P3")%>%
-#   select(-plot_mani)%>%
-#   gather(metric, value, PCSdiff:disp_diff)
-# 
+hpplots<-read.csv("CORRE_ContTreat_Compare_OCT2017.csv")%>%
+  filter(site_project_comm=="KNZ_pplots_0")%>%
+  filter(treatment=="N2P3"&calendar_year==2011|treatment=="N2P3"&calendar_year==2002)%>%
+  select(-plot_mani)%>%
+  gather(metric, value, PCSdiff:disp_diff)
+
 # ggplot(data=hpplots, aes(x=calendar_year, y=value))+
 #   geom_point()+
 #   geom_line()+
