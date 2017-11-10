@@ -121,7 +121,8 @@ E_q<-function(x){
       ##calculate differences for these year comparison and rbind to what I want.
       
       SERGL=rbind(metrics, SERGL)  
-    }}
+    }
+}
 
   ###bray curtis changes
   replist<-unique(df$replicate)
