@@ -79,6 +79,7 @@ E_q<-function(x){
 
 ##calculate SERGL
   SERGL=data.frame(replicate=c(), time=c(), S=c(), E=c(), R=c(), G=c(), L=c())#expeiment year is year of timestep2
+  topsp<-data.frame()
   
   replist<-unique(rank$replicate)
   
@@ -120,7 +121,17 @@ E_q<-function(x){
       metrics<-data.frame(replicate=replicate, time=timestep[i+1], S=sdiff, E=ediff, R=MRSc, G=gain, L=loss)#spc_id
       ##calculate differences for these year comparison and rbind to what I want.
       
-      SERGL=rbind(metrics, SERGL)  
+      ##top species changes
+      subset_t12$delta_abundance<-subset_t12$abundance.y-subset_t12$abundance.x
+      
+      ordered<-subset_t12[order(subset_t12$delta_abundance),]
+      
+      topspec<-ordered[c(1:2, nrow(ordered), nrow(ordered)-1),c(1:2, 8,9,15)]
+      colnames(topspec)[3]<-"time"
+      colnames(topspec)[4]<-"treatment"
+      
+      SERGL=rbind(metrics, SERGL)
+      topsp=rbind(topsp, topspec)
     }
 }
 
@@ -286,7 +297,9 @@ E_q<-function(x){
       ##combine all
       rank<-rbind(rank_pres, zero_rank)
 
-SERSp=data.frame(treatment=c(), time=c(), Sd=c(), Ed=c(), Rd=c(), spd=c())      
+SERSp=data.frame(treatment=c(), time=c(), Sd=c(), Ed=c(), Rd=c(), spd=c())  
+topsp<-data.frame()
+
       timestep<-sort(unique(rank$time)) 
       
       for(i in 1:(length(timestep))){
@@ -330,7 +343,18 @@ SERSp=data.frame(treatment=c(), time=c(), Sd=c(), Ed=c(), Rd=c(), spd=c())
           metrics<-data.frame(treatment=treat_id, time=time_id, Sd=sdiff, Ed=ediff, Rd=MRSc_diff, spd=spdiffc)#spc_id
           ##calculate differences for these year comparison and rbind to what I want.
           
+          ##top species changes
+          subset_ct$delta_abundance<-subset_ct$abundance.y-subset_ct$abundance.x
+          
+          ordered<-subset_ct[order(subset_ct$delta_abundance),]
+          
+          topspec<-ordered[c(1:2, nrow(ordered), nrow(ordered)-1),c(1:2, 7,11)]
+          colnames(topspec)[3]<-"treatment"
+          colnames(topspec)[4]<-"treatment"
+          
           SERSp=rbind(metrics, SERSp)  
+          topsp<-rbind(topspec, topsp)
+         
         }
       }
 
