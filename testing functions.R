@@ -8,7 +8,7 @@ library(grid)
 library(gtable)
 
 setwd("~/Dropbox/SESYNC/SESYNC_RACs/For R Package")
-
+setwd("C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\For R package")
 df<-read.csv('pplots_example.csv')
 
 #not working
