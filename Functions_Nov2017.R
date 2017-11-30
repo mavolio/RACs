@@ -1,14 +1,11 @@
 library(tidyverse)
 library(codyn)
 library(vegan)
-library(Kendall)
-library(gridExtra)
-library(reldist)
-library(grid)
-library(gtable)
+
 
 
 #work
+setwd("C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\For R package")
 df<-read.csv('pplots_example.csv')
 
 
@@ -44,8 +41,9 @@ E_q<-function(x){
 #' @param sim foo dataset with columns for time, replicate, species, and abundance, (and optionally an id column for grouping and second column for defining the groupins)
 add_ranks <- function(df) {
   ##add ranks for present species
-  rank_pres<-df%>%
-    filter(abundance!=0)%>%
+  rank_pres<-subset(df, abundance!=0)
+  
+  split(rank_pres)
     tbl_df()%>%
     group_by(replicate, time)%>%
     mutate(rank=rank(-abundance, ties.method = "average"))%>%
@@ -91,22 +89,21 @@ calculate_SERGL <- function(rank, replicate.var, species.var, abundance.var, tim
   replist<-unique(rank$replicate)
   
   for (i in 1:length(replist)){
-    subset<-rank%>%
-      filter(replicate==replist[i])
+    subset<-subset(rank, replicate==replist[i])
+    
     replicate<-replist[i]
     
     #now get all timestep within an experiment
     timestep<-sort(unique(subset$time))    
     
     for(i in 1:(length(timestep)-1)) {#minus 1 will keep me in year bounds NOT WORKING
-      subset_t1<-subset%>%
-        filter(time==timestep[i])
+      subset_t1<-subset(subset, time==timestep[i])
       
-      subset_t2<-subset%>%
-        filter(time==timestep[i+1])
+      subset_t2<-subset(subset, time==timestep[i+1])
       
-      subset_t12<-merge(subset_t1, subset_t2, by=c("species","replicate"), all=T)%>%
-        filter(abundance.x!=0|abundance.y!=0)
+      subset_t12<-merge(subset_t1, subset_t2, by=c("species","replicate"), all=T)
+      subset_t12<-subset(subset_t12, abundance.x!=0|abundance.y!=0)
+      
       #reordering
       MRSc<-mean(abs(subset_t12$rank.x-subset_t12$rank.y))/nrow(subset_t12)
       #ricness and evenness differences
@@ -145,24 +142,22 @@ calc_sp_abund_changes<- function(rank){
   
   replist<-unique(rank$replicate)
   
-  for (i in 1:length(replist)){
-    subset<-rank%>%
-      filter(replicate==replist[i])
-    replicate<-replist[i]
-    
-    #now get all timestep within an experiment
-    timestep<-sort(unique(subset$time))    
-    
-    for(i in 1:(length(timestep)-1)) {#minus 1 will keep me in year bounds NOT WORKING
-      subset_t1<-subset%>%
-        filter(time==timestep[i])
-      
-      subset_t2<-subset%>%
-        filter(time==timestep[i+1])
-      
-      subset_t12<-merge(subset_t1, subset_t2, by=c("species","replicate"), all=T)%>%
-        filter(abundance.x!=0|abundance.y!=0)
-      ##top species changes
+       for (i in 1:length(replist)){
+        subset<-subset(rank, replicate==replist[i])
+        
+        replicate<-replist[i]
+        
+        #now get all timestep within an experiment
+        timestep<-sort(unique(subset$time))    
+        
+        for(i in 1:(length(timestep)-1)) {#minus 1 will keep me in year bounds NOT WORKING
+          subset_t1<-subset(subset, time==timestep[i])
+          
+          subset_t2<-subset(subset, time==timestep[i+1])
+          
+          subset_t12<-merge(subset_t1, subset_t2, by=c("species","replicate"), all=T)
+          subset_t12<-subset(subset_t12, abundance.x!=0|abundance.y!=0)
+       ##top species changes
       subset_t12$delta_abundance<-subset_t12$abundance.y-subset_t12$abundance.x
       
       abundchange<-subset_t12[,c(1,2, 8,13)]
@@ -202,11 +197,11 @@ multivariate_change_func <- function(df){
   for(i in 1:length(replist)) {
     
     #subsets out each dataset
-    subset=df%>%
-      filter(replicate==replist[i])  
+    subset=subset(df, replicate==replist[i])  
     #get years
     timestep<-sort(unique(subset$time))
-    #transpose data
+   
+     #transpose data HOW TO DO THIS WITHOUT ANOTHER PACAGE
     species=subset%>%
       spread(species, abundance, fill=0)
     
@@ -228,15 +223,15 @@ multivariate_change_func <- function(df){
     #collecting and labeling distances to centroid from betadisper to get a measure of dispersion and then take the mean for a year
     disp2=data.frame(replicate=replist[i],
                      time=species$time,
-                     dist=disp$distances)%>%
-      tbl_df%>%
-      group_by(replicate, time)%>%
-      summarize(dispersion=mean(dist))
+                     dist=disp$distances)
     
+    disp2.2<-aggregate(dist~replicate+time, mean, data=disp2)
+
+  
     ##subtract consequtive years subtracts year x+1 - x. So if it is positive there was greater dispersion in year x+1 and if negative less dispersion in year x+1
     disp_yrs=data.frame(replicate=replist[i],
                         time=timestep[2:length(timestep)],
-                        dispersion_diff=diff(disp2$dispersion))
+                        dispersion_diff=diff(disp2.2$dist))
     
     #merge together change in mean and dispersion data
     distances<-merge(cent_dist_yrs, disp_yrs, by=c("replicate","time"))
