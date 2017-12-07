@@ -9,8 +9,22 @@ setwd("C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\For R package")
 df<-read.csv('pplots_example.csv')
 
 
-#####CALCULATING DIVERSITY METRICS WITHIN A TIME STEP FOR EACH REPLICATE AND THEN AVERAGING LATER
+#####CALCULATING DIVERSITY METRICS
+##still need to make a funciton to encapsulate all these
 
+com_struct <- function(df, replicate.var, abundance.var, time.var, evenness="E_q") {
+
+  ###NO CLUE WHY THIS IS NOT GIVING ME MULTIPLE COLUMNS
+  comstruct<-aggregate(abundance~time+replicate, data=df, FUN=function(x)c(SpR=S(x),evenness=E_q(x)))
+  
+  #works here
+  head(aggregate(abundance~time+replicate, data=df, FUN=function(x)c(SpR=S(x),evenness=E_q(x))))
+    
+  #comstruct<-aggregate(df[[abundance.var]]~df[[replicate.var]]+df[[time.var]], FUN=function(x)c(SpR=S(x),evenness=E_q(x)), data=df)
+  
+  return(comstruct)
+}
+  
 #1) function to calculate richness
 #' @x the vector of abundances of each species
 S<-function(x){
@@ -38,42 +52,67 @@ E_q<-function(x){
 }
 
 
-#' @param sim foo dataset with columns for time, replicate, species, and abundance, (and optionally an id column for grouping and second column for defining the groupins)
-add_ranks <- function(df) {
+#function to calculate E1/D (inverse of Simpson's) from Smith and Wilson 1996
+#' @S the number of species in the sample
+#' @x the vector of abundances of each species
+#' @N the total abundance
+#' @p the vector of relative abundances of each species
+E_simp<-function(x, S=length(x[x!=0]), N=sum(x[x!=0]), ps=x[x!=0]/N, p2=ps*ps ){
+  D<-sum(p2)
+  (1/D)/S
+}
+
+
+##FUNCTION TO ADD RANKS
+#' @param for a dataset with columns for time, replicate, species, and abundance, (and optionally an id column for grouping and second column for defining the groupings)
+#' 
+
+add_ranks <- function(df, replicate.var, species.var, abundance.var, time.var) {
+  ##SHOULD THE FIRST STEP TO BE ONLY SELECT THE RELEVANT COLUMNS?
+  df<-subset(df, select=c("time", "abundance","species","replicate"))
+  
   ##add ranks for present species
-  rank_pres<-subset(df, abundance!=0)
+  rank_pres<-subset(df, df[[abundance.var]]!=0)
+  rank_pres$rep_time<-paste(rank_pres[[replicate.var]], rank_pres[[time.var]], sep="_")
+  rank_pres$rank<-ave(rank_pres[[abundance.var]], rank_pres$rep_time, FUN=function(x) rank(-x, ties.method = "average"))
+  rank_pres<-subset(rank_pres, select=-rep_time)
   
-  split(rank_pres)
-    tbl_df()%>%
-    group_by(replicate, time)%>%
-    mutate(rank=rank(-abundance, ties.method = "average"))%>%
-    tbl_df()
+  #adding zeros
+  #NEED TO REMOVE THE LOOP HERE
+  replist<-unique(df[[replicate.var]])
   
-  #adding zeros 
-  replist<-unique(df$replicate)
   allsp<-data.frame()
   for (i in 1:length(replist)){
-    subset <- df %>%
-      filter(replicate==replist[i])%>%
-      spread(species, abundance, fill=0)
+    subset <- subset(df[[replicate.var]]==replist[i])
     
-    long<-subset%>%
-      gather(species, abundance, 5:ncol(subset))###this is depend on whether there are treatment and trt-control definition columns, will either be 3 or 5. I know this is a problem.
+    replicate<-replist[i]
+    
+    #FOR RESHAPE HOW TO DEAL WITH COLUMN NAMES?
+    subset2<-subset(subset, select=c("time","species","abundance"))
+    wide<- reshape(subset2, idvar="time", timevar="species", direction="wide")
+    wide[is.na(wide)] <- 0
+      
+    long<-reshape(wide, idvar="time", ids="time", time=names(wide), timevar="abundance", direction="long")
+    long$replicate<-replist[i]
+    colnames(long)[3]<-"abundance"
+    
     allsp<-rbind(long, allsp)  
   }
   
   ###make zero abundant species have the rank S+1 (the size of the species pool plus 1)
   ##pull out zeros
-  zeros<-allsp%>%
-    filter(abundance==0)
+  zeros<-subset(allsp, all.sp[[abundance.var]]==0)
+  
   ##get species richness for each year
-  SpR<-group_by(allsp, replicate, time)%>%
-    summarize(S=S(abundance))
+  SpR<-aggregate([[abundance.var]]~[[replicate.var]]+[[time.var]], FUN=S, data=allsp)
+  colnames(SpR)[4]<-"S"
+
   ##merge together make zero abundances rank S+1
-  zero_rank<-merge(zeros, SpR, by=c("time","replicate"))%>%
-    mutate(rank=S+1)%>%
-    select(-S)%>%
-    tbl_df()
+  #HOW TO DEAL WITH COLUMN NAMES IN MERGE??
+  zero_rank<-merge(zeros, SpR, by=c("time","replicate","C_T"))
+  zero_rank$rank<-zero_rank$S+1
+  zero_rank<-subset(zero_rank, select=-S)
+  
   ##combine all
   rank<-rbind(rank_pres, zero_rank)
   
@@ -86,21 +125,24 @@ calculate_SERGL <- function(rank, replicate.var, species.var, abundance.var, tim
   
   SERGL=data.frame(replicate=c(), time=c(), S=c(), E=c(), R=c(), G=c(), L=c())#expeiment year is year of timestep2
   
-  replist<-unique(rank$replicate)
+  replist<-unique(rank[[replicate.var]])
   
   for (i in 1:length(replist)){
-    subset<-subset(rank, replicate==replist[i])
+    #THIS BREAKS AT THIS STEP
+    subset<-subset(rank, rank[[replicate.var]]==replist[i])
     
     replicate<-replist[i]
     
     #now get all timestep within an experiment
-    timestep<-sort(unique(subset$time))    
+    timestep<-sort(unique(subset[[time.var]]))    
     
-    for(i in 1:(length(timestep)-1)) {#minus 1 will keep me in year bounds NOT WORKING
-      subset_t1<-subset(subset, time==timestep[i])
+    #NEED TO REMOVE THE LOOP
+    for(i in 1:(length(timestep)-1)) {
+      subset_t1<-subset(subset, subset[[time.var]]==timestep[i])
       
-      subset_t2<-subset(subset, time==timestep[i+1])
+      subset_t2<-subset(subset, subset[[time.var]]==timestep[i+1])
       
+      #HOW TO MERGE BY COLUMN NAMES?
       subset_t12<-merge(subset_t1, subset_t2, by=c("species","replicate"), all=T)
       subset_t12<-subset(subset_t12, abundance.x!=0|abundance.y!=0)
       
@@ -137,43 +179,44 @@ SERGL_func <- function(df) {
   return(result)
 }
 
-calc_sp_abund_changes<- function(rank){
-  sp_abund_changes<-data.frame()
-  
-  replist<-unique(rank$replicate)
-  
-       for (i in 1:length(replist)){
-        subset<-subset(rank, replicate==replist[i])
-        
-        replicate<-replist[i]
-        
-        #now get all timestep within an experiment
-        timestep<-sort(unique(subset$time))    
-        
-        for(i in 1:(length(timestep)-1)) {#minus 1 will keep me in year bounds NOT WORKING
-          subset_t1<-subset(subset, time==timestep[i])
-          
-          subset_t2<-subset(subset, time==timestep[i+1])
-          
-          subset_t12<-merge(subset_t1, subset_t2, by=c("species","replicate"), all=T)
-          subset_t12<-subset(subset_t12, abundance.x!=0|abundance.y!=0)
-       ##top species changes
-      subset_t12$delta_abundance<-subset_t12$abundance.y-subset_t12$abundance.x
-      
-      abundchange<-subset_t12[,c(1,2, 8,13)]
-      colnames(abundchange)[3]<-"time"
-      
-      sp_abund_changes=rbind(sp_abund_changes, abundchange)
-    }
-  }
-  return(sp_abund_changes)
-}
+#we can ignore this, once calcualte_SERGL is working this is basically the same thing and we can copy the code
+# calc_sp_abund_changes<- function(rank){
+#   sp_abund_changes<-data.frame()
+#   
+#   replist<-unique(rank$replicate)
+#   
+#        for (i in 1:length(replist)){
+#         subset<-subset(rank, replicate==replist[i])
+#         
+#         replicate<-replist[i]
+#         
+#         #now get all timestep within an experiment
+#         timestep<-sort(unique(subset$time))    
+#         
+#         for(i in 1:(length(timestep)-1)) {#minus 1 will keep me in year bounds NOT WORKING
+#           subset_t1<-subset(subset, time==timestep[i])
+#           
+#           subset_t2<-subset(subset, time==timestep[i+1])
+#           
+#           subset_t12<-merge(subset_t1, subset_t2, by=c("species","replicate"), all=T)
+#           subset_t12<-subset(subset_t12, abundance.x!=0|abundance.y!=0)
+#        ##top species changes
+#       subset_t12$delta_abundance<-subset_t12$abundance.y-subset_t12$abundance.x
+#       
+#       abundchange<-subset_t12[,c(1,2, 8,13)]
+#       colnames(abundchange)[3]<-"time"
+#       
+#       sp_abund_changes=rbind(sp_abund_changes, abundchange)
+#     }
+#   }
+#   return(sp_abund_changes)
+# }
 
-sp_abund_change_func <- function(df) {
-  rank <- add_ranks(df)
-  result <- calc_sp_abund_changes(rank)
-  return(result)
-}
+# sp_abund_change_func <- function(df) {
+#   rank <- add_ranks(df)
+#   result <- calc_sp_abund_changes(rank)
+#   return(result)
+# }
 
 # TODO define functions throughout whole file
 # TODO rename data frame argument to df
@@ -185,19 +228,20 @@ sp_abund_change_func <- function(df) {
 # TODO add tests to codyn for the new functions
 
 #4/5)Bray-Curtis Mean Change & Bray-Curtis Dissimilarity 
+##THIS NEEDS TO BE FIXED SO YOU HAVE 2 OPTIONS, IF OBS ONLY GROUP BY YEAR, IF TRT GROUP BY YEAR+TIME
 
 multivariate_change_func <- function(df){
   #make a new dataframe with just the label;
-  replist<-unique(df$replicate)
+  treatlist<-unique(df$treatment)
   
   #makes an empty dataframe
   Mult_Comp_Disp_Change=data.frame(replicate=c(), time=c(), compositional_change=c(), dispersion_change=c()) 
   
   #Calculating bc mean change and dispersion
-  for(i in 1:length(replist)) {
+  for(i in 1:length(treatlist)) {
     
     #subsets out each dataset
-    subset=subset(df, replicate==replist[i])  
+    subset=subset(df, treatment==treatlist[i])  
     #get years
     timestep<-sort(unique(subset$time))
    
@@ -216,31 +260,34 @@ multivariate_change_func <- function(df){
     
     ##extracting only the comparisions we want year x to year x=1.
     ###(experiment_year is year x+1
-    cent_dist_yrs=data.frame(replicate=replist[i],
-                             time=timestep[2:length(timestep)],
+    cent_dist_yrs=data.frame(time=timestep[2:length(timestep)],
                              mean_change=diag(cent_dist[2:nrow(cent_dist),1:(ncol(cent_dist)-1)]))
     
     #collecting and labeling distances to centroid from betadisper to get a measure of dispersion and then take the mean for a year
-    disp2=data.frame(replicate=replist[i],
-                     time=species$time,
+    disp2=data.frame(time=species$time,
                      dist=disp$distances)
     
-    disp2.2<-aggregate(dist~replicate+time, mean, data=disp2)
+    disp2.2<-aggregate(dist~time, mean, data=disp2)
 
   
     ##subtract consequtive years subtracts year x+1 - x. So if it is positive there was greater dispersion in year x+1 and if negative less dispersion in year x+1
-    disp_yrs=data.frame(replicate=replist[i],
-                        time=timestep[2:length(timestep)],
+    disp_yrs=data.frame(time=timestep[2:length(timestep)],
                         dispersion_diff=diff(disp2.2$dist))
     
     #merge together change in mean and dispersion data
-    distances<-merge(cent_dist_yrs, disp_yrs, by=c("replicate","time"))
+    distances<-merge(cent_dist_yrs, disp_yrs, by=c("time"))
     
     #pasting dispersions into the dataframe made for this analysis
     Mult_Comp_Disp_Change=rbind(distances, Mult_Comp_Disp_Change)  
   }
   return(Mult_Comp_Disp_Change)
 }
+
+
+#############################################################
+#############################################################
+#Giving up here
+
 #6) curve comparision
 ####Looking at the shape of the curve - cc
 ###this compares the areas of difference between two curves that are consequtive time steps for a plot.
@@ -370,7 +417,11 @@ calculate_SERSp <- function(ct_rank){
     
     time_id<-timestep[i]
     
-    #fitler out control plots
+    #need to do all comparisions NOT SURE HOW TO PROCEED FROM HERE TO SUBSET ALL POSSIBLE COMBINATIONS
+    comparison<-combn(unique(time$treatment),2)
+    
+    
+    #filter out control plots
     control<-time%>%
       filter(C_T=="Control")
     
