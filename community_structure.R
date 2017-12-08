@@ -9,6 +9,8 @@
 #' @param abundance.var The name of the abundance column 
 #' @param replicate.var The name of the optional replicate column 
 
+##make for diversity
+##rename columns
 
 community_structure <- function(df, replicate.var, abundance.var, time.var, evenness="E_q") {
   if(is.null(replicate.var)){
