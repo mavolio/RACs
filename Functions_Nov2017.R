@@ -87,7 +87,7 @@ add_ranks <- function(df, replicate.var, species.var, abundance.var, time.var) {
     
     replicate<-replist[i]
     
-    #FOR RESHAPE HOW TO DEAL WITH COLUMN NAMES?
+    #FOR RESHAPE HOW TO DEAL WITH COLUMN NAMES? ###
     subset2<-subset(subset, select=c("time","species","abundance"))
     wide<- reshape(subset2, idvar="time", timevar="species", direction="wide")
     wide[is.na(wide)] <- 0
@@ -108,8 +108,8 @@ add_ranks <- function(df, replicate.var, species.var, abundance.var, time.var) {
   colnames(SpR)[4]<-"S"
 
   ##merge together make zero abundances rank S+1
-  #HOW TO DEAL WITH COLUMN NAMES IN MERGE??
-  zero_rank<-merge(zeros, SpR, by=c("time","replicate","C_T"))
+  #HOW TO DEAL WITH COLUMN NAMES IN MERGE?? - toes it work to not have in quotes?
+  zero_rank<-merge(zeros, SpR, by=c(time.var,replicate.var))
   zero_rank$rank<-zero_rank$S+1
   zero_rank<-subset(zero_rank, select=-S)
   
@@ -128,8 +128,8 @@ calculate_SERGL <- function(rank, replicate.var, species.var, abundance.var, tim
   replist<-unique(rank[[replicate.var]])
   
   for (i in 1:length(replist)){
-    #THIS BREAKS AT THIS STEP
-    subset<-subset(rank, rank[[replicate.var]]==replist[i])
+    #THIS BREAKS AT THIS STEP - see if single bracket fixes this.
+    subset<-subset(rank, rank[replicate.var]==replist[i])
     
     replicate<-replist[i]
     
