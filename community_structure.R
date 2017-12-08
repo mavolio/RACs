@@ -1,16 +1,26 @@
 
 #####CALCULATING DIVERSITY METRICS
 ##still need to make a funciton to encapsulate all these
+#' @title Community structure
+#' @description 
+#' @param df A data frame containing time, species and abundance columns and an optional column of replicates
+#' @param time.var The name of the time column 
+#' @param species.var The name of the species column 
+#' @param abundance.var The name of the abundance column 
+#' @param replicate.var The name of the optional replicate column 
+
 
 community_structure <- function(df, replicate.var, abundance.var, time.var, evenness="E_q") {
+  if(is.null(replicate.var)){
+    
+    myformula <- as.formula(paste(abundance.var, "~", time.var))
+    comstruct <- aggregate(myformula, data=df, FUN=function(x)c(SpR=S(x),evenness=E_q(x)))
   
-  ###NO CLUE WHY THIS IS NOT GIVING ME MULTIPLE COLUMNS
-  comstruct<-aggregate(abundance~time+replicate, data=df, FUN=function(x)c(SpR=S(x),evenness=E_q(x)))
-  
-
+    } else {
+      
   myformula <- as.formula(paste(abundance.var, "~", time.var, "+", replicate.var))
   comstruct <- aggregate(myformula, data=df, FUN=function(x)c(SpR=S(x),evenness=E_q(x)))
-  
+    }
   return(comstruct)
 }
 
