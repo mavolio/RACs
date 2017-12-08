@@ -12,14 +12,24 @@
 
 community_structure <- function(df, replicate.var, abundance.var, time.var, evenness="E_q") {
   if(is.null(replicate.var)){
-    
     myformula <- as.formula(paste(abundance.var, "~", time.var))
+    
+    if(evenness=="E_q"){
     comstruct <- aggregate(myformula, data=df, FUN=function(x)c(SpR=S(x),evenness=E_q(x)))
   
-    } else {
+    } 
+    comstruct <- aggregate(myformula, data=df, FUN=function(x)c(SpR=S(x),evenness=ESimp(x)))
+  }
+    
+    else {
       
   myformula <- as.formula(paste(abundance.var, "~", time.var, "+", replicate.var))
-  comstruct <- aggregate(myformula, data=df, FUN=function(x)c(SpR=S(x),evenness=E_q(x)))
+  
+  if(evenness=="E_q"){
+    comstruct <- aggregate(myformula, data=df, FUN=function(x)c(SpR=S(x),evenness=E_q(x)))
+    
+  } 
+  comstruct <- aggregate(myformula, data=df, FUN=function(x)c(SpR=S(x),evenness=ESimp(x)))
     }
   return(comstruct)
 }
