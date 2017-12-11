@@ -1,3 +1,14 @@
+## a function to fill zeros
+fill_zeros <- function(df, time.var, species.var, abundance.var){
+  df2<-subset(df, select=c(time.var,species.var,abundance.var))
+  wide<- reshape(df2, idvar=time.var, timevar=species.var, direction="wide")
+  wide[is.na(wide)] <- 0
+  
+  long<-reshape(wide, idvar=time.var, ids=time.var, time=names(wide), timevar=abundance.var, direction="long")
+  colnames(long)[3]<-abundance.var
+  return(long)
+}
+
 
 ##FUNCTION TO ADD RANKS
 #' @param for a dataset with columns for time, replicate, species, and abundance, (and optionally an id column for grouping and second column for defining the groupings)
