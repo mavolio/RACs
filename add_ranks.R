@@ -48,7 +48,6 @@ add_ranks <- function(df, replicate.var, species.var, abundance.var, time.var) {
   colnames(SpR)[3]<-"S"
   
   ##merge together make zero abundances rank S+1
-  #HOW TO DEAL WITH COLUMN NAMES IN MERGE?? - toes it work to not have in quotes?
   zero_rank<-merge(zeros, SpR, by=c(time.var,replicate.var))
   zero_rank$rank<-zero_rank$S+1
   zero_rank<-subset(zero_rank, select=-S)
