@@ -16,7 +16,7 @@ fill_zeros <- function(df, time.var, species.var, abundance.var){
 
 add_ranks <- function(df, replicate.var, species.var, abundance.var, time.var) {
   ##SHOULD THE FIRST STEP TO BE ONLY SELECT THE RELEVANT COLUMNS?
-  df<-subset(df, select=c("time", "abundance","species","replicate"))
+  df<-subset(df, select=c(time.var, abundance.var, species.var, replicate.var))
   
   ##add ranks for present species
   rank_pres<-subset(df, df[[abundance.var]]!=0)
@@ -25,34 +25,27 @@ add_ranks <- function(df, replicate.var, species.var, abundance.var, time.var) {
   rank_pres<-subset(rank_pres, select=-rep_time)
   
   #adding zeros
-  #NEED TO REMOVE THE LOOP HERE
-  replist<-unique(df[[replicate.var]])
   
-  allsp<-data.frame()
-  for (i in 1:length(replist)){
-    subset <- subset(df[[replicate.var]]==replist[i])
-    
-    replicate<-replist[i]
-    
-    #FOR RESHAPE HOW TO DEAL WITH COLUMN NAMES? ###
-    subset2<-subset(subset, select=c("time","species","abundance"))
-    wide<- reshape(subset2, idvar="time", timevar="species", direction="wide")
-    wide[is.na(wide)] <- 0
-    
-    long<-reshape(wide, idvar="time", ids="time", time=names(wide), timevar="abundance", direction="long")
-    long$replicate<-replist[i]
-    colnames(long)[3]<-"abundance"
-    
-    allsp<-rbind(long, allsp)  
-  }
-  
+  # sort and apply fill_zeros to all replicates
+  df <- df[order(df[[replicate.var]]),]
+  X <- split(df, df[replicate.var])
+  out <- lapply(X, FUN=fill_zeros, time.var, species.var, abundance.var)
+  ID <- unique(names(out))
+  out <- mapply(function(x, y) "[<-"(x, replicate.var, value = y) ,
+                out, ID, SIMPLIFY = FALSE)
+  allsp <- do.call("rbind", out)
+
+ 
   ###make zero abundant species have the rank S+1 (the size of the species pool plus 1)
   ##pull out zeros
-  zeros<-subset(allsp, all.sp[[abundance.var]]==0)
+  zeros <- subset(allsp, allsp[[abundance.var]]==0)
   
   ##get species richness for each year
-  SpR<-aggregate([[abundance.var]]~[[replicate.var]]+[[time.var]], FUN=S, data=allsp)
-  colnames(SpR)[4]<-"S"
+  ## Note to Meghan: This uses a function that I thought was only for community_structure
+  ## Might make a separate file of shared diversity functions
+  myformula <- as.formula(paste(abundance.var, "~", replicate.var, "+", time.var))
+  SpR<-aggregate(myformula, FUN=S, data=allsp)
+  colnames(SpR)[3]<-"S"
   
   ##merge together make zero abundances rank S+1
   #HOW TO DEAL WITH COLUMN NAMES IN MERGE?? - toes it work to not have in quotes?
