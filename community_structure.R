@@ -47,13 +47,6 @@ S<-function(x){
 }
 
 
-S<-function(df, species.var){
-  
-  x1<-x[x!=0]
-  length(x1)
-}
-
-
 # 2) function to calculate EQ evenness from Smith and Wilson 1996
 #' @x the vector of abundances of each species
 #' if all abundances are equal it returns a 1
