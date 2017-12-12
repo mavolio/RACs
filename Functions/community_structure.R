@@ -17,28 +17,27 @@ community_structure <- function(df, replicate.var, abundance.var, time.var, even
     myformula <- as.formula(paste(abundance.var, "~", time.var))
     
     if(evenness=="E_q"){
-    comstruct <- aggregate(myformula, data=df, FUN=function(x)c(SpR=S(x),evenness=E_q(x)))
+    comstruct <- do.call(data.frame,aggregate(myformula, data=df, FUN=function(x)c(SpR=S(x),evenness=E_q(x))))
     names(comstruct)[3]<-"richness"
     names(comstruct)[4]<-"E_q"
-  
     }
     else{
-    comstruct <- aggregate(myformula, data=df, FUN=function(x)c(SpR=S(x),evenness=E_simp(x)))
+    comstruct <- do.call(data.frame,aggregate(myformula, data=df, FUN=function(x)c(SpR=S(x),evenness=E_simp(x))))
     names(comstruct)[3]<-"richness"
     names(comstruct)[4]<-"E_simp"
+    } 
   }
-  } 
   else {
       
   myformula <- as.formula(paste(abundance.var, "~", time.var, "+", replicate.var))
   
   if(evenness=="E_q"){
-    comstruct <- aggregate(myformula, data=df, FUN=function(x)c(SpR=S(x),evenness=E_q(x)))
+    comstruct <- do.call(data.frame, aggregate(myformula, data=df, FUN=function(x)c(SpR=S(x),evenness=E_q(x))))
     names(comstruct)[3]<-"richness"
-#    names(comstruct)[4]<-"E_q"
+    names(comstruct)[4]<-"E_q"
   } 
-  else{
-  comstruct <- aggregate(myformula, data=df, FUN=function(x)c(SpR=S(x),evenness=E_simp(x)))
+ else{
+  comstruct <- do.call(data.frame,aggregate(myformula, data=df, FUN=function(x)c(SpR=S(x),evenness=E_simp(x))))
   names(comstruct)[3]<-"richness"
   names(comstruct)[4]<-"E_simp"
   }
@@ -47,12 +46,14 @@ community_structure <- function(df, replicate.var, abundance.var, time.var, even
 }
 
 #Problems
-#only outputs richness
 # does not work with replicate missing
 
 ##test
-test<- community_structure(df, replicate.var = "replicate", abundance.var = "abundance", time.var = "time")
-test2<-community_structure(df2, abundance.var = "abundance", time.var = "time")
+test<- community_structure(df, replicate.var = "replicate", abundance.var = "abundance", time.var = "time", evenness="E_simp")
+test2<-community_structure(df, replicate.var = "replicate", abundance.var = "abundance", time.var = "time", evenness="E_q")
+
+test3<-community_structure(df2, abundance.var = "abundance", time.var = "time")
+
 
 #### PRIVATE FUNCTIONS ####
 
