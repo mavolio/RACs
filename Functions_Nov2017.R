@@ -6,6 +6,7 @@ library(vegan)
 
 #work
 setwd("C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\For R package")
+setwd("~/Dropbox/SESYNC/SESYNC_RACs/For R Package")
 df<-read.csv('pplots_example.csv')
 
 
