@@ -12,7 +12,7 @@
 ##make for diversity
 ##rename columns
 
-community_structure <- function(df, replicate.var, abundance.var, time.var, evenness="E_q") {
+community_structure <- function(df, abundance.var, time.var, replicate.var = NULL, evenness="E_q") {
   if(is.null(replicate.var)){
     myformula <- as.formula(paste(abundance.var, "~", time.var))
     
