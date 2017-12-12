@@ -11,18 +11,18 @@
 ##make for diversity
 ##rename columns
 
-community_structure <- function(df, replicate.var, abundance.var, time.var, diversity="shannons") {
+community_diversity <- function(df, replicate.var, abundance.var, time.var, diversity="shannons") {
   if(is.null(replicate.var)){
     myformula <- as.formula(paste(abundance.var, "~", time.var))
     
     if(diversity=="shannons"){
-      comstruct <- aggregate(myformula, data=df, FUN=function(x)c(SpR=S(x),diversity=shannons(x)))
-      names(comstruct)[3]<-"shannons"
+      comdiv <- aggregate(myformula, data=df, FUN=function(x)diversity=shannons(x))
+      names(comdiv)[3]<-"shannons"
       
     }
     else{
-      comstruct <- aggregate(myformula, data=df, FUN=function(x)c(SpR=S(x),diversity=simpsons(x)))
-      names(comstruct)[3]<-"simpsons"
+      comdiv <- aggregate(myformula, data=df, FUN=function(x)diversity=simpsons(x))
+      names(comdiv)[3]<-"simpsons"
 
     }
   } 
@@ -30,48 +30,46 @@ community_structure <- function(df, replicate.var, abundance.var, time.var, dive
     
     myformula <- as.formula(paste(abundance.var, "~", time.var, "+", replicate.var))
     
-    if(evenness=="shannons"){
-      comstruct <- aggregate(myformula, data=df, FUN=function(x)c(SpR=S(x),diversity=shannons(x)))
-      names(comstruct)[3]<-"shannons"
+    if(diversity=="shannons"){
+      comdiv <- aggregate(myformula, data=df, FUN=function(x)diversity=shannons(x))
+      names(comdiv)[3]<-"shannons"
     } 
     else{
-      comstruct <- aggregate(myformula, data=df, FUN=function(x)c(SpR=S(x),diversity=simpsons(x)))
-      names(comstruct)[3]<-"simpsons"
+      comdiv <- aggregate(myformula, data=df, FUN=function(x)diversity=simpsons(x))
+      names(comdiv)[3]<-"simpsons"
     }
   }
-  return(comstruct)
+  return(comdiv)
 }
 
 #Problems
-#only outputs richness
 # does not work with replicate missing
 
 ##test
-test<- community_structure(df, replicate.var = "replicate", abundance.var = "abundance", time.var = "time")
+test<- community_diversity(df, replicate.var = "replicate", abundance.var = "abundance", time.var = "time")
+test3<- community_diversity(df, replicate.var = "replicate", abundance.var = "abundance", time.var = "time", diversity = "simpson")
 test2<-community_structure(df2, abundance.var = "abundance", time.var = "time")
 
 #### PRIVATE FUNCTIONS ####
 
 
 #1) function to calculate Simpson's Divsersity from Smith and Wilson 1996
-#' @S the number of species in the sample
 #' @x the vector of abundances of each species
 #' @N the total abundance
 #' @p the vector of relative abundances of each species
-simpsons<-function(x, S=length(x[x!=0 & !is.na(x)]), N=sum(x[x!=0&!is.na(x)]), ps=x[x!=0&!is.na(x)]/N, p2=ps*ps ){
+simpsons<-function(x, N=sum(x[x!=0&!is.na(x)]), ps=x[x!=0&!is.na(x)]/N, p2=ps*ps ){
   D<-sum(p2)
-  (1/D)/S
+  1/D
 }
 
 #2) function to calculate Shannon's Divsersity 
-#' @S the number of species in the sample
 #' @x the vector of abundances of each species
 #' @N the total abundance
 #' @p the vector of relative abundances of each species
-Shannons<-function(x, S=length(x[x!=0 & !is.na(x)]), N=sum(x[x!=0&!is.na(x)]), ps=x[x!=0&!is.na(x)]/N, p2=ps*ps ){
-  D<-sum(p2)
-  (1/D)/S
+shannons<-function(x, N=sum(x[x!=0&!is.na(x)]), ps=x[x!=0&!is.na(x)]/N ){
+  -sum(ps*log(ps))
 }
+
 
 
 
