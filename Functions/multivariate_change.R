@@ -1,3 +1,7 @@
+#how to require vegan?
+#make if else if a treatment column is there or not
+
+
 multivariate_change <- function(df){
   #make a new dataframe with just the label;
   treatlist<-unique(df$treatment)
