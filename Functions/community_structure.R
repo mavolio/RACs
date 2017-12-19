@@ -1,6 +1,5 @@
 
 #####CALCULATING DIVERSITY METRICS
-##still need to make a funciton to encapsulate all these
 #' @title Community structure
 #' @description 
 #' @param df A data frame containing time, species and abundance columns and an optional column of replicates
@@ -9,51 +8,39 @@
 #' @param abundance.var The name of the abundance column 
 #' @param replicate.var The name of the optional replicate column 
 
-##make for diversity
-##rename columns
 
-community_structure <- function(df, abundance.var, time.var, replicate.var = NULL, evenness="E_q") {
+community_structure <- function(df,  time.var, abundance.var, replicate.var = NULL, evenness="EQ") {
   if(is.null(replicate.var)){
     myformula <- as.formula(paste(abundance.var, "~", time.var))
     
-    if(evenness=="E_q"){
-    comstruct <- do.call(data.frame,aggregate(myformula, data=df, FUN=function(x)c(SpR=S(x),evenness=E_q(x))))
-    names(comstruct)[3]<-"richness"
-    names(comstruct)[4]<-"E_q"
+    if(evenness=="EQ"){
+    comstruct <- do.call(data.frame,aggregate(myformula, data=df, FUN=function(x)c(SpR=S(x),evenness=EQ(x))))
+    names(comstruct)[2]<-"Richness"
+    names(comstruct)[3]<-"Evenness_EQ"
     }
     else{
-    comstruct <- do.call(data.frame,aggregate(myformula, data=df, FUN=function(x)c(SpR=S(x),evenness=E_simp(x))))
-    names(comstruct)[3]<-"richness"
-    names(comstruct)[4]<-"E_simp"
+    comstruct <- do.call(data.frame,aggregate(myformula, data=df, FUN=function(x)c(SpR=S(x),evenness=SimpEven(x))))
+    names(comstruct)[2]<-"Richness"
+    names(comstruct)[3]<-"Evenness_Simpson"
     } 
   }
   else {
       
   myformula <- as.formula(paste(abundance.var, "~", time.var, "+", replicate.var))
   
-  if(evenness=="E_q"){
-    comstruct <- do.call(data.frame, aggregate(myformula, data=df, FUN=function(x)c(SpR=S(x),evenness=E_q(x))))
-    names(comstruct)[3]<-"richness"
-    names(comstruct)[4]<-"E_q"
+  if(evenness=="EQ"){
+    comstruct <- do.call(data.frame, aggregate(myformula, data=df, FUN=function(x)c(SpR=S(x),evenness=EQ(x))))
+    names(comstruct)[3]<-"Richness"
+    names(comstruct)[4]<-"Evenness_EQ"
   } 
  else{
-  comstruct <- do.call(data.frame,aggregate(myformula, data=df, FUN=function(x)c(SpR=S(x),evenness=E_simp(x))))
-  names(comstruct)[3]<-"richness"
-  names(comstruct)[4]<-"E_simp"
+  comstruct <- do.call(data.frame,aggregate(myformula, data=df, FUN=function(x)c(SpR=S(x),evenness=SimpEven(x))))
+  names(comstruct)[3]<-"Richness"
+  names(comstruct)[4]<-"Evenness_Simpson"
   }
   }
   return(comstruct)
 }
-
-#Problems
-# does not work with replicate missing
-
-##test
-test<- community_structure(df, replicate.var = "replicate", abundance.var = "abundance", time.var = "time", evenness="E_simp")
-test2<-community_structure(df, replicate.var = "replicate", abundance.var = "abundance", time.var = "time", evenness="E_q")
-
-test3<-community_structure(df2, abundance.var = "abundance", time.var = "time")
-
 
 #### PRIVATE FUNCTIONS ####
 
@@ -69,7 +56,7 @@ S<-function(x){
 # 2) function to calculate EQ evenness from Smith and Wilson 1996
 #' @x the vector of abundances of each species
 #' if all abundances are equal it returns a 1
-E_q<-function(x){
+EQ<-function(x){
   x1<-x[x!=0 & !is.na(x)]
   if (length(x1)==1) {
     return(NA)
@@ -91,7 +78,7 @@ E_q<-function(x){
 #' @x the vector of abundances of each species
 #' @N the total abundance
 #' @p the vector of relative abundances of each species
-E_simp<-function(x, S=length(x[x!=0 & !is.na(x)]), N=sum(x[x!=0&!is.na(x)]), ps=x[x!=0&!is.na(x)]/N, p2=ps*ps ){
+SimpEven<-function(x, S=length(x[x!=0 & !is.na(x)]), N=sum(x[x!=0&!is.na(x)]), ps=x[x!=0&!is.na(x)]/N, p2=ps*ps ){
   D<-sum(p2)
   (1/D)/S
 }
