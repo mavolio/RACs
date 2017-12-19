@@ -1,5 +1,17 @@
-##calculating SERGL
-calculate_SERGL <- function(df, replicate.var, species.var, abundance.var, time.var) {
+##calculating RAC changes
+#' @title Rank Abundance Curve Changes
+#' @description 
+#' @param df A data frame containing time, species and abundance columns and an optional column of replicates
+#' @param time.var The name of the time column 
+#' @param species.var The name of the species column 
+#' @param abundance.var The name of the abundance column 
+#' @param replicate.var The name of the optional replicate column 
+#' 
+#' 
+#' TO DO: Add time.var_pair, add for null replicates? then also need to add to add_ranks
+
+RAC_changes <- function(df, time.var, species.var, abundance.var, replicate.var) {
+  
   rankdf <- add_ranks(df, replicate.var, species.var, abundance.var, time.var)
   
   # current year rankdf
@@ -37,20 +49,15 @@ calculate_SERGL <- function(df, replicate.var, species.var, abundance.var, time.
 
 
 ### PRIVATE FUNCTIONS ###
-## function for MRSc
-MRSc <- function(df, rank1, rank2){
-  mrcs <- mean(abs(df[[rank1]]-df[[rank2]]))/nrow(df)
-  return(mrcs)
-}
 
 
-## function for the richness and evenness differences, gains and losses, and returning a dataframe with those and the MRSc output
+## function for the richness and evenness differences, gains and losses, and rankshifts returning a dataframe with those and the MRSc output
 aggfunc <- function(df, rank.var1, rank.var2, abundance.var1, abundance.var2){
   #ricness and evenness differences
   s_t1 <- S(df[[abundance.var1]])
-  e_t1 <- E_q(as.numeric(df[[abundance.var1]]))
+  e_t1 <- EQ(as.numeric(df[[abundance.var1]]))
   s_t2 <- S(df[[abundance.var2]])
-  e_t2 <- E_q(as.numeric(df[[abundance.var2]]))
+  e_t2 <- EQ(as.numeric(df[[abundance.var2]]))
   
   sdiff <- abs(s_t1-s_t2)/nrow(df)
   ediff <- abs(e_t1-e_t2)/nrow(df)
@@ -62,8 +69,33 @@ aggfunc <- function(df, rank.var1, rank.var2, abundance.var1, abundance.var2){
   gain <- sum(df$gain)/nrow(df)
   loss <- sum(df$loss)/nrow(df)
   
-  mrsc <- MRSc(df, rank.var1, rank.var2)
+  mrsc <- mean(abs(df[[rank.var1]]-df[[rank.var2]])/nrow(df))
   
-  metrics <- data.frame(S=sdiff, E=ediff, R=mrsc, G=gain, L=loss)
+  metrics <- data.frame(Richness_change=sdiff, Evenness_change=ediff, Rank_change=mrsc, Gains=gain, Losses=loss)
   return(metrics)
+}
+
+S<-function(x){
+  x1 <- x[x!=0 & !is.na(x)]
+  stopifnot(x1==as.numeric(x1))
+  length(x1)
+}
+
+# 2) function to calculate EQ evenness from Smith and Wilson 1996
+#' @x the vector of abundances of each species
+#' if all abundances are equal it returns a 1
+EQ<-function(x){
+  x1<-x[x!=0 & !is.na(x)]
+  if (length(x1)==1) {
+    return(NA)
+  }
+  if (abs(max(x1) - min(x1)) < .Machine$double.eps^0.5) {##bad idea to test for zero, so this is basically doing the same thing testing for a very small number
+    return(1)
+  }
+  r<-rank(x1, ties.method = "average")
+  r_scale<-r/max(r)
+  x_log<-log(x1)
+  fit<-lm(r_scale~x_log)
+  b<-fit$coefficients[[2]]
+  2/pi*atan(b)
 }
