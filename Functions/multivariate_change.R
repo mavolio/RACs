@@ -73,6 +73,20 @@ multivariate_change <- function(df, time.var, species.var, abundance.var, replic
   #makes an empty dataframe
   # Mult_Comp_Disp_Change=data.frame(replicate=c(), treatment=c(),time=c(), compositional_change=c(), dispersion_change=c()) 
   # 
+  
+
+  
+  # # calculate change for each treatment
+  # df <- df[order(df[[replicate.var]]),]
+  # X <- split(df, df[replicate.var])
+  # out <- lapply(X, FUN=fill_zeros, time.var, species.var, abundance.var)
+  # ID <- unique(names(out))
+  # out <- mapply(function(x, y) "[<-"(x, treatment.var, value = y) ,
+  #               out, ID, SIMPLIFY = FALSE)
+  # allsp <- do.call("rbind", out)
+  
+  #Calculating bc mean change and dispersion PUT ALL THIS IN A FUNCTION
+  
   df2<-subset(df, select=c(time.var,replicate.var, species.var,abundance.var, treatment.var))
   df2$id<-paste(df2[[time.var]], df2[[replicate.var]], df2[[treatment.var]], sep="_")
   df2<-subset(df2, select=-c(time.var,replicate.var))#why doesn't this work?
@@ -83,18 +97,7 @@ multivariate_change <- function(df, time.var, species.var, abundance.var, replic
   colnames(speciesid)[2]<-"replicate"
   colnames(speciesid)[3]<-"treatment"
   species2<-cbind(speciesid, species)
-
   
-  # # calculate change for each treatment
-  # df <- df[order(df[[replicate.var]]),]
-  # X <- split(df, df[replicate.var])
-  # out <- lapply(X, FUN=fill_zeros, time.var, species.var, abundance.var)
-  # ID <- unique(names(out))
-  # out <- mapply(function(x, y) "[<-"(x, replicate.var, value = y) ,
-  #               out, ID, SIMPLIFY = FALSE)
-  # allsp <- do.call("rbind", out)
-  
-  #Calculating bc mean change and dispersion
   for(i in 1:length(treatlist)) {
     
     #subsets out each dataset
@@ -130,7 +133,8 @@ multivariate_change <- function(df, time.var, species.var, abundance.var, replic
     
     #merge together change in mean and dispersion data
     distances<-merge(cent_dist_yrs, disp_yrs, by=c("time"))
-    
+   
+    return(distances) 
     #pasting dispersions into the dataframe made for this analysis
     Mult_Comp_Disp_Change=rbind(distances, Mult_Comp_Disp_Change)  
   }
