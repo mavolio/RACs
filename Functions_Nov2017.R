@@ -7,10 +7,14 @@ library(vegan)
 #work
 setwd("C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\For R package")
 setwd("~/Dropbox/SESYNC/SESYNC_RACs/For R Package")
-df<-read.csv('pplots_example.csv')
+pdata<-read.csv('pplots_example.csv')
+pdata2<-subset(pdata, replicate==1)
+pdata2<-pdata2[,-3]
+pdata3<-subset(df, treatment=="N1P0")
+pdata3<-pdata3[-2]
 
 
-#####CALCULATING DIVERSITY METRICS
+ #####CALCULATING DIVERSITY METRICS
 ##still need to make a funciton to encapsulate all these
 
 com_struct <- function(df, replicate.var, abundance.var, time.var, evenness="E_q") {
