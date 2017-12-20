@@ -39,6 +39,25 @@ add_ranks_treatment_control_sppools <- function(df) {
   return(ct_rank)
 }
 
+
+## create a dataframe of all unique treatment combinations
+namesvector = unique(df[[treatment.var]])
+
+myperms <- as.data.frame(cbind(cola=as.character(), colb = as.character()))
+for (i in 1:length(namesvector)) {
+  cola <- as.character(namesvector[i])
+  for (j in i:length(namesvector)) {
+    if(i != j){
+      colb <- as.character(namesvector[j])
+      suba <- cbind(cola, colb)
+      myperms <- rbind(suba, myperms)
+    }
+  }
+}
+
+
+
+
 calculate_SERSp <- function(ct_rank){
   SERSp=data.frame(treatment=c(), time=c(), Sd=c(), Ed=c(), Rd=c(), spd=c())      
   timestep<-sort(unique(ct_rank$time)) 
