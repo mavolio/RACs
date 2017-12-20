@@ -46,7 +46,7 @@ RAC_changes <- function(df, time.var, species.var, abundance.var, replicate.var=
   }
   else{
     
-    rankdf <- add_ranks(df, replicate.var, species.var, abundance.var, time.var)
+    rankdf <- add_ranks(df,  time.var, species.var, abundance.var, replicate.var)
     
     # current year rankdf
     df2 <- rankdf
@@ -89,6 +89,7 @@ test1<-RAC_changes(pdata, time.var="time", replicate.var = "replicate", species.
 
 
 ## function for the richness and evenness differences, gains and losses, and rankshifts returning a dataframe with those and the MRSc output
+#rename this
 aggfunc <- function(df, rank.var1, rank.var2, abundance.var1, abundance.var2){
   #ricness and evenness differences
   s_t1 <- S(df[[abundance.var1]])
