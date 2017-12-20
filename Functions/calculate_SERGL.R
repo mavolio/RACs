@@ -13,7 +13,7 @@
 RAC_changes <- function(df, time.var, species.var, abundance.var, replicate.var=NULL) {
   if(is.null(replicate.var)){
   
-  rankdf <- add_ranks(df, species.var, abundance.var, time.var)#stops working here. Not sure why.
+  rankdf <- add_ranks(df, species.var, abundance.var, time.var, replicate.var)
   
   # current year rankdf
   df2 <- rankdf
