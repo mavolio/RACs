@@ -43,6 +43,8 @@ add_ranks_treatment_control_sppools <- function(df) {
 ## create a dataframe of all unique treatment combinations
 namesvector = unique(df[[treatment.var]])
 
+
+
 myperms <- as.data.frame(cbind(cola=as.character(), colb = as.character()))
 for (i in 1:length(namesvector)) {
   cola <- as.character(namesvector[i])
@@ -55,7 +57,49 @@ for (i in 1:length(namesvector)) {
   }
 }
 
+## A more parsimonious utils way to do this,
+## if we go this way need to shift to a df 
+# myperms <- combn(unique(time$treatment),2)
 
+## SPLIT BY YEAR AND DO EACH YEAR
+mytimes <- unique(df[[time.var]])
+for (i in 1:lemght(mytimes)){
+
+## need to add treatment into this!
+rankdf <- add_ranks(df, time.var, species.var, abundance.var, replicate.var)
+  
+df1 <- subset(rankdf, rankdf[[treatment.var]]== as.character(myperms[[i,1]]))
+df2 <- subset(rankdf, rankdf[[treatment.var]]== as.character(myperms[[i,2]]))
+
+
+df12<-merge(df1, df2, by=c(time.var,species.var), all=T)
+df12<-subset(df12, df12[[paste(abundance.var, ".x", sep = "")]]!=0|df12[[paste(abundance.var, ".y", sep = "")]]!=0)
+df12<-subset(df12, !is.na(df12[[paste(abundance.var, ".x", sep = "")]]) & !is.na(df12[[paste(abundance.var, ".y", sep = "")]]))
+
+## need to do the rank for this
+MRSc_diff<-mean(abs(df12$rank.x-df12$rank.y))/nrow(df12)
+
+spdiff<-subset_ct%>%
+  filter(abundance.x==0|abundance.y==0)
+
+spdiffc<-nrow(spdiff)/nrow(subset_ct)
+
+##eveness richness
+s_c <- S(subset_ct$abundance.x)
+e_c <- E_q(subset_ct$abundance.x)
+s_t <- S(subset_ct$abundance.y)
+e_t <- E_q(subset_ct$abundance.y)
+
+sdiff<-abs(s_c-s_t)/nrow(subset_ct)
+ediff<-abs(e_c-e_t)/nrow(subset_ct)
+
+metrics<-data.frame(treatment=treat_id, time=time_id, Sd=sdiff, Ed=ediff, Rd=MRSc_diff, spd=spdiffc)#spc_id
+
+##calculate differences for these year comparison and rbind to what I want.
+
+SERSp=rbind(metrics, SERSp)  
+
+}
 
 
 calculate_SERSp <- function(ct_rank){
