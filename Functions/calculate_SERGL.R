@@ -82,8 +82,8 @@ RAC_changes <- function(df, time.var, species.var, abundance.var, replicate.var=
   return(output)
 }
 
-test2<-RAC_changes(df2, time.var="time",species.var = "species", abundance.var = "abundance")#not working
-test1<-RAC_changes(df, time.var="time", replicate.var = "replicate", species.var = "species", abundance.var = "abundance")
+test2<-RAC_changes(pdata2, time.var="time",species.var = "species", abundance.var = "abundance")#not working
+test1<-RAC_changes(pdata, time.var="time", replicate.var = "replicate", species.var = "species", abundance.var = "abundance")
 
 ### PRIVATE FUNCTIONS ###
 
