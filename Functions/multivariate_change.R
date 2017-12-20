@@ -26,11 +26,7 @@ multivariate_change <- function(df, time.var, species.var, abundance.var, replic
         df2<-subset(df, select=c(time.var,species.var,abundance.var,replicate.var))
         df2$id<-paste(df2[[time.var]], df2[[replicate.var]], sep="_")
         species<-codyn:::transpose_community(df2, 'id',species.var, abundance.var)
-        
-        # df2<-subset(df2, select=-c(time.var,replicate.var))#why doesn't this work?
-        # species<- reshape(df2, idvar="id", timevar=species.var, direction="wide")
-        # species[is.na(wide)] <- 0
-        # 
+        species$id<-row.names(species)
         speciesid<-do.call(rbind.data.frame, strsplit(species$id, split="_"))
         colnames(speciesid)[1]<-time.var
         colnames(speciesid)[2]<-replicate.var
