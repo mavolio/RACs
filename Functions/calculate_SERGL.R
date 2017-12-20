@@ -8,11 +8,12 @@
 #' @param replicate.var The name of the optional replicate column 
 #' 
 #' 
-#' TO DO: Add time.var_pair, add for null replicates? then also need to add to add_ranks
+#' TO DO: Add time.var_pair, add for null replicates?
 
-RAC_changes <- function(df, time.var, species.var, abundance.var, replicate.var) {
+RAC_changes <- function(df, time.var, species.var, abundance.var, replicate.var=NULL) {
+  if(is.null(replicate.var)){
   
-  rankdf <- add_ranks(df, replicate.var, species.var, abundance.var, time.var)
+  rankdf <- add_ranks(df, species.var, abundance.var, time.var)#stops working here. Not sure why.
   
   # current year rankdf
   df2 <- rankdf
@@ -22,14 +23,13 @@ RAC_changes <- function(df, time.var, species.var, abundance.var, replicate.var)
   df1[[time.var]] <- df1[[time.var]] + 1
   
   # merge: .x is for previous time point, .y for current time point, time.var corresponds to current (i.e., .y)
-  df12 <- merge(df1, df2,  by=c(species.var,replicate.var, time.var), all=T)
+  df12 <- merge(df1, df2,  by=c(species.var, time.var), all=T)
   df12<-subset(df12, df12[[paste(abundance.var, ".x", sep = "")]]!=0|df12[[paste(abundance.var, ".y", sep = "")]]!=0)
   df12<-subset(df12, !is.na(df12[[paste(abundance.var, ".x", sep = "")]]) & !is.na(df12[[paste(abundance.var, ".y", sep = "")]]))
-  df12$splitvariable <- paste(df12[[replicate.var]], df12[[time.var]], sep="_") 
   
   # sort and apply turnover to all replicates
-  df12 <- df12[order(df12$splitvariable),]
-  X <- split(df12, df12$splitvariable)
+  df12 <- df12[order(df12[[time.var]]),]
+  X <- split(df12, df12[[time.var]])
   
 
   out <- lapply(X, FUN=aggfunc, "rank.x", "rank.y", paste(abundance.var, ".x", sep = ""),paste(abundance.var, ".y", sep = "")) 
@@ -39,14 +39,51 @@ RAC_changes <- function(df, time.var, species.var, abundance.var, replicate.var)
   output <- do.call("rbind", out)  
 
   outnames <- data.frame(do.call('rbind', strsplit(as.character(output$splitvariable),'_',fixed=TRUE)))
-  names(outnames) = c(replicate.var, time.var)
+  names(outnames) = time.var
   
   output$splitvariable <- NULL
   output <- cbind(outnames, output)
-  
+  }
+  else{
+    
+    rankdf <- add_ranks(df, replicate.var, species.var, abundance.var, time.var)
+    
+    # current year rankdf
+    df2 <- rankdf
+    
+    # previous year rank df
+    df1 <- rankdf
+    df1[[time.var]] <- df1[[time.var]] + 1
+    
+    # merge: .x is for previous time point, .y for current time point, time.var corresponds to current (i.e., .y)
+    df12 <- merge(df1, df2,  by=c(species.var,replicate.var, time.var), all=T)
+    df12<-subset(df12, df12[[paste(abundance.var, ".x", sep = "")]]!=0|df12[[paste(abundance.var, ".y", sep = "")]]!=0)
+    df12<-subset(df12, !is.na(df12[[paste(abundance.var, ".x", sep = "")]]) & !is.na(df12[[paste(abundance.var, ".y", sep = "")]]))
+    df12$splitvariable <- paste(df12[[replicate.var]], df12[[time.var]], sep="_") 
+    
+    # sort and apply turnover to all replicates
+    df12 <- df12[order(df12$splitvariable),]
+    X <- split(df12, df12$splitvariable)
+    
+    
+    out <- lapply(X, FUN=aggfunc, "rank.x", "rank.y", paste(abundance.var, ".x", sep = ""),paste(abundance.var, ".y", sep = "")) 
+    ID <- unique(names(out))
+    out <- mapply(function(x, y) "[<-"(x, "splitvariable", value = y) ,
+                  out, ID, SIMPLIFY = FALSE)
+    output <- do.call("rbind", out)  
+    
+    outnames <- data.frame(do.call('rbind', strsplit(as.character(output$splitvariable),'_',fixed=TRUE)))
+    names(outnames) = c(replicate.var, time.var)
+    
+    output$splitvariable <- NULL
+    output <- cbind(outnames, output)
+    
+  }
   return(output)
 }
 
+test2<-RAC_changes(df2, time.var="time",species.var = "species", abundance.var = "abundance")#not working
+test1<-RAC_changes(df, time.var="time", replicate.var = "replicate", species.var = "species", abundance.var = "abundance")
 
 ### PRIVATE FUNCTIONS ###
 
