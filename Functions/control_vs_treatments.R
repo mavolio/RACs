@@ -1,5 +1,5 @@
 ## Notes for Meghan:
-## 1) will we ever want to make time.var optional? People might often just be comparing treatments... Same for replicate.var
+## 1) will we ever want to make time.var optional? People might often just be comparing treatments... Same for replicate.var, don't have the optional ifelse in yet
 ## 2) double check that 0s have been filled in before the summing
 
 ##calculating RAC changes between treatments
@@ -9,6 +9,7 @@
 #' @param time.var The name of the time column 
 #' @param species.var The name of the species column 
 #' @param abundance.var The name of the abundance column 
+#' @param treatment.var The name of the treatment column
 #' @param replicate.var The name of the optional replicate column 
 #' 
 #' 
