@@ -40,10 +40,11 @@ add_ranks_treatment_control_sppools <- function(df) {
 }
 
 
+
+
+##### DO THIS AT THE TOP OF THE PRIMARY FUNCTION #####
 ## create a dataframe of all unique treatment combinations
 namesvector = unique(df[[treatment.var]])
-
-
 
 myperms <- as.data.frame(cbind(cola=as.character(), colb = as.character()))
 for (i in 1:length(namesvector)) {
@@ -56,42 +57,99 @@ for (i in 1:length(namesvector)) {
     }
   }
 }
+names(myperms) <- c(treatment.var, paste(treatment.var, "2", sep = ""))
 
 ## A more parsimonious utils way to do this,
 ## if we go this way need to shift to a df 
 # myperms <- combn(unique(time$treatment),2)
 
-## SPLIT BY YEAR AND DO EACH YEAR
-mytimes <- unique(df[[time.var]])
-for (i in 1:lemght(mytimes)){
+## Average values within each treatment, species and year
+## Then take ranks
+## Notes for Meghan:
+## 1) will we ever want to make time.var optional? People might often just be comparing treatments...
+## 2) double check that 0s have been filled in before the summing
+myformula = as.formula(paste(abundance.var, "~", treatment.var, "+", species.var, "+", time.var))
+sumdf <- aggregate(myformula, data = df, "mean")
 
 ## need to add treatment into this!
-rankdf <- add_ranks(df, time.var, species.var, abundance.var, replicate.var)
+rankdf <- add_ranks(sumdf, time.var, species.var, abundance.var, treatment.var)
+
+rankdf2 <- rankdf
+rankdf2[[paste(treatment.var, "2", sep = "")]] <- rankdf2[[treatment.var]]
+rankdf2[[treatment.var]] <- NULL
+
+rankdfall <- merge(rankdf, myperms, all.y = T)
+
+#rankdf2all <- merge(rankdf2, myperms, all.y = T)
+
+ranktog <- merge(rankdfall, rankdf2, by=c(time.var, species.var, paste(treatment.var, "2", sep="")))
+ranktog$splitvariable = paste(ranktog[[time.var]], ranktog[[treatment.var]], ranktog[[paste(treatment.var, "2", sep = "")]], sep="_")
+ranktog <- subset(ranktog, ranktog[[paste(abundance.var, ".x", sep = "")]]!=0 | ranktog[[paste(abundance.var, ".y", sep = "")]]!=0)
+ranktog <- subset(ranktog, !is.na(ranktog[[paste(abundance.var, ".x", sep = "")]]) & !is.na(ranktog[[paste(abundance.var, ".y", sep = "")]]))
+
+
+X <- split(ranktog, ranktog$splitvariable)
+
+out <- lapply(X, FUN=aggfunc, "rank.x", "rank.y", paste(abundance.var, ".x", sep = ""),paste(abundance.var, ".y", sep = "")) 
+ID <- unique(names(out))
+out <- mapply(function(x, y) "[<-"(x, "splitvariable", value = y) ,
+              out, ID, SIMPLIFY = FALSE)
+output <- do.call("rbind", out)  
+
+outnames <- data.frame(do.call('rbind', strsplit(as.character(output$splitvariable),'_',fixed=TRUE)))
+names(outnames) = c(time.var, treatment.var, paste(treatment.var, "2", sep=""))
+output$splitvariable <- NULL
+output <- cbind(outnames, output)
+
+
+
+subrank <- subset(ranktog,  treatment == "N1P3" & treatment2 == "N2P2")
+subrank <- subset(subrank, subrank[[paste(abundance.var, ".x", sep = "")]]!=0 | subrank[[paste(abundance.var, ".y", sep = "")]]!=0)
+subrank <- subset(subrank, !is.na(subrank[[paste(abundance.var, ".x", sep = "")]]) & !is.na(subrank[[paste(abundance.var, ".y", sep = "")]]))
+
+
+#### ## SPLIT BY YEAR AND DO EACH YEAR ####
+
+
+SERSp=data.frame(treatment=c(), time=c(), Sd=c(), Ed=c(), Rd=c(), spd=c())      
+
+for (i in 1:length(myperms)){
   
 df1 <- subset(rankdf, rankdf[[treatment.var]]== as.character(myperms[[i,1]]))
 df2 <- subset(rankdf, rankdf[[treatment.var]]== as.character(myperms[[i,2]]))
 
+df12 <- merge(df1, df2, by=c(time.var,species.var), all=T)
+df12 <- subset(df12, df12[[paste(abundance.var, ".x", sep = "")]]!=0 | df12[[paste(abundance.var, ".y", sep = "")]]!=0)
+df12 <- subset(df12, !is.na(df12[[paste(abundance.var, ".x", sep = "")]]) & !is.na(df12[[paste(abundance.var, ".y", sep = "")]]))
 
-df12<-merge(df1, df2, by=c(time.var,species.var), all=T)
-df12<-subset(df12, df12[[paste(abundance.var, ".x", sep = "")]]!=0|df12[[paste(abundance.var, ".y", sep = "")]]!=0)
-df12<-subset(df12, !is.na(df12[[paste(abundance.var, ".x", sep = "")]]) & !is.na(df12[[paste(abundance.var, ".y", sep = "")]]))
+out <- aggfunc(df12, "rank.x", "rank.y", paste(abundance.var, ".x", sep = ""),paste(abundance.var, ".y", sep = ""))
 
-## need to do the rank for this
-MRSc_diff<-mean(abs(df12$rank.x-df12$rank.y))/nrow(df12)
 
-spdiff<-subset_ct%>%
-  filter(abundance.x==0|abundance.y==0)
 
-spdiffc<-nrow(spdiff)/nrow(subset_ct)
+# out <- lapply(X, FUN=aggfunc, "rank.x", "rank.y", paste(abundance.var, ".x", sep = ""),paste(abundance.var, ".y", sep = "")) 
+# ID <- unique(names(out))
+# out <- mapply(function(x, y) "[<-"(x, "splitvariable", value = y) ,
+#               out, ID, SIMPLIFY = FALSE)
+# output <- do.call("rbind", out) 
+
+
+
+
+MRSc_diff <- mean(abs(df12$rank.x-df12$rank.y))/nrow(df12)
+
+## Meghan: I think there's a problem up the chain because there aren't any 0s
+spdiff <- subset(df12, df12[[paste(abundance.var, ".x", sep = "")]] == 0 | df12[[paste(abundance.var, ".y", sep = "")]] == 0)
+
+spdiffc <- nrow(spdiff)/nrow(df12)
 
 ##eveness richness
 s_c <- S(subset_ct$abundance.x)
-e_c <- E_q(subset_ct$abundance.x)
+e_c <- EQ(subset_ct$abundance.x)
 s_t <- S(subset_ct$abundance.y)
-e_t <- E_q(subset_ct$abundance.y)
+e_t <- EQ(subset_ct$abundance.y)
 
-sdiff<-abs(s_c-s_t)/nrow(subset_ct)
-ediff<-abs(e_c-e_t)/nrow(subset_ct)
+sdiff<-abs(s_c-s_t)/nrow(df12)
+ediff<-abs(e_c-e_t)/nrow(df12)
 
 metrics<-data.frame(treatment=treat_id, time=time_id, Sd=sdiff, Ed=ediff, Rd=MRSc_diff, spd=spdiffc)#spc_id
 
@@ -102,57 +160,5 @@ SERSp=rbind(metrics, SERSp)
 }
 
 
-calculate_SERSp <- function(ct_rank){
-  SERSp=data.frame(treatment=c(), time=c(), Sd=c(), Ed=c(), Rd=c(), spd=c())      
-  timestep<-sort(unique(ct_rank$time)) 
+
   
-  for(i in 1:(length(timestep))){
-    
-    time<-ct_rank%>%
-      filter(time==timestep[i])
-    
-    time_id<-timestep[i]
-    
-    #need to do all comparisions NOT SURE HOW TO PROCEED FROM HERE TO SUBSET ALL POSSIBLE COMBINATIONS
-    comparison<-combn(unique(time$treatment),2)
-    
-    
-    #filter out control plots
-    control<-time%>%
-      filter(C_T=="Control")
-    
-    treat_list<-unique(subset(time, C_T=="Treatment")$treatment)
-    
-    for (i in 1:length(treat_list)){
-      treat<-time%>%
-        filter(treatment==treat_list[i])
-      
-      treat_id<-treat_list[i]
-      
-      subset_ct<-merge(control, treat, by=c("time","species"), all=T)%>%
-        filter(abundance.x!=0|abundance.y!=0)
-      
-      MRSc_diff<-mean(abs(subset_ct$rank.x-subset_ct$rank.y))/nrow(subset_ct)
-      
-      spdiff<-subset_ct%>%
-        filter(abundance.x==0|abundance.y==0)
-      
-      spdiffc<-nrow(spdiff)/nrow(subset_ct)
-      
-      ##eveness richness
-      s_c <- S(subset_ct$abundance.x)
-      e_c <- E_q(subset_ct$abundance.x)
-      s_t <- S(subset_ct$abundance.y)
-      e_t <- E_q(subset_ct$abundance.y)
-      
-      sdiff<-abs(s_c-s_t)/nrow(subset_ct)
-      ediff<-abs(e_c-e_t)/nrow(subset_ct)
-      
-      metrics<-data.frame(treatment=treat_id, time=time_id, Sd=sdiff, Ed=ediff, Rd=MRSc_diff, spd=spdiffc)#spc_id
-      ##calculate differences for these year comparison and rbind to what I want.
-      
-      SERSp=rbind(metrics, SERSp)  
-    }
-  }
-  return(SERSp)
-}
