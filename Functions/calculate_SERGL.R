@@ -8,7 +8,7 @@
 #' @param replicate.var The name of the optional replicate column 
 #' 
 #' 
-#' TO DO: Add time.var_pair, add for null replicates?
+#' TO DO: Add time.var_pair
 
 RAC_changes <- function(df, time.var, species.var, abundance.var, replicate.var=NULL) {
   if(is.null(replicate.var)){
@@ -32,7 +32,7 @@ RAC_changes <- function(df, time.var, species.var, abundance.var, replicate.var=
   X <- split(df12, df12[[time.var]])
   
 
-  out <- lapply(X, FUN=aggfunc, "rank.x", "rank.y", paste(abundance.var, ".x", sep = ""),paste(abundance.var, ".y", sep = "")) 
+  out <- lapply(X, FUN=SERGL, "rank.x", "rank.y", paste(abundance.var, ".x", sep = ""),paste(abundance.var, ".y", sep = "")) 
   ID <- unique(names(out))
   out <- mapply(function(x, y) "[<-"(x, "splitvariable", value = y) ,
                 out, ID, SIMPLIFY = FALSE)
@@ -66,7 +66,7 @@ RAC_changes <- function(df, time.var, species.var, abundance.var, replicate.var=
     X <- split(df12, df12$splitvariable)
     
     
-    out <- lapply(X, FUN=aggfunc, "rank.x", "rank.y", paste(abundance.var, ".x", sep = ""),paste(abundance.var, ".y", sep = "")) 
+    out <- lapply(X, FUN=SERGL, "rank.x", "rank.y", paste(abundance.var, ".x", sep = ""),paste(abundance.var, ".y", sep = "")) 
     ID <- unique(names(out))
     out <- mapply(function(x, y) "[<-"(x, "splitvariable", value = y) ,
                   out, ID, SIMPLIFY = FALSE)
@@ -82,15 +82,12 @@ RAC_changes <- function(df, time.var, species.var, abundance.var, replicate.var=
   return(output)
 }
 
-test2<-RAC_changes(pdata2, time.var="time",species.var = "species", abundance.var = "abundance")#not working
-test1<-RAC_changes(pdata, time.var="time", replicate.var = "replicate", species.var = "species", abundance.var = "abundance")
-
 ### PRIVATE FUNCTIONS ###
 
 
 ## function for the richness and evenness differences, gains and losses, and rankshifts returning a dataframe with those and the MRSc output
 #rename this
-aggfunc <- function(df, rank.var1, rank.var2, abundance.var1, abundance.var2){
+SERGL <- function(df, rank.var1, rank.var2, abundance.var1, abundance.var2){
   #ricness and evenness differences
   s_t1 <- S(df[[abundance.var1]])
   e_t1 <- EQ(as.numeric(df[[abundance.var1]]))
