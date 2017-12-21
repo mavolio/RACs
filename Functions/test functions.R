@@ -1,10 +1,21 @@
 setwd("C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\For R package")
 setwd("~/Dropbox/SESYNC/SESYNC_RACs/For R Package")
+#all data
 pdata<-read.csv('pplots_example.csv')
+
+#no replicate
 pdata2<-subset(pdata, replicate==1)
 pdata2<-pdata2[,-3]
+
+#no treatment
 pdata3<-subset(pdata, treatment=="N1P0")
 pdata3<-pdata3[-2]
+
+replicate.var <- 'replicate'
+treatment.var <- 'treatment'
+species.var <- 'species'
+time.var <- 'time'
+abundace.var <- 'abundance'
 
 #RAC_changes
 #works with time and rep.
@@ -29,7 +40,7 @@ test2.eq<-community_structure(pdata2, time.var="time", abundance.var = "abundanc
 
 #multivariate change
 #with treatment
-test2<-multivariate_change(df, time.var="time", replicate.var = "replicate", treatment.var = "treatment", species.var = "species", abundance.var = "abundance")
+test2<-multivariate_change(pdata, time.var="time", replicate.var = "replicate", treatment.var = "treatment", species.var = "species", abundance.var = "abundance")
 #without treatment
 test1<-multivariate_change(pdata3, time.var="time", replicate.var = "replicate", species.var = "species", abundance.var = "abundance")
 
