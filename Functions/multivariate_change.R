@@ -26,9 +26,8 @@ multivariate_change <- function(df, time.var, species.var, abundance.var, replic
   ID <- unique(names(out))
   out <- mapply(function(x, y) "[<-"(x, treatment.var, value = y) ,
                 out, ID, SIMPLIFY = FALSE)
-  allsp <- do.call("rbind", out)
+  mult_com_change <- do.call("rbind", out)
   
-  mult_com_change <- distances
   
   }
   
