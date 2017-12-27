@@ -23,7 +23,7 @@ add_ranks <- function(df, time.var, species.var, abundance.var,  replicate.var=N
   ##add ranks for present species
   rank_pres <- subset(df, df[[abundance.var]]!=0)
    rank_pres$rank <- ave(rank_pres[[abundance.var]], rank_pres[[time.var]], FUN = function(x) rank(-x, ties.method = "average"))
-  rank_pres<-subset(rank_pres)
+  rank_pres<-subset(rank_pres)#what does this do?
   
   #adding zeros
   
