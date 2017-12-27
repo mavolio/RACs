@@ -15,7 +15,7 @@ replicate.var <- 'replicate'
 treatment.var <- 'treatment'
 species.var <- 'species'
 time.var <- 'time'
-abundace.var <- 'abundance'
+abundance.var <- 'abundance'
 
 #RAC_changes
 #works with time and rep.
@@ -44,3 +44,10 @@ test2<-multivariate_change(pdata, time.var="time", replicate.var = "replicate", 
 #without treatment
 test1<-multivariate_change(pdata3, time.var="time", replicate.var = "replicate", species.var = "species", abundance.var = "abundance")
 
+#curve change
+test1<-curve_change(pdata, time.var="time", abundance.var = "abundance", species.var = "species", replicate.var="replicate")
+test2<-curve_change(pdata2, time.var="time", abundance.var = "abundance", species.var = "species")
+
+#abundance change
+test1<-abundance_change(pdata, time.var="time", abundance.var = "abundance", species.var = "species", replicate.var="replicate")
+test2<-abundance_change(pdata2, time.var="time", abundance.var = "abundance", species.var = "species")
