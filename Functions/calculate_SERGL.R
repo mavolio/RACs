@@ -27,23 +27,12 @@ RAC_changes <- function(df, time.var, species.var, abundance.var, replicate.var=
   df12<-subset(df12, df12[[paste(abundance.var, ".x", sep = "")]]!=0|df12[[paste(abundance.var, ".y", sep = "")]]!=0)
   df12<-subset(df12, !is.na(df12[[paste(abundance.var, ".x", sep = "")]]) & !is.na(df12[[paste(abundance.var, ".y", sep = "")]]))
   
-  # sort and apply turnover to all replicates
+  # sort and apply to all time pairs
   df12 <- df12[order(df12[[time.var]]),]
   X <- split(df12, df12[[time.var]])
-  
-
   out <- lapply(X, FUN=SERGL, "rank.x", "rank.y", paste(abundance.var, ".x", sep = ""),paste(abundance.var, ".y", sep = "")) 
-  ID <- unique(names(out))
-  out <- mapply(function(x, y) "[<-"(x, "splitvariable", value = y) ,
-                out, ID, SIMPLIFY = FALSE)
   output <- do.call("rbind", out)  
-
-  outnames <- data.frame(do.call('rbind', strsplit(as.character(output$splitvariable),'_',fixed=TRUE)))
-  names(outnames) = time.var
-  
-  output$splitvariable <- NULL
-  output <- cbind(outnames, output)
-  }
+}
   else{
     
     rankdf <- add_ranks(df,  time.var, species.var, abundance.var, replicate.var)
@@ -61,7 +50,7 @@ RAC_changes <- function(df, time.var, species.var, abundance.var, replicate.var=
     df12<-subset(df12, !is.na(df12[[paste(abundance.var, ".x", sep = "")]]) & !is.na(df12[[paste(abundance.var, ".y", sep = "")]]))
     df12$splitvariable <- paste(df12[[replicate.var]], df12[[time.var]], sep="_") 
     
-    # sort and apply turnover to all replicates
+    # sort and apply to all time and replicate combinations
     df12 <- df12[order(df12$splitvariable),]
     X <- split(df12, df12$splitvariable)
     
@@ -74,6 +63,7 @@ RAC_changes <- function(df, time.var, species.var, abundance.var, replicate.var=
     
     outnames <- data.frame(do.call('rbind', strsplit(as.character(output$splitvariable),'_',fixed=TRUE)))
     names(outnames) = c(replicate.var, time.var)
+    outnames <- outnames[1]
     
     output$splitvariable <- NULL
     output <- cbind(outnames, output)
@@ -106,7 +96,12 @@ SERGL <- function(df, rank.var1, rank.var2, abundance.var1, abundance.var2){
   
   mrsc <- mean(abs(df[[rank.var1]]-df[[rank.var2]])/nrow(df))
   
-  metrics <- data.frame(Richness_change=sdiff, Evenness_change=ediff, Rank_change=mrsc, Gains=gain, Losses=loss)
+  time_pair<-paste(unique(df[[time.var]])-1, unique(df[[time.var]]), sep="-")
+  
+  metrics <- data.frame(time=time_pair,Richness_change=sdiff, Evenness_change=ediff, Rank_change=mrsc, Gains=gain, Losses=loss)
+  
+  colnames(metrics)[1]<-paste(time.var, "pair", sep="_")
+  
   return(metrics)
 }
 
