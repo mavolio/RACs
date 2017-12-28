@@ -28,7 +28,7 @@ curve_change <- function(df, time.var, species.var, abundance.var, replicate.var
     subset_t2 <- relrank[relrank[[time.var]] == timestep[i+1],]
     subset_t12 <- rbind(subset_t1, subset_t2)
     
-    output <- curvechange(subset_t12)
+    output <- curvechange(subset_t12, time.var, relrank, cumabund)
     
     cc_out <- rbind(cc_out, output)
     }
@@ -54,7 +54,7 @@ curve_change <- function(df, time.var, species.var, abundance.var, replicate.var
       subset_t12 <- rbind(subset_t1, subset_t2)
       
       X <- split(subset_t12, subset_t12[[replicate.var]])
-      out <- lapply(X, FUN=curvechange) 
+      out <- lapply(X, FUN=curvechange, time.var, relrank, cumabund) 
       ID <- unique(names(out))
       out <- mapply(function(x, y) "[<-"(x, replicate.var, value = y) ,
                     out, ID, SIMPLIFY = FALSE)
@@ -69,7 +69,7 @@ curve_change <- function(df, time.var, species.var, abundance.var, replicate.var
     
 ###private function
     
-curvechange <- function(df){
+curvechange <- function(df, time.var, relrank, cumabund){
     
     timestep2 <- unique(df[[time.var]])#assumes this is a length of 2
 
@@ -81,10 +81,10 @@ curvechange <- function(df){
     h <- abs(sf1(r) - sf2(r))
     w <- c(diff(r), 0)
     CC=sum(w*h)
+    time_pair<-paste(timestep2[1], timestep2[2], sep="-")
     
-    
-    output=data.frame(timestep=timestep2[2], CurveChange=CC)#expeiment year is year of timestep2
-    colnames(output)[1]<-time.var
+    output=data.frame(timepair=time_pair, CurveChange=CC)#expeiment year is year of timestep2
+    colnames(output)[1]<-paste(time.var, "pair", sep = "_")
     
     return(output)
     } 
