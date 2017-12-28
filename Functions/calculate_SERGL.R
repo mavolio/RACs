@@ -13,7 +13,7 @@
 RAC_changes <- function(df, time.var, species.var, abundance.var, replicate.var=NULL) {
   if(is.null(replicate.var)){
   
-  rankdf <- add_ranks(df, time.var, species.var, abundance.var, replicate.var)
+  rankdf <- add_ranks_time(df, time.var, species.var, abundance.var, replicate.var)
   
   # current year rankdf
   df2 <- rankdf
@@ -35,7 +35,7 @@ RAC_changes <- function(df, time.var, species.var, abundance.var, replicate.var=
 }
   else{
     
-    rankdf <- add_ranks(df,  time.var, species.var, abundance.var, replicate.var)
+    rankdf <- add_ranks_time(df,  time.var, species.var, abundance.var, replicate.var)
     
     # current year rankdf
     df2 <- rankdf
@@ -47,6 +47,8 @@ RAC_changes <- function(df, time.var, species.var, abundance.var, replicate.var=
     # merge: .x is for previous time point, .y for current time point, time.var corresponds to current (i.e., .y)
     df12 <- merge(df1, df2,  by=c(species.var,replicate.var, time.var), all=T)
     df12<-subset(df12, df12[[paste(abundance.var, ".x", sep = "")]]!=0|df12[[paste(abundance.var, ".y", sep = "")]]!=0)
+    
+    #what does this step do? Why is it necessary?
     df12<-subset(df12, !is.na(df12[[paste(abundance.var, ".x", sep = "")]]) & !is.na(df12[[paste(abundance.var, ".y", sep = "")]]))
     df12$splitvariable <- paste(df12[[replicate.var]], df12[[time.var]], sep="_") 
     
