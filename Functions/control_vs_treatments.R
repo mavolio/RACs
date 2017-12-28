@@ -34,14 +34,14 @@ names(myperms) <- c(treatment.var, paste(treatment.var, "2", sep = ""))
 
 ## A more parsimonious way to do this is in "utils"
 ## if we go this way we'd need to shift the output to a df to be consistent with below
-# myperms <- combn(unique(time$treatment),2)
+# myperms <- (combn(unique(time$treatment,2))
 
 ## Average values within each treatment, species and year
 myformula = as.formula(paste(abundance.var, "~", treatment.var, "+", species.var, "+", time.var))
 sumdf <- aggregate(myformula, data = df, "mean")
 
 ## Take ranks
-rankdf <- add_ranks(sumdf, time.var, species.var, abundance.var, treatment.var)
+rankdf <- add_ranks_time(sumdf, time.var, species.var, abundance.var, treatment.var)
 
 ## Create a second rankdf with a renamed treatment.var column
 rankdf2 <- rankdf
