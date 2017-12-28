@@ -11,7 +11,7 @@
 abundance_change <- function(df, time.var, species.var, abundance.var, replicate.var=NULL) {
   if(is.null(replicate.var)){
     
-    rankdf <- add_ranks(df, time.var, species.var, abundance.var, replicate.var=NULL)
+    rankdf <- add_ranks_time(df, time.var, species.var, abundance.var, replicate.var=NULL)
     
     # current year rankdf
     df2 <- rankdf
@@ -36,7 +36,7 @@ abundance_change <- function(df, time.var, species.var, abundance.var, replicate
   }
   else{
     
-    rankdf <- add_ranks(df,  time.var, species.var, abundance.var, replicate.var)
+    rankdf <- add_ranks_time(df,  time.var, species.var, abundance.var, replicate.var)
     
     # current year rankdf
     df2 <- rankdf
