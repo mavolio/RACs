@@ -11,11 +11,28 @@ pdata2<-pdata2[,-3]
 pdata3<-subset(pdata, treatment=="N1P0")
 pdata3<-pdata3[-2]
 
+#no time
+pdata4<-subset(pdata, time==2002)
+pdata4 <- pdata4[-1]
+
+#adding fake block
+rep_trt <- unique(subset(df, select = c(replicate.var, treatment.var)))
+#write.csv(rep_trt,"forfakeblocks.csv")
+fb<-read.csv("forfakeblocks2.csv")
+pdata5<-merge(fb, pdata, by=c("treatment","replicate"))
+
+##fake blocks no time
+pdata6<-subset(pdata5, time==2002)
+pdata6<-pdata6[-4]
+
 replicate.var <- 'replicate'
 treatment.var <- 'treatment'
 species.var <- 'species'
 time.var <- 'time'
 abundance.var <- 'abundance'
+block.var <- 'block'
+
+
 
 #RAC_changes
 #works with time and rep.
@@ -51,3 +68,51 @@ test2<-curve_change(pdata2, time.var="time", abundance.var = "abundance", specie
 #abundance change
 test1<-abundance_change(pdata, time.var="time", abundance.var = "abundance", species.var = "species", replicate.var="replicate")
 test2<-abundance_change(pdata2, time.var="time", abundance.var = "abundance", species.var = "species")
+
+####
+#RAC difference
+####
+
+#with blocks no time
+test1<-RAC_differences(df = pdata6, species.var = "species", abundance.var = "abundance", treatment.var = 'treatment', block.var = "block", replicate.var = "replicate")
+#with blocks and time
+test2<-RAC_differences(df = pdata5, species.var = "species", abundance.var = "abundance", treatment.var = 'treatment', block.var = "block", replicate.var = "replicate", time.var = "time")
+
+#pooling by treatment no time
+test3<-RAC_differences(df = pdata4, species.var = "species", abundance.var = "abundance", treatment.var = 'treatment', pool="YES", replicate.var = "replicate")
+#pooling by treatment with time
+test4<-RAC_differences(df = pdata, species.var = "species", abundance.var = "abundance", treatment.var = 'treatment', pool="YES", replicate.var = "replicate", time.var = "time")
+
+#all replicates no trt no time
+test5<-RAC_differences(df=pdata4, species.var = "species", abundance.var = "abundance", replicate.var = "replicate")
+#all replicates time
+test6<-RAC_differences(df=pdata, species.var = "species", abundance.var = "abundance", replicate.var = "replicate", time.var="time")
+
+#all replicates with trt but no time
+test7<-RAC_differences(df=pdata4, species.var = "species", abundance.var = "abundance", replicate.var = "replicate", treatment.var = 'treatment')
+#all replicates time
+test8<-RAC_differences(df=pdata, species.var = "species", abundance.var = "abundance", replicate.var = "replicate", time.var="time", treatment.var= 'treatment')
+
+####
+#Abundance difference
+####
+
+#with blocks no time
+test1<-abundance_diff(df = pdata6, species.var = "species", abundance.var = "abundance", treatment.var = 'treatment', block.var = "block", replicate.var = "replicate")
+#with blocks and time
+test2<-abundance_diff(df = pdata5, species.var = "species", abundance.var = "abundance", treatment.var = 'treatment', block.var = "block", replicate.var = "replicate", time.var = "time")
+
+#pooling by treatment no time
+test3<-abundance_diff(df = pdata4, species.var = "species", abundance.var = "abundance", treatment.var = 'treatment', pool="YES", replicate.var = "replicate")
+#pooling by treatment with time
+test4<-abundance_diff(df = pdata, species.var = "species", abundance.var = "abundance", treatment.var = 'treatment', pool="YES", replicate.var = "replicate", time.var = "time")
+
+#all replicates no trt no time
+test5<-abundance_diff(df=pdata4, species.var = "species", abundance.var = "abundance", replicate.var = "replicate")
+#all replicates time
+test6<-abundance_diff(df=pdata, species.var = "species", abundance.var = "abundance", replicate.var = "replicate", time.var="time")
+
+#all replicates with trt but no time
+test7<-abundance_diff(df=pdata4, species.var = "species", abundance.var = "abundance", replicate.var = "replicate", treatment.var = 'treatment')
+#all replicates time
+test8<-abundance_diff(df=pdata, species.var = "species", abundance.var = "abundance", replicate.var = "replicate", time.var="time", treatment.var= 'treatment')
