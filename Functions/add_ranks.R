@@ -16,7 +16,7 @@
 #'  \item{rank: }{A numeric column with the species rank; a rank of 1 indicates the species was most abundant in that time period. Species that are not present in that time period have the largest rank value.}
 #' }
 #' @export
-add_ranks <- function(df, time.var, species.var, abundance.var,  replicate.var=NULL) {
+add_ranks_time <- function(df, time.var, species.var, abundance.var,  replicate.var=NULL) {
   
   if(is.null(replicate.var)){
     df <- subset(df, select = c(time.var, species.var, abundance.var))
