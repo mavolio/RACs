@@ -81,5 +81,10 @@ disp_yrs <- data.frame(time = timestep[2:length(timestep)],
 #merge together change in mean and dispersion data
 distances <- merge(cent_dist_yrs, disp_yrs, by=time.var)
 
+distances$time_pair<-paste(distances[[time.var]]-1, distances[[time.var]], sep="_")
+
+distances<-subset(distances, select = c("time_pair", "composition_change", "dispersion_change"))
+colnames(distances)[1]<-paste(time.var, "pair", sep="_")
+
 return(distances)
 }
