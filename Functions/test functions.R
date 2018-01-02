@@ -16,7 +16,7 @@ pdata4<-subset(pdata, time==2002)
 pdata4 <- pdata4[-1]
 
 #adding fake block
-rep_trt <- unique(subset(df, select = c(replicate.var, treatment.var)))
+#rep_trt <- unique(subset(df, select = c(replicate.var, treatment.var)))
 #write.csv(rep_trt,"forfakeblocks.csv")
 fb<-read.csv("forfakeblocks2.csv")
 pdata5<-merge(fb, pdata, by=c("treatment","replicate"))
