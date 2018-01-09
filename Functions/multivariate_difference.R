@@ -44,22 +44,27 @@ mult_diff <- function(df, species.var, abundance.var, replicate.var, treatment.v
   #calculate bray-curtis dissimilarities
   bc <- vegdist(species3[,3:ncol(species3)], method="bray")
   
-  #calculate distances of each plot to year centroid (i.e., dispersion)
+  #calculate distances of each plot to treatment centroid (i.e., dispersion)
   disp <- betadisper(bc, species3[[treatment.var]], type="centroid")
   
-  #getting distances between centroids over years; these centroids are in BC space, so that's why this uses euclidean distances
+  #getting distances between treatments; these centroids are in BC space, so that's why this uses euclidean distances
   cent_dist <- as.data.frame(as.matrix(vegdist(disp$centroids, method="euclidean")))
   
-  ##extracting only the comparisions we want year x to year x=1.
-  ###year x+1
-  cent_dist_yrs <- data.frame(treatment.var = timestep[2:length(timestep)],
-                              composition_change = diag(cent_dist[2:nrow(cent_dist), 1:(ncol(cent_dist)-1)]))
+  #extracting all treatment differences
+  cent_dist2 <- as.data.frame(cbind(rownames(cent_dist)[which(lower.tri(cent_dist, diag=T), arr.ind=T)[,1]],
+        colnames(cent_dist)[which(lower.tri(cent_dist, diag=T), arr.ind=T)[,2]],
+        cent_dist[lower.tri(cent_dist, diag=T)]))
+  cent_dist3 <- cent_dist2[cent_dist2$V1 != cent_dist2$V2,]
   
-  #collecting and labeling distances to centroid from betadisper to get a measure of dispersion and then take the mean for a year
-  disp2 <- data.frame(time=species2[[time.var]],
+  colnames(cent_dist3)[1] <- paste(treatment.var, 2, sep="")
+  colnames(cent_dist3)[2] <- treatment.var
+  colnames(cent_dist3)[3] <- "comm_diff"
+  
+  #collecting and labeling distances to centroid from betadisper to get a measure of dispersion and then take the mean for a treatment
+  disp2 <- data.frame(treatment=species3[[treatment.var]],
                       dist = disp$distances)
   
-  myformula <- as.formula(paste("dist", "~", time.var))
+  myformula <- as.formula(paste("dist", "~", treatment.var))
   disp2.2<-aggregate(myformula, mean, data=disp2)
   
   ##subtract consequtive years subtracts year x+1 - x. So if it is positive there was greater dispersion in year x+1 and if negative less dispersion in year x+1
@@ -75,70 +80,4 @@ mult_diff <- function(df, species.var, abundance.var, replicate.var, treatment.v
   colnames(distances)[1]<-paste(time.var, "pair", sep="_")
   
   return(distances)
-}
-  
-  
-  year<-unique(df$time)
-
-#makes an empty dataframe
-Mult_Comp_Disp_Diff=data.frame() 
-##calculating bray-curtis mean change and disperison differecnes
-for(i in 1:length(year)) {
-  
-  #subsets out each dataset
-  subset<-df%>%
-    filter(time==year[i])%>%
-    select(treatment, time, species, abundance, replicate, C_T)
-  
-  #need this to keep track of plot mani
-  labels=subset%>%
-    select(C_T, treatment)%>%
-    unique()
-  
-  #transpose data
-  species=subset%>%
-    spread(species, abundance, fill=0)
-  
-  #calculate bray-curtis dissimilarities
-  bc=vegdist(species[,5:ncol(species)], method="bray")
-  
-  #calculate distances of each plot to treatment centroid (i.e., dispersion)
-  disp=betadisper(bc, species$treatment, type="centroid")
-  
-  #getting distances between centroids over years; these centroids are in BC space, so that's why this uses euclidean distances
-  cent_dist=as.data.frame(as.matrix(vegdist(disp$centroids, method="euclidean")))
-  
-  #extracting only the distances we need and adding labels for the comparisons;
-  cent_C_T=data.frame(time=year[i],
-                      treatment=row.names(cent_dist),
-                      mean_change=t(cent_dist[names(cent_dist)==labels$treatment[labels$C_T=="Control"],]))
-  
-  #renaming column
-  colnames(cent_C_T)[3]<-"comp_diff"
-  
-  #collecting and labeling distances to centroid from betadisper to get a measure of dispersion and then take the mean for a treatment
-  disp2=data.frame(time=year[i],
-                   treatment=species$treatment,
-                   C_T=species$C_T,
-                   replicate=species$replicate,
-                   dist=disp$distances)%>%
-    tbl_df%>%
-    group_by(time, treatment, C_T)%>%
-    summarize(dispersion=mean(dist))
-  
-  control<-disp2$dispersion[disp2$C_T=="Control"]
-  
-  ##subtract control from treatments
-  disp_treat=disp2%>%
-    mutate(disp_diff=dispersion-control)%>%
-    select(-dispersion)
-  
-  #merge together change in mean and dispersion data
-  distances<-merge(cent_C_T, disp_treat, by=c("time","treatment"))
-  
-  #pasting dispersions into the dataframe made for this analysis
-  Mult_Comp_Disp_Diff=rbind(Mult_Comp_Disp_Diff, distances)  
-}
-
-return(Mult_Comp_Disp_Diff)
 }
