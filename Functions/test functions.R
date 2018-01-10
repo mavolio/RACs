@@ -116,3 +116,34 @@ test6<-abundance_diff(df=pdata, species.var = "species", abundance.var = "abunda
 test7<-abundance_diff(df=pdata4, species.var = "species", abundance.var = "abundance", replicate.var = "replicate", treatment.var = 'treatment')
 #all replicates time
 test8<-abundance_diff(df=pdata, species.var = "species", abundance.var = "abundance", replicate.var = "replicate", time.var="time", treatment.var= 'treatment')
+
+
+####
+#curve difference
+####
+
+#with blocks no time
+test1<-curve_differences(df = pdata6, species.var = "species", abundance.var = "abundance", treatment.var = 'treatment', block.var = "block", replicate.var = "replicate")
+#with blocks and time
+test2<-curve_differences(df = pdata5, species.var = "species", abundance.var = "abundance", treatment.var = 'treatment', block.var = "block", replicate.var = "replicate", time.var = "time")
+
+#pooling by treatment no time
+test3<-curve_differences(df = pdata4, species.var = "species", abundance.var = "abundance", treatment.var = 'treatment', pool="YES", replicate.var = "replicate")
+#pooling by treatment with time
+test4<-curve_differences(df = pdata, species.var = "species", abundance.var = "abundance", treatment.var = 'treatment', pool="YES", replicate.var = "replicate", time.var = "time")
+
+#all replicates no trt no time
+test5<-curve_differences(df=pdata4, species.var = "species", abundance.var = "abundance", replicate.var = "replicate")
+#all replicates time
+test6<-curve_differences(df=pdata, species.var = "species", abundance.var = "abundance", replicate.var = "replicate", time.var="time")
+
+#all replicates with trt but no time
+test7<-curve_differences(df=pdata4, species.var = "species", abundance.var = "abundance", replicate.var = "replicate", treatment.var = 'treatment')
+#all replicates time
+test8<-curve_differences(df=pdata, species.var = "species", abundance.var = "abundance", replicate.var = "replicate", time.var="time", treatment.var= 'treatment')
+
+#multivariate difference
+#without time
+test2<-multivariate_difference(pdata4, replicate.var = "replicate", treatment.var = "treatment", species.var = "species", abundance.var = "abundance")
+#with time
+test1<-multivariate_difference(pdata, time.var="time", replicate.var = "replicate", species.var = "species", abundance.var = "abundance", treatment.var = "treatment")
