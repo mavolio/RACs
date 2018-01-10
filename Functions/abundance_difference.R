@@ -34,7 +34,7 @@ abundance_difference <- function(df, time.var=NULL, species.var, abundance.var, 
        ranktog <- merge(rankdfall, rankdf2, by=c(species.var, block.var, paste(treatment.var, "2", sep="")))
       
        ## Create a variable to split on (block as well as unique treatment combos)
-       ranktog$splitvariable = paste(ranktog[[block.var]], ranktog[[treatment.var]], ranktog[[paste(treatment.var, "2", sep = "")]], sep="_")
+       ranktog$splitvariable = paste(ranktog[[block.var]], ranktog[[treatment.var]], ranktog[[paste(treatment.var, "2", sep = "")]], sep="##")
        
        ## Split the dataframe
        X <- split(ranktog, ranktog$splitvariable)
@@ -47,7 +47,7 @@ abundance_difference <- function(df, time.var=NULL, species.var, abundance.var, 
        output <- do.call("rbind", out)  
        
        ## Add in the identifying column names
-       outnames <- data.frame(do.call('rbind', strsplit(as.character(output$splitvariable),'_',fixed=TRUE)))
+       outnames <- data.frame(do.call('rbind', strsplit(as.character(output$splitvariable),'##',fixed=TRUE)))
        names(outnames) = c(block.var, treatment.var, paste(treatment.var, "2", sep=""))
        output$splitvariable <- NULL
        output <- cbind(outnames, output)
@@ -72,7 +72,7 @@ abundance_difference <- function(df, time.var=NULL, species.var, abundance.var, 
       ranktog <- merge(rankdfall, rankdf2, by=c(time.var, species.var, block.var, paste(treatment.var, "2", sep="")))
       
       ## Create a variable to split on (block, time, and unique treatment combos)
-      ranktog$splitvariable = paste(ranktog[[time.var]], ranktog[[block.var]], ranktog[[treatment.var]], ranktog[[paste(treatment.var, "2", sep = "")]], sep="_")
+      ranktog$splitvariable = paste(ranktog[[time.var]], ranktog[[block.var]], ranktog[[treatment.var]], ranktog[[paste(treatment.var, "2", sep = "")]], sep="##")
       
       ## Split the dataframe
       X <- split(ranktog, ranktog$splitvariable)
@@ -85,7 +85,7 @@ abundance_difference <- function(df, time.var=NULL, species.var, abundance.var, 
       output <- do.call("rbind", out)  
       
       ## Add in the identifying column names
-      outnames <- data.frame(do.call('rbind', strsplit(as.character(output$splitvariable),'_',fixed=TRUE)))
+      outnames <- data.frame(do.call('rbind', strsplit(as.character(output$splitvariable),'##',fixed=TRUE)))
       names(outnames) = c(time.var, block.var, treatment.var, paste(treatment.var, "2", sep=""))
       output$splitvariable <- NULL
       output <- cbind(outnames, output)
@@ -113,7 +113,7 @@ abundance_difference <- function(df, time.var=NULL, species.var, abundance.var, 
       ranktog <- merge(rankdfall, rankdf2, by=c(species.var, paste(treatment.var, "2", sep="")))
       
       ## Create a variable to split on (block as well as unique treatment combos)
-      ranktog$splitvariable = paste(ranktog[[treatment.var]], ranktog[[paste(treatment.var, "2", sep = "")]], sep="_")
+      ranktog$splitvariable = paste(ranktog[[treatment.var]], ranktog[[paste(treatment.var, "2", sep = "")]], sep="##")
       
       ## Split the dataframe
       X <- split(ranktog, ranktog$splitvariable)
@@ -126,7 +126,7 @@ abundance_difference <- function(df, time.var=NULL, species.var, abundance.var, 
       output <- do.call("rbind", out)  
       
       ## Add in the identifying column names
-      outnames <- data.frame(do.call('rbind', strsplit(as.character(output$splitvariable),'_',fixed=TRUE)))
+      outnames <- data.frame(do.call('rbind', strsplit(as.character(output$splitvariable),'##',fixed=TRUE)))
       names(outnames) = c(treatment.var, paste(treatment.var, "2", sep=""))
       output$splitvariable <- NULL
       output <- cbind(outnames, output)
@@ -146,7 +146,7 @@ abundance_difference <- function(df, time.var=NULL, species.var, abundance.var, 
         ranktog <- merge(rankdfall, rankdf2, by=c(time.var, species.var, paste(treatment.var, "2", sep="")))
         
         ## Create a variable to split on (block, time, and unique treatment combos)
-        ranktog$splitvariable = paste(ranktog[[time.var]], ranktog[[treatment.var]], ranktog[[paste(treatment.var, "2", sep = "")]], sep="_")
+        ranktog$splitvariable = paste(ranktog[[time.var]], ranktog[[treatment.var]], ranktog[[paste(treatment.var, "2", sep = "")]], sep="##")
         
         ## Split the dataframe
         X <- split(ranktog, ranktog$splitvariable)
@@ -159,7 +159,7 @@ abundance_difference <- function(df, time.var=NULL, species.var, abundance.var, 
         output <- do.call("rbind", out)  
         
         ## Add in the identifying column names
-        outnames <- data.frame(do.call('rbind', strsplit(as.character(output$splitvariable),'_',fixed=TRUE)))
+        outnames <- data.frame(do.call('rbind', strsplit(as.character(output$splitvariable),'##',fixed=TRUE)))
         names(outnames) = c(time.var, treatment.var, paste(treatment.var, "2", sep=""))
         output$splitvariable <- NULL
         output <- cbind(outnames, output)
@@ -184,7 +184,7 @@ abundance_difference <- function(df, time.var=NULL, species.var, abundance.var, 
            ranktog <- merge(rankdfall, rankdf2, by=c(species.var, paste(replicate.var, "2", sep="")))
            
            ## Create a variable to split on (each replicate combination)
-           ranktog$splitvariable = paste(ranktog[[replicate.var]], ranktog[[paste(replicate.var, "2", sep = "")]], sep="_")
+           ranktog$splitvariable = paste(ranktog[[replicate.var]], ranktog[[paste(replicate.var, "2", sep = "")]], sep="##")
            
            ## Split the dataframe
            X <- split(ranktog, ranktog$splitvariable)
@@ -197,7 +197,7 @@ abundance_difference <- function(df, time.var=NULL, species.var, abundance.var, 
            output <- do.call("rbind", out)  
            
            ## Add in the identifying column names
-           outnames <- data.frame(do.call('rbind', strsplit(as.character(output$splitvariable),'_',fixed=TRUE)))
+           outnames <- data.frame(do.call('rbind', strsplit(as.character(output$splitvariable),'##',fixed=TRUE)))
            names(outnames) = c(replicate.var, paste(replicate.var, "2", sep=""))
            output$splitvariable <- NULL
            output <- cbind(outnames, output)
@@ -217,7 +217,7 @@ abundance_difference <- function(df, time.var=NULL, species.var, abundance.var, 
         ranktog <- merge(rankdfall, rankdf2, by=c(species.var, time.var, paste(replicate.var, "2", sep="")))
         
         ## Create a variable to split on (each replicate combination)
-        ranktog$splitvariable = paste(ranktog[[time.var]], ranktog[[replicate.var]], ranktog[[paste(replicate.var, "2", sep = "")]], sep="_")
+        ranktog$splitvariable = paste(ranktog[[time.var]], ranktog[[replicate.var]], ranktog[[paste(replicate.var, "2", sep = "")]], sep="##")
         
         ## Split the dataframe
         X <- split(ranktog, ranktog$splitvariable)
@@ -230,7 +230,7 @@ abundance_difference <- function(df, time.var=NULL, species.var, abundance.var, 
         output <- do.call("rbind", out)  
         
         ## Add in the identifying column names
-        outnames <- data.frame(do.call('rbind', strsplit(as.character(output$splitvariable),'_',fixed=TRUE)))
+        outnames <- data.frame(do.call('rbind', strsplit(as.character(output$splitvariable),'##',fixed=TRUE)))
         names(outnames) = c(time.var, replicate.var, paste(replicate.var, "2", sep=""))
         output$splitvariable <- NULL
         output <- cbind(outnames, output)
@@ -263,7 +263,7 @@ abundance_difference <- function(df, time.var=NULL, species.var, abundance.var, 
           ranktog <- merge(rankdfall, rankdf2, by=c(species.var, paste(replicate.var, "2", sep="")))
           
           ## Create a variable to split on (each replicate combination)
-          ranktog$splitvariable = paste(ranktog[[replicate.var]], ranktog[[paste(replicate.var, "2", sep = "")]], sep="_")
+          ranktog$splitvariable = paste(ranktog[[replicate.var]], ranktog[[paste(replicate.var, "2", sep = "")]], sep="##")
           
           ## Split the dataframe
           X <- split(ranktog, ranktog$splitvariable)
@@ -276,7 +276,7 @@ abundance_difference <- function(df, time.var=NULL, species.var, abundance.var, 
           output <- do.call("rbind", out)  
           
           ## Add in the identifying column names
-          outnames <- data.frame(do.call('rbind', strsplit(as.character(output$splitvariable),'_',fixed=TRUE)))
+          outnames <- data.frame(do.call('rbind', strsplit(as.character(output$splitvariable),'##',fixed=TRUE)))
           names(outnames) = c(replicate.var, paste(replicate.var, "2", sep=""))
           output$splitvariable <- NULL
           output <- cbind(outnames, output)
@@ -299,7 +299,7 @@ abundance_difference <- function(df, time.var=NULL, species.var, abundance.var, 
           ranktog <- merge(rankdfall, rankdf2, by=c(species.var, time.var, paste(replicate.var, "2", sep="")))
           
           ## Create a variable to split on (each replicate combination)
-          ranktog$splitvariable = paste(ranktog[[time.var]], ranktog[[replicate.var]], ranktog[[paste(replicate.var, "2", sep = "")]], sep="_")
+          ranktog$splitvariable = paste(ranktog[[time.var]], ranktog[[replicate.var]], ranktog[[paste(replicate.var, "2", sep = "")]], sep="##")
           
           ## Split the dataframe
           X <- split(ranktog, ranktog$splitvariable)
@@ -312,7 +312,7 @@ abundance_difference <- function(df, time.var=NULL, species.var, abundance.var, 
           output <- do.call("rbind", out)  
           
           ## Add in the identifying column names
-          outnames <- data.frame(do.call('rbind', strsplit(as.character(output$splitvariable),'_',fixed=TRUE)))
+          outnames <- data.frame(do.call('rbind', strsplit(as.character(output$splitvariable),'##',fixed=TRUE)))
           names(outnames) = c(time.var, replicate.var, paste(replicate.var, "2", sep=""))
           output$splitvariable <- NULL
           output <- cbind(outnames, output)
