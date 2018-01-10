@@ -63,7 +63,7 @@ mult_diff <- function(df, species.var, abundance.var, replicate.var, treatment.v
   
   colnames(cent_dist3)[1] <- paste(treatment.var, 2, sep="")
   colnames(cent_dist3)[2] <- treatment.var
-  colnames(cent_dist3)[3] <- "comm_diff"
+  colnames(cent_dist3)[3] <- "composition_diff"
   
   #collecting and labeling distances to centroid from betadisper to get a measure of dispersion and then take the mean for a treatment
   disp2 <- data.frame(treatment=species3[[treatment.var]],
@@ -80,8 +80,8 @@ mult_diff <- function(df, species.var, abundance.var, replicate.var, treatment.v
   cent_dist_disp2[[treatment.var]]<-as.character(cent_dist_disp2[[treatment.var]])
   cent_dist_disp2[[paste(treatment.var, 2, sep = "")]]<-as.character(cent_dist_disp2[[paste(treatment.var, 2, sep = "")]])
   
-   cent_dist_disp2$abs_disp_diff <- abs(cent_dist_disp2$dist.x - cent_dist_disp2$dist.y)
-  cent_dist_disp2$greater_disp <- as.character(ifelse(cent_dist_disp2$dist.x > cent_dist_disp2$dist.y, cent_dist_disp2[[treatment.var]], cent_dist_disp2[[paste(treatment.var, 2, sep = "")]]))
+   cent_dist_disp2$abs_dispersion_diff <- abs(cent_dist_disp2$dist.x - cent_dist_disp2$dist.y)
+  cent_dist_disp2$trt_greater_disp <- as.character(ifelse(cent_dist_disp2$dist.x > cent_dist_disp2$dist.y, cent_dist_disp2[[treatment.var]], cent_dist_disp2[[paste(treatment.var, 2, sep = "")]]))
   
   cent_dist_disp2$dist.x <- NULL
   cent_dist_disp2$dist.y <- NULL
