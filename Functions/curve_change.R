@@ -83,7 +83,7 @@ curvechange <- function(df, time.var, relrank, cumabund){
     CC=sum(w*h)
     time_pair<-paste(timestep2[1], timestep2[2], sep="-")
     
-    output=data.frame(timepair=time_pair, CurveChange=CC)#expeiment year is year of timestep2
+    output=data.frame(timepair=time_pair, curve_change=CC)#expeiment year is year of timestep2
     colnames(output)[1]<-paste(time.var, "pair", sep = "_")
     
     return(output)
@@ -95,14 +95,14 @@ curvechange <- function(df, time.var, relrank, cumabund){
 #2. plots with only 1 species in any 2 years.
 
 ##dropping plots that were not measured both years
-subset_t12_2<-merge(plots_bothyrs, subset_t12, by="replicate")
-
-#dropping plots with only 1 species in any of the two years    
-drop<-subset_t12_2%>%
-  group_by(time, replicate)%>%
-  mutate(numplots=length(replicate))%>%
-  ungroup()%>%
-  group_by(replicate)%>%
-  mutate(min=min(numplots))%>%
-  select(replicate, min)%>%
-  unique()
+# subset_t12_2<-merge(plots_bothyrs, subset_t12, by="replicate")
+# 
+# #dropping plots with only 1 species in any of the two years    
+# drop<-subset_t12_2%>%
+#   group_by(time, replicate)%>%
+#   mutate(numplots=length(replicate))%>%
+#   ungroup()%>%
+#   group_by(replicate)%>%
+#   mutate(min=min(numplots))%>%
+#   select(replicate, min)%>%
+#   unique()
