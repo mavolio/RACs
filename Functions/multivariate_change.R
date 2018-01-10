@@ -12,10 +12,9 @@ multivariate_change <- function(df, time.var, species.var, abundance.var, replic
 
     if(is.null(treatment.var)){
   
-      mult_change(df, time.var, species.var, abundance.var, replicate.var)
+      mult_com_change <- mult_change(df, time.var, species.var, abundance.var, replicate.var)
       
-      mult_com_change <- distances
-    }
+      }
   
   else {
     
