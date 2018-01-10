@@ -50,7 +50,7 @@ RAC_change <- function(df, time.var, species.var, abundance.var, replicate.var=N
     
     #what does this step do? Why is it necessary?
     df12<-subset(df12, !is.na(df12[[paste(abundance.var, ".x", sep = "")]]) & !is.na(df12[[paste(abundance.var, ".y", sep = "")]]))
-    df12$splitvariable <- paste(df12[[replicate.var]], df12[[time.var]], sep="_") 
+    df12$splitvariable <- paste(df12[[replicate.var]], df12[[time.var]], sep="##") 
     
     # sort and apply to all time and replicate combinations
     df12 <- df12[order(df12$splitvariable),]
@@ -63,7 +63,7 @@ RAC_change <- function(df, time.var, species.var, abundance.var, replicate.var=N
                   out, ID, SIMPLIFY = FALSE)
     output <- do.call("rbind", out)  
     
-    outnames <- data.frame(do.call('rbind', strsplit(as.character(output$splitvariable),'_',fixed=TRUE)))
+    outnames <- data.frame(do.call('rbind', strsplit(as.character(output$splitvariable),'##',fixed=TRUE)))
     names(outnames) = c(replicate.var, time.var)
     outnames <- outnames[1]
     
