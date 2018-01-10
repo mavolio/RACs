@@ -9,7 +9,7 @@
 #' @param block.var The name of the optional block column
 
 
-RAC_differences <- function(df, time.var=NULL, species.var, abundance.var, replicate.var, treatment.var=NULL, pool="NO", block.var=NULL){
+RAC_difference <- function(df, time.var=NULL, species.var, abundance.var, replicate.var, treatment.var=NULL, pool="NO", block.var=NULL){
 
   if(!is.null(block.var)){
     
@@ -99,7 +99,7 @@ RAC_differences <- function(df, time.var=NULL, species.var, abundance.var, repli
       
     if(is.null(time.var)){
       ##pool data into treatment and rank
-      rankdf<-pool_treatments(df, time.var, species.var, abundance.var, replicate.var, treatment.var)
+      rankdf<-pool_replicates(df, time.var, species.var, abundance.var, replicate.var, treatment.var)
       
       ## Create a second rankdf with a renamed treatment.var column
       rankdf2 <- rankdf
@@ -132,7 +132,7 @@ RAC_differences <- function(df, time.var=NULL, species.var, abundance.var, repli
       output <- cbind(outnames, output)
     }
       else{
-        rankdf<-pool_treatments(df, time.var, species.var, abundance.var, replicate.var, treatment.var)
+        rankdf<-pool_replicates(df, time.var, species.var, abundance.var, replicate.var, treatment.var)
         
         ## Create a second rankdf with a renamed treatment.var column
         rankdf2 <- rankdf
@@ -348,7 +348,7 @@ return(output)
     
     mrsc_diff <- mean(abs(df[[rank.var1]]-df[[rank.var2]])/nrow(df))
     
-    metrics <- data.frame(Richness_diff=sdiff, Evenness_diff=ediff, Rank_diff=mrsc_diff, Species_differences = spdiffc)
+    metrics <- data.frame(richness_diff=sdiff, evenness_diff=ediff, rank_diff=mrsc_diff, species_diff = spdiffc)
     
     return(metrics)
   }
