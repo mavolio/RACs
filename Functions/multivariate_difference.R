@@ -11,24 +11,29 @@ multivariate_difference <- function(df, time.var=NULL, species.var, abundance.va
   
   if(is.null(time.var)){
     
-    
+    output <- mult_diff(df, species.var, abundance.var, replicate.var, treatment.var)
     
   }
   
   else{
     
+    df <- df[order(df[[time.var]]),]
+    X <- split(df, df[time.var])
+    out <- lapply(X, FUN = mult_diff, species.var, abundance.var, replicate.var, treatment.var)
+    ID <- unique(names(out))
+    out <- mapply(function(x, y) "[<-"(x, time.var, value = y) ,
+                  out, ID, SIMPLIFY = FALSE)
+    output <- do.call("rbind", out)
+    
   }
   
-  return()
+  return(output)
 }
 
 ###private functions
 
 mult_diff <- function(df, species.var, abundance.var, replicate.var, treatment.var){
   require(vegan)
-  
-  #get treatments
-  labels <- sort(unique(df[[treatment.var]]))
   
   #transpose data
   df2<-subset(df, select = c(species.var, abundance.var, replicate.var, treatment.var))
@@ -65,19 +70,22 @@ mult_diff <- function(df, species.var, abundance.var, replicate.var, treatment.v
                       dist = disp$distances)
   
   myformula <- as.formula(paste("dist", "~", treatment.var))
-  disp2.2<-aggregate(myformula, mean, data=disp2)
+  disp2.2 <- aggregate(myformula, mean, data=disp2)
   
-  ##subtract consequtive years subtracts year x+1 - x. So if it is positive there was greater dispersion in year x+1 and if negative less dispersion in year x+1
-  disp_yrs <- data.frame(time = timestep[2:length(timestep)],
-                         dispersion_change = diff(disp2.2$dist))
+  #mege into get dispersion for each treatment
+  cent_dist_disp <- merge(cent_dist3, disp2.2, by = treatment.var)
+  cent_dist_disp2 <- merge(cent_dist_disp, disp2.2, by.x = paste(treatment.var, 2, sep = ""), by.y = treatment.var)
   
-  #merge together change in mean and dispersion data
-  distances <- merge(cent_dist_yrs, disp_yrs, by=time.var)
+  #calculate absolute difference
+  cent_dist_disp2[[treatment.var]]<-as.character(cent_dist_disp2[[treatment.var]])
+  cent_dist_disp2[[paste(treatment.var, 2, sep = "")]]<-as.character(cent_dist_disp2[[paste(treatment.var, 2, sep = "")]])
   
-  distances$time_pair<-paste(distances[[time.var]]-1, distances[[time.var]], sep="_")
+   cent_dist_disp2$abs_disp_diff <- abs(cent_dist_disp2$dist.x - cent_dist_disp2$dist.y)
+  cent_dist_disp2$greater_disp <- as.character(ifelse(cent_dist_disp2$dist.x > cent_dist_disp2$dist.y, cent_dist_disp2[[treatment.var]], cent_dist_disp2[[paste(treatment.var, 2, sep = "")]]))
   
-  distances<-subset(distances, select = c("time_pair", "composition_change", "dispersion_change"))
-  colnames(distances)[1]<-paste(time.var, "pair", sep="_")
+  cent_dist_disp2$dist.x <- NULL
+  cent_dist_disp2$dist.y <- NULL
   
-  return(distances)
+
+  return(cent_dist_disp2)
 }
