@@ -3,44 +3,74 @@
 #' @title Community structure
 #' @description 
 #' @param df A data frame containing time, species and abundance columns and an optional column of replicates
-#' @param time.var The name of the time column 
+#' @param time.var The name of the optional time column 
 #' @param species.var The name of the species column 
 #' @param abundance.var The name of the abundance column 
 #' @param replicate.var The name of the optional replicate column 
 
 
-community_structure <- function(df,  time.var, abundance.var, replicate.var = NULL, evenness = "EQ") {
+community_structure <- function(df,  time.var=NULL, abundance.var, replicate.var = NULL, evenness = "EQ") {
   if(is.null(replicate.var)){
     myformula <- as.formula(paste(abundance.var, "~", time.var))
     
     if(evenness == "EQ"){
     comstruct <- do.call(data.frame,aggregate(myformula, data = df, FUN = function(x) c(SpR = S(x), evenness = EQ(x))))
-    names(comstruct)[2] <- "Richness"
-    names(comstruct)[3] <- "Evenness_EQ"
+    names(comstruct)[2] <- "richness"
+    names(comstruct)[3] <- "evenness_EQ"
     }
     else{
     comstruct <- do.call(data.frame,aggregate(myformula, data = df, FUN = function(x) c(SpR = S(x), evenness = SimpEven(x))))
-    names(comstruct)[2] <- "Richness"
-    names(comstruct)[3] <- "Evenness_Simpson"
+    names(comstruct)[2] <- "richness"
+    names(comstruct)[3] <- "evenness_Simpson"
     } 
   }
   else {
+    if(is.null(time.var)){
+      myformula <- as.formula(paste(abundance.var, "~", replicate.var))
       
-  myformula <- as.formula(paste(abundance.var, "~", time.var, "+", replicate.var))
+      if(evenness == "EQ"){
+        comstruct <- do.call(data.frame,aggregate(myformula, data = df, FUN = function(x) c(SpR = S(x), evenness = EQ(x))))
+        names(comstruct)[2] <- "richness"
+        names(comstruct)[3] <- "evenness_EQ"
+      }
+      else{
+        comstruct <- do.call(data.frame,aggregate(myformula, data = df, FUN = function(x) c(SpR = S(x), evenness = SimpEven(x))))
+        names(comstruct)[2] <- "richness"
+        names(comstruct)[3] <- "evenness_Simpson"
+      }
+    } 
+    else{
+    myformula <- as.formula(paste(abundance.var, "~", time.var, "+", replicate.var))
+  
+    if(evenness == "EQ"){
+    comstruct <- do.call(data.frame, aggregate(myformula, data = df, FUN = function(x) c(SpR = S(x), evenness = EQ(x))))
+    names(comstruct)[3] <- "richness"
+    names(comstruct)[4] <- "evenness_EQ"
+  } 
+    else{
+    comstruct <- do.call(data.frame,aggregate(myformula, data = df, FUN = function(x) c(SpR = S(x), evenness = SimpEven(x))))
+    names(comstruct)[3] <- "richness"
+    names(comstruct)[4] <- "evenness_Simpson"
+  }
+    }
+  }
+    return(comstruct)
+}
+
+if(is.null(time.var)){
+  myformula <- as.formula(paste(abundance.var, "~", replicate.var))
   
   if(evenness == "EQ"){
-    comstruct <- do.call(data.frame, aggregate(myformula, data = df, FUN = function(x) c(SpR = S(x), evenness = EQ(x))))
-    names(comstruct)[3] <- "Richness"
-    names(comstruct)[4] <- "Evenness_EQ"
-  } 
- else{
-  comstruct <- do.call(data.frame,aggregate(myformula, data = df, FUN = function(x) c(SpR = S(x), evenness = SimpEven(x))))
-  names(comstruct)[3] <- "Richness"
-  names(comstruct)[4] <- "Evenness_Simpson"
+    comstruct <- do.call(data.frame,aggregate(myformula, data = df, FUN = function(x) c(SpR = S(x), evenness = EQ(x))))
+    names(comstruct)[2] <- "richness"
+    names(comstruct)[3] <- "evenness_EQ"
   }
+  else{
+    comstruct <- do.call(data.frame,aggregate(myformula, data = df, FUN = function(x) c(SpR = S(x), evenness = SimpEven(x))))
+    names(comstruct)[2] <- "richness"
+    names(comstruct)[3] <- "evenness_Simpson"
   }
-  return(comstruct)
-}
+} 
 
 #### PRIVATE FUNCTIONS ####
 
