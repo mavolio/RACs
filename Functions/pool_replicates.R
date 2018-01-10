@@ -8,7 +8,7 @@
 #' @param treatment.var The name of the treatment column
 
 
-pool_treatments <- function(df, time.var=NULL, species.var, abundance.var, replicate.var, treatment.var) {
+pool_replicates <- function(df, time.var=NULL, species.var, abundance.var, replicate.var, treatment.var) {
   
   if(is.null(time.var)){
     ## isolate rep-trts
