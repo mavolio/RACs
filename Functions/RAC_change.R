@@ -20,7 +20,7 @@ RAC_change <- function(df, time.var, species.var, abundance.var, replicate.var=N
   
   # previous year rank df
   df1 <- rankdf
-  df1[[time.var]] <- df1[[time.var]] + 1
+  df1[[time.var]] <- df1[[time.var]] + 1 #this will not work for experiments that do not collect data every year.
   
   # merge: .x is for previous time point, .y for current time point, time.var corresponds to current (i.e., .y)
   df12 <- merge(df1, df2,  by=c(species.var, time.var), all=T)

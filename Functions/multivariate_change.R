@@ -43,10 +43,10 @@ timestep <- sort(unique(df[[time.var]]))
 
 #transpose data
 df2<-subset(df, select = c(time.var, species.var, abundance.var, replicate.var))
-df2$id <- paste(df2[[time.var]], df2[[replicate.var]], sep="_")
+df2$id <- paste(df2[[time.var]], df2[[replicate.var]], sep="##")
 species<-codyn:::transpose_community(df2, 'id', species.var, abundance.var)
 species$id <- row.names(species)
-speciesid <- do.call(rbind.data.frame, strsplit(species$id, split="_"))
+speciesid <- do.call(rbind.data.frame, strsplit(species$id, split="##"))
 colnames(speciesid)[1] <- time.var
 colnames(speciesid)[2] <- replicate.var
 species2 <- cbind(speciesid, species)
@@ -63,24 +63,23 @@ cent_dist <- as.matrix(vegdist(disp$centroids, method="euclidean"))
 
 ##extracting only the comparisions we want year x to year x=1.
 ###year x+1
-cent_dist_yrs <- data.frame(time = timestep[2:length(timestep)],
+cent_dist_yrs <- data.frame(time1 = timestep[1:length(timestep)-1], time2 = timestep[2:length(timestep)],
                          composition_change = diag(cent_dist[2:nrow(cent_dist), 1:(ncol(cent_dist)-1)]))
 
 #collecting and labeling distances to centroid from betadisper to get a measure of dispersion and then take the mean for a year
 disp2 <- data.frame(time=species2[[time.var]],
                  dist = disp$distances)
 
-myformula <- as.formula(paste("dist", "~", time.var))
+myformula <- as.formula(paste("dist", "~", "time"))
 disp2.2<-aggregate(myformula, mean, data=disp2)
 
 ##subtract consequtive years subtracts year x+1 - x. So if it is positive there was greater dispersion in year x+1 and if negative less dispersion in year x+1
-disp_yrs <- data.frame(time = timestep[2:length(timestep)],
+disp_yrs <- data.frame(time2 = timestep[2:length(timestep)],
                     dispersion_change = diff(disp2.2$dist))
 
 #merge together change in mean and dispersion data
-distances <- merge(cent_dist_yrs, disp_yrs, by=time.var)
-
-distances$time_pair<-paste(distances[[time.var]]-1, distances[[time.var]], sep="_")
+distances <- merge(cent_dist_yrs, disp_yrs, by="time2")
+distances$time_pair<-paste(distances$time1, distances$time2, sep="-")
 
 distances<-subset(distances, select = c("time_pair", "composition_change", "dispersion_change"))
 colnames(distances)[1]<-paste(time.var, "pair", sep="_")
