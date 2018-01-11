@@ -183,6 +183,10 @@ sim_rac_changes_mean<-sim_rac_changes%>%
 #codyn dataset
 codyndat_mult_change <- multivariate_change(df = codyndat_clean, time.var = "experiment_year", species.var = "species", abundance.var = "abundance", replicate.var = "id")
 
+test <- multivariate_change(df = and, time.var = "experiment_year", species.var = "species", abundance.var = "abundance", replicate.var = "plot_id")
+
+#check code and find why, somewhere this b/c missing [[ ]] 
+
 #Sim dataset
 sim_mult_change <- multivariate_change(df = sim, time.var = "time", species.var = "species", abundance.var = "abundance", replicate.var = "id2")
 
@@ -196,41 +200,31 @@ sim_bray_curtis<-bray_curtis%>%
 # Curve change ------------------------------------------------------------
 
 
-####Looking at the shape of the curve - cc
-###this compares the areas of difference between two curves that are consequtive time steps for a plot.
+####codyn first
 
-#codyn dat first
-d_output=data.frame(site_project_comm=c(), experiment_year=c(), plot_id=c(), Darea=c())#expeiment year is year of timestep2
+#clean the data first, drop plots that are not measured both comparision years, and plots that only have 1 species.
+codyn_clean2=data.frame()
 
 spc<-unique(codyndat_clean$site_project_comm)
 
 for (i in 1:length(spc)){
   subset<-codyndat_clean%>%
-    filter(site_project_comm==spc[i])
- 
-  ranks<-subset%>%
-    filter(abundance!=0)%>%
-    group_by(experiment_year, plot_id)%>%
-    mutate(rank=rank(-abundance, ties.method="average"),
-           maxrank=max(rank),
-           relrank=rank/maxrank)%>%
-    arrange(-abundance)%>%
-    mutate(cumabund=cumsum(abundance))%>%
-    ungroup()
-
+    filter(site_project_comm==spc[i])%>%
+    filter(abundance!=0)
+  
   spc_id2<-spc[i]
   
-  timestep<-sort(unique(ranks$experiment_year))    
+  timestep<-sort(unique(subset$experiment_year))    
   
   for(i in 1:(length(timestep)-1)) {#minus 1 will keep me in year bounds NOT WORKING
-    subset_t1<-ranks%>%
+    subset_t1<-subset%>%
       filter(experiment_year==timestep[i])
     
     plots_t1<-subset_t1%>%
       select(plot_id)%>%
       unique()
     
-    subset_t2<-ranks%>%
+    subset_t2<-subset%>%
       filter(experiment_year==timestep[i+1])
     
     plots_t2<-subset_t2%>%
@@ -238,13 +232,13 @@ for (i in 1:length(spc)){
       unique()
     
     plots_bothyrs<-merge(plots_t1, plots_t2, by="plot_id")
-#dataset of two years    
+    #dataset of two years    
     subset_t12<-rbind(subset_t1, subset_t2)
     
-##dropping plots that were not measured both years
+    ##dropping plots that were not measured both years
     subset_t12_2<-merge(plots_bothyrs, subset_t12, by="plot_id")
     
-#dropping plots with only 1 species in any of the two years    
+    #dropping plots with only 1 species in any of the two years    
     drop<-subset_t12_2%>%
       group_by(experiment_year, plot_id)%>%
       mutate(numplots=length(plot_id))%>%
@@ -256,124 +250,37 @@ for (i in 1:length(spc)){
     
     subset_t12_3<-merge(subset_t12_2, drop, by="plot_id")%>%
       filter(min!=1)%>%
-      ungroup()%>%
-      group_by(experiment_year, plot_id)%>%
-      arrange(rank)%>%
+      select(-min)%>%
       ungroup()
     
-    result <- subset_t12_3 %>%
-    group_by(plot_id) %>%
-    do({
-      y <- unique(.$experiment_year)###assumption this is a length 2 list
-      df1 <- filter(., experiment_year==y[[1]])
-      df2 <- filter(., experiment_year==y[[2]])
-      sf1 <- stepfun(df1$relrank, c(0, df1$cumabund))
-      sf2 <- stepfun(df2$relrank, c(0, df2$cumabund))
-      r <- sort(unique(c(0, df1$relrank, df2$relrank)))
-      h <- abs(sf1(r) - sf2(r))
-      w <- c(diff(r), 0)
-      data.frame(Dstar=sum(w*h))#do has to output a dataframe
-  })
-
-    d_output1=data.frame(site_project_comm=spc_id2, experiment_year=timestep[i+1], plot_id=result$plot_id, Dstar=result$Dstar)#expeiment year is year of timestep2
-    
-    d_output<-rbind(d_output, d_output1)
+    codyn_clean2<-rbind(codyn_clean2, subset_t12_3)
   }
 }
+    
+    
+codyn_cc <-curve_change(df = codyn_clean2, "experiment_year", "species", "abundance", "id")
+
 codyndat_dstar<-d_output%>% 
   group_by(site_project_comm, experiment_year)%>%
   summarise(Dstar=mean(Dstar))
 
-####Looking at the shape of the curve - cc
 #sim dataset
-d_output=data.frame(id=c(), time=c(), site=c(), Darea=c())#expeiment year is year of timestep2
 
-com<-unique(sim$id)
+sim_cc <- curve_change(sim, "time", "species", "abundance", "id2")
 
-for (i in 1:length(com)){
-  subset<-sim%>%
-    filter(id==com[i])
-  
-  ranks<-subset%>%
-    filter(abundance!=0)%>%
-    group_by(time, site)%>%
-    mutate(rank=rank(-abundance, ties.method="average"),
-           maxrank=max(rank),
-           relrank=rank/maxrank)%>%
-    arrange(-abundance)%>%
-    mutate(cumabund=cumsum(abundance))%>%
-    ungroup()
-  
-  com_id2<-com[i]
-  
-  timestep<-sort(unique(ranks$time))    
-  
-  for(i in 1:(length(timestep)-1)) {#minus 1 will keep me in year bounds NOT WORKING
-    subset_t1<-ranks%>%
-      filter(time==timestep[i])
-    
-    plots_t1<-subset_t1%>%
-      select(site)%>%
-      unique()
-    
-    subset_t2<-ranks%>%
-      filter(time==timestep[i+1])
-    
-    plots_t2<-subset_t2%>%
-      select(site)%>%
-      unique()
-    
-    plots_bothyrs<-merge(plots_t1, plots_t2, by="site")
-    #dataset of two years    
-    subset_t12<-rbind(subset_t1, subset_t2)
-    
-    ##dropping plots that were not measured both years
-    subset_t12_2<-merge(plots_bothyrs, subset_t12, by="site")
-    
-    #dropping plots with only 1 species in any of the two years    
-    drop<-subset_t12_2%>%
-      group_by(time, site)%>%
-      mutate(numplots=length(site))%>%
-      ungroup()%>%
-      group_by(site)%>%
-      mutate(min=min(numplots))%>%
-      select(site, min)%>%
-      unique()
-    
-    subset_t12_3<-merge(subset_t12_2, drop, by="site")%>%
-      filter(min!=1)%>%
-      ungroup()%>%
-      group_by(time, site)%>%
-      arrange(rank)%>%
-      ungroup()
-    
-    result <- subset_t12_3 %>%
-      group_by(site) %>%
-      do({
-        y <- unique(.$time)###assumption this is a length 2 list
-        df1 <- filter(., time==y[[1]])
-        df2 <- filter(., time==y[[2]])
-        sf1 <- stepfun(df1$relrank, c(0, df1$cumabund))
-        sf2 <- stepfun(df2$relrank, c(0, df2$cumabund))
-        r <- sort(unique(c(0, df1$relrank, df2$relrank)))
-        h <- abs(sf1(r) - sf2(r))
-        w <- c(diff(r), 0)
-        data.frame(Dstar=sum(w*h))#do has to output a dataframe
-      })
-    
-    d_output1=data.frame(id=com_id2, time=timestep[i+1], site=result$site, Dstar=result$Dstar)#expeiment year is year of timestep2
-    
-    d_output<-rbind(d_output, d_output1)
-  }
-}
+sim_info<-sim%>%
+  select(id, id2, id3)%>%
+  unique()
 
-sim_dstar<-d_output%>% 
-  group_by(id, time)%>%
-  summarise(Dstar=mean(Dstar))%>%
+sim_cc_merge<-merge(sim_info, sim_cc, by="id2")
+
+sim_cc_ave<-sim_cc_merge%>% 
+  group_by(id, time_pair)%>%
+  summarise(curve_change=mean(curve_change))%>%
   separate(id, into=c("alpha","theta","scenario","rep"), sep="_", remove=F)%>%
   mutate(id3=paste(alpha, theta, scenario, sep="_"))%>%
-  group_by(id3, time)%>%
-  summarize(Dstar=mean(Dstar))
+  group_by(id3, time_pair)%>%
+  summarize(curve_change=mean(curve_change))
   
 
 # looking at spatial differences, testing that scenarios work well --------
