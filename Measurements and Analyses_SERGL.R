@@ -427,26 +427,26 @@ for(i in 1:length(id_u)) {
     select(id, time, species, abundance, site)
   
   #get years
-  timestep<-sort(unique(subset$time))
+  timestept<-sort(unique(subset$time))
   
   #transpose data
-  species=subset%>%
+  speciest=subset%>%
     spread(species, abundance, fill=0)
   
   #calculate bray-curtis dissimilarities
-  bc=vegdist(species[,4:ncol(species)], method="bray")
+  bct=vegdist(speciest[,4:ncol(speciest)], method="bray")
   
   #calculate distances of each plot to year centroid (i.e., dispersion)
-  disp=betadisper(bc, species$time, type="centroid")
+  dispt=betadisper(bct, speciest$time, type="centroid")
   
   #getting distances between centroids over years; these centroids are in BC space, so that's why this uses euclidean distances
-  cent_dist=as.matrix(vegdist(disp$centroids, method="euclidean"))
+  cent_distt=as.matrix(vegdist(dispt$centroids, method="euclidean"))
   
   ##extracting only the comparisions we want year x to year x=1.
   ###(experiment_year is year x+1
-  cent_dist_yrs=data.frame(id=id_u[i],
-                           time=timestep[2:length(timestep)],
-                           mean_change=diag(cent_dist[2:nrow(cent_dist),1:(ncol(cent_dist)-1)]))
+  cent_dist_yrst=data.frame(id=id_u[i],
+                           time=timestept[2:length(timestept)],
+                           mean_change=diag(cent_distt[2:nrow(cent_distt),1:(ncol(cent_distt)-1)]))
   
   #collecting and labeling distances to centroid from betadisper to get a measure of dispersion and then take the mean for a year
   disp2=data.frame(id=id_u[i],
