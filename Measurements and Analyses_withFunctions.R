@@ -181,21 +181,48 @@ sim_rac_changes_mean<-sim_rac_changes%>%
 
 # Mean Change and Dispersion ----------------------------------------------
 #codyn dataset
-codyndat_mult_change <- multivariate_change(df = codyndat_clean, time.var = "experiment_year", species.var = "species", abundance.var = "abundance", replicate.var = "id")
 
-test <- multivariate_change(df = and, time.var = "experiment_year", species.var = "species", abundance.var = "abundance", replicate.var = "plot_id")
+#codyndat_mult_change <- multivariate_change(df = codyndat_clean, time.var = "experiment_year", species.var = "species", abundance.var = "abundance", replicate.var = "id")
+#it doesnt work this way, give error: Error in rowSums(x, na.rm = TRUE) : 'x' must be numeric
 
-#check code and find why, somewhere this b/c missing [[ ]] 
+codyn_multchange<-data.frame()
+spc<-unique(codyndat_clean$site_project_comm)
+
+for (i in 1:length(spc)){
+  
+  subset<-codyndat_clean%>%
+    filter(site_project_comm==spc[i])
+  
+  out <- multivariate_change(df = subset, time.var = "experiment_year", species.var = "species", abundance.var = "abundance", replicate.var = "plot_id")
+  
+  out$site_project_comm<-spc[i]
+
+  codyn_multchange<-rbind(codyn_multchange, out)  
+}
 
 #Sim dataset
-sim_mult_change <- multivariate_change(df = sim, time.var = "time", species.var = "species", abundance.var = "abundance", replicate.var = "id2")
+sim_mult_change<-data.frame()
 
-sim_bray_curtis<-bray_curtis%>%
+com_rep<-unique(sim$id)
+
+for (i in 1:length(com_rep)){
+  
+  subset<-sim%>%
+    filter(id==com_rep[i])
+  
+  out <- multivariate_change(df = subset, time.var = "time", species.var = "species", abundance.var = "abundance", replicate.var = "site")
+  
+  out$id<-com_rep[i]
+  
+  sim_mult_change<-rbind(sim_mult_change, out)  
+}
+
+sim_multchange_mean<-sim_mult_change%>%
   separate(id, into=c("alpha","theta","scenario","rep"), sep="_", remove=F)%>%
   mutate(id3=paste(alpha, theta, scenario, sep="_"))%>%
-  group_by(id3, time)%>%
-  summarize(mean_change=mean(mean_change),
-            dispersion_diff=mean(dispersion_diff))
+  group_by(id3, time_pair)%>%
+  summarize(composition_change=mean(composition_change),
+            dispersion_change=mean(dispersion_change))
 
 # Curve change ------------------------------------------------------------
 
@@ -238,7 +265,7 @@ for (i in 1:length(spc)){
     ##dropping plots that were not measured both years
     subset_t12_2<-merge(plots_bothyrs, subset_t12, by="plot_id")
     
-    #dropping plots with only 1 species in any of the two years    
+    #dropping plots with only 1 species in any of the years    
     drop<-subset_t12_2%>%
       group_by(experiment_year, plot_id)%>%
       mutate(numplots=length(plot_id))%>%
@@ -258,7 +285,23 @@ for (i in 1:length(spc)){
 }
     
     
-codyn_cc <-curve_change(df = codyn_clean2, "experiment_year", "species", "abundance", "id")
+#codyn_cc <-curve_change(df = codyn_clean2, "experiment_year", "species", "abundance", "id")
+#not working
+
+codyn_curvechange<-data.frame()
+spc<-unique(codyn_clean2$site_project_comm)
+
+for (i in 1:length(spc)){
+  
+  subset<-codyn_clean2%>%
+    filter(site_project_comm==spc[i])
+  
+  out <- curve_change(df = subset, time.var = "experiment_year", species.var = "species", abundance.var = "abundance", replicate.var = "plot_id")
+  
+  out$site_project_comm<-spc[i]
+  
+  codyn_curvechange<-rbind(codyn_curvechange, out)  
+}
 
 codyndat_dstar<-d_output%>% 
   group_by(site_project_comm, experiment_year)%>%
