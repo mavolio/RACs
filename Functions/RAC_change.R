@@ -15,12 +15,22 @@ RAC_change <- function(df, time.var, species.var, abundance.var, replicate.var=N
   
   rankdf <- add_ranks_time(df, time.var, species.var, abundance.var, replicate.var=NULL)
   
+  time1 <- sort(unique(rankdf[[time.var]]))
+  time2 <- c(time1[2:length(time1)], NA)
+
+  
+  
   # current year rankdf
-  df2 <- rankdf
+  df2 <- rankdf[which(rankdf[[time.var]]%in%time2),]
   
   # previous year rank df
-  df1 <- rankdf
-  df1[[time.var]] <- df1[[time.var]] + 1 #this will not work for experiments that do not collect data every year.
+  mytimes <- data.frame(cbind(time1, time2))
+  names(mytimes) = c(time.var, "dummytime")
+
+  df1 <- merge(rankdf, mytimes)
+  df1[[time.var]] <- NULL
+  names(df1)[[ncol(df1)]] <- time.var
+  df1 <- subset(df1, !is.na(df1[[time.var]]))
   
   # merge: .x is for previous time point, .y for current time point, time.var corresponds to current (i.e., .y)
   df12 <- merge(df1, df2,  by=c(species.var, time.var), all=T)
@@ -30,7 +40,7 @@ RAC_change <- function(df, time.var, species.var, abundance.var, replicate.var=N
   # sort and apply to all time pairs
   df12 <- df12[order(df12[[time.var]]),]
   X <- split(df12, df12[[time.var]])
-  out <- lapply(X, FUN=SERGL, time.var, "rank.x", "rank.y", paste(abundance.var, ".x", sep = ""),paste(abundance.var, ".y", sep = "")) 
+  out <- lapply(X, FUN=SERGL, time.var, "rank.x", "rank.y", paste(abundance.var, ".x", sep = ""),paste(abundance.var, ".y", sep = "")) ## need to check how SERGL assigns time names
   output <- do.call("rbind", out)  
 }
   else{
