@@ -63,6 +63,7 @@ curve_change <- function(df, time.var, species.var, abundance.var, replicate.var
       plots_bothyrs<-merge(plots_t1, plots_t2, by=replicate.var)
       
       subset_t12_2<-merge(plots_bothyrs, subset_t12, by=replicate.var)
+      subset_t12_2[[replicate.var]]<-as.character(subset_t12_2[[replicate.var]])
       
       X <- split(subset_t12_2, subset_t12_2[[replicate.var]])
       out <- lapply(X, FUN=curvechange, time.var, relrank, cumabund) 
@@ -82,7 +83,7 @@ curve_change <- function(df, time.var, species.var, abundance.var, replicate.var
     
 curvechange <- function(df, time.var, relrank, cumabund){
     
-    df <- df[order(df[[time.var]], -df[[abundance.var]]),]
+    df <- df[order(df$cumabund),]
   
     timestep2 <- unique(df[[time.var]])#assumes this is a length of 2
 
@@ -102,20 +103,3 @@ curvechange <- function(df, time.var, relrank, cumabund){
     return(output)
     } 
   
-    
-####these are going to give errors
-#1. plots that were not measured both year
-#2. plots with only 1 species in any 2 years.
-
-##dropping plots that were not measured both years
-# subset_t12_2<-merge(plots_bothyrs, subset_t12, by="replicate")
-# 
-# #dropping plots with only 1 species in any of the two years    
-# drop<-subset_t12_2%>%
-#   group_by(time, replicate)%>%
-#   mutate(numplots=length(replicate))%>%
-#   ungroup()%>%
-#   group_by(replicate)%>%
-#   mutate(min=min(numplots))%>%
-#   select(replicate, min)%>%
-#   unique()
