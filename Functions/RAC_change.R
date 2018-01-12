@@ -18,8 +18,6 @@ RAC_change <- function(df, time.var, species.var, abundance.var, replicate.var=N
   time1 <- sort(unique(rankdf[[time.var]]))
   time2 <- c(time1[2:length(time1)], NA)
 
-  
-  
   # current year rankdf
   df2 <- rankdf[which(rankdf[[time.var]]%in%time2),]
   
@@ -47,12 +45,20 @@ RAC_change <- function(df, time.var, species.var, abundance.var, replicate.var=N
     
     rankdf <- add_ranks_time(df,  time.var, species.var, abundance.var, replicate.var)
     
+    time1 <- sort(unique(rankdf[[time.var]]))
+    time2 <- c(time1[2:length(time1)], NA)
+    
     # current year rankdf
-    df2 <- rankdf
+    df2 <- rankdf[which(rankdf[[time.var]]%in%time2),]
     
     # previous year rank df
-    df1 <- rankdf
-    df1[[time.var]] <- df1[[time.var]] + 1
+    mytimes <- data.frame(cbind(time1, time2))
+    names(mytimes) = c(time.var, "dummytime")
+    
+    df1 <- merge(rankdf, mytimes)
+    df1[[time.var]] <- NULL
+    names(df1)[[ncol(df1)]] <- time.var
+    df1 <- subset(df1, !is.na(df1[[time.var]]))
     
     # merge: .x is for previous time point, .y for current time point, time.var corresponds to current (i.e., .y)
     df12 <- merge(df1, df2,  by=c(species.var,replicate.var, time.var), all=T)
