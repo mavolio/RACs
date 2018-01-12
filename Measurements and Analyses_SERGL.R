@@ -541,7 +541,9 @@ for (i in 1:length(spc)){
       ungroup()%>%
       group_by(experiment_year, plot_id)%>%
       arrange(rank)%>%
-      ungroup()
+      ungroup()%>%
+      mutate(as.character(plot_id))%>%
+      arrange(cumabund)
     
     result <- subset_t12_3 %>%
     group_by(plot_id) %>%
