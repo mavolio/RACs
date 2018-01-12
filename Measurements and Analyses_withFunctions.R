@@ -251,32 +251,23 @@ sim_multchange_mean<-sim_mult_change%>%
 ####codyn first
 
 #clean the data first, drop plots that only have 1 species
-codyn_plots2spmin <- codyndat_clean%>%
-  filter(abundance!=0)%>%
-  mutate(present=1)%>%
-  group_by(experiment_year, plot_id, site_project_comm)%>%
-  mutate(numspecies=sum(present))%>%
-  filter(numspecies>1)%>%
-  ungroup()%>%
-  select(site_project_comm, experiment_year, plot_id, numspecies)%>%
-  unique()
+codyn_clean2<-subset(codyndat_clean, abundance!=0)
+codyn_clean2$present<-1
+codyn_clean_spnum<-aggregate(present~experiment_year+plot_id+site_project_comm, sum, data=codyn_clean2)
+codyn_clean2<-subset(codyn_clean_spnum, present>1)
 
-codyn_clean2<-merge(codyndat_clean, codyn_plots2spmin, by=c("site_project_comm","experiment_year","plot_id"))
+codyn_mult_sp<-merge(codyndat_clean, codyn_clean2, by=c("site_project_comm","experiment_year","plot_id"))
 
 #codyn_cc <-curve_change(df = codyn_clean2, "experiment_year", "species", "abundance", "id")
 #not working
 
-and<-subset(codyn_clean2, site_project_comm=="AND.control.0"&experiment_year<1993)#stuck here. I know there are more than 1 species. I am not sure why this is not working!
-
-test <- curve_change(df = and, time.var = "experiment_year", species.var = "species", abundance.var = "abundance", replicate.var = "plot_id")
-
 
 codyn_curvechange<-data.frame()
-spc<-unique(codyn_clean2$site_project_comm)
+spc<-unique(codyn_mult_sp$site_project_comm)
 
 for (i in 1:length(spc)){
   
-  subset<-codyn_clean2%>%
+  subset<-codyn_mult_sp%>%
     filter(site_project_comm==spc[i])
   
   out <- curve_change(df = subset, time.var = "experiment_year", species.var = "species", abundance.var = "abundance", replicate.var = "plot_id")
@@ -286,9 +277,9 @@ for (i in 1:length(spc)){
   codyn_curvechange<-rbind(codyn_curvechange, out)  
 }
 
-codyndat_dstar<-d_output%>% 
-  group_by(site_project_comm, experiment_year)%>%
-  summarise(Dstar=mean(Dstar))
+codyn_curvechange_mean<-codyn_curvechange%>% 
+  group_by(site_project_comm, experiment_year_pair)%>%
+  summarise(curve_change=mean(curve_change))
 
 #sim dataset
 sim_curve_change<-data.frame()
