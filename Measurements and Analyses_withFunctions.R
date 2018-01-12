@@ -166,7 +166,7 @@ for (i in 1:length(spc)){
   codyndat_rac_change<-rbind(codyndat_rac_change, out)  
 }
 
-codyndat_rac_change_average<-codyn_rac_change%>%
+codyndat_rac_change_average<-codyndat_rac_change%>%
   group_by(site_project_comm, experiment_year_pair)%>%
   summarise(S=mean(richness_change),
             E=mean(evenness_change,na.rm=T),
@@ -175,24 +175,31 @@ codyndat_rac_change_average<-codyn_rac_change%>%
             L=mean(losses))
 
 ##SIM dataset
-sim_rac_changes <- RAC_change(df = sim, time.var = "time", species.var = "species", abundance.var = "abundance", replicate.var = "id2")
+sim_rac_change<-data.frame()
 
-sim_rac_changes_mean<-sim_rac_changes%>%
-  separate(id2, c("id","site"), sep="::")%>%
-  group_by(id, time_pair)%>%
-  summarise(S=mean(richness_change),
-            E=mean(evenness_change,na.rm=T),
-            R=mean(rank_change),
-            G=mean(gains),
-            L=mean(losses))%>%
+com_rep<-unique(sim$id)
+
+for (i in 1:length(com_rep)){
+  
+  subset<-sim%>%
+    filter(id==com_rep[i])
+  
+  out <- RAC_change(df = subset, time.var = "time", species.var = "species", abundance.var = "abundance", replicate.var = "site")
+  
+  out$id<-com_rep[i]
+  
+  sim_rac_change<-rbind(sim_rac_change, out)  
+}
+
+sim_rac_change_mean<-sim_rac_change%>%
   separate(id, into=c("alpha","theta","scenario","rep"), sep="_", remove=F)%>%
   mutate(id3=paste(alpha, theta, scenario, sep="_"))%>%
   group_by(id3, time_pair)%>%
-  summarize(S=mean(S),
-            E=mean(E,na.rm=T),
-            R=mean(R),
-            G=mean(G),
-            L=mean(L))
+  summarize(S=mean(richness_change),
+            E=mean(evenness_change,na.rm=T),
+            R=mean(rank_change),
+            G=mean(gains),
+            L=mean(losses))
 
 # Mean Change and Dispersion ----------------------------------------------
 #codyn dataset
