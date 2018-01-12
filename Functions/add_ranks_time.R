@@ -70,6 +70,7 @@ add_ranks_time <- function(df, time.var, species.var, abundance.var,  replicate.
     
     # sort and apply fill_zeros to all replicates
     df <- df[order(df[[replicate.var]]),]
+    df[[replicate.var]]<-as.character(df[[replicate.var]])
     X <- split(df, df[replicate.var])
     out <- lapply(X, FUN = fill_zeros, time.var, species.var, abundance.var)
     ID <- unique(names(out))
