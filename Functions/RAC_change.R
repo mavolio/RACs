@@ -26,7 +26,7 @@ RAC_change <- function(df, time.var, species.var, abundance.var, replicate.var=N
   names(mytimes) = c(time.var, "dummytime")
 
   df1 <- merge(rankdf, mytimes)
-  df1[[time.var]] <- NULL
+  names(df1)[1] <- 'time1'
   names(df1)[[ncol(df1)]] <- time.var
   df1 <- subset(df1, !is.na(df1[[time.var]]))
   
