@@ -51,9 +51,20 @@ curve_change <- function(df, time.var, species.var, abundance.var, replicate.var
       
       subset_t1 <- relrank[relrank[[time.var]] == timestep[i],]
       subset_t2 <- relrank[relrank[[time.var]] == timestep[i+1],]
-      subset_t12 <- rbind(subset_t1, subset_t2)
+      subset_t12<-rbind(subset_t1, subset_t2)
       
-      X <- split(subset_t12, subset_t12[[replicate.var]])
+      ##dropping plots that were not measured both years
+      plots_t1<-as.data.frame(unique(subset_t1[[replicate.var]]))
+      colnames(plots_t1)[1]<-replicate.var
+
+      plots_t2<-as.data.frame(unique(subset_t2[[replicate.var]]))
+      colnames(plots_t2)[1]<-replicate.var
+      
+      plots_bothyrs<-merge(plots_t1, plots_t2, by=replicate.var)
+      
+      subset_t12_2<-merge(plots_bothyrs, subset_t12, by=replicate.var)
+      
+      X <- split(subset_t12_2, subset_t12_2[[replicate.var]])
       out <- lapply(X, FUN=curvechange, time.var, relrank, cumabund) 
       ID <- unique(names(out))
       out <- mapply(function(x, y) "[<-"(x, replicate.var, value = y) ,
@@ -71,6 +82,8 @@ curve_change <- function(df, time.var, species.var, abundance.var, replicate.var
     
 curvechange <- function(df, time.var, relrank, cumabund){
     
+    df <- df[order(df[[time.var]], -df[[abundance.var]]),]
+  
     timestep2 <- unique(df[[time.var]])#assumes this is a length of 2
 
     df1 <- df[df[[time.var]] == timestep2[1],]
