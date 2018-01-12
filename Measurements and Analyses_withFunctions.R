@@ -14,7 +14,9 @@ library(gtools)
 sim<-read.csv("~/Dropbox/SESYNC/SESYNC_RACs/R Files/SimCom_Sept28.csv")%>%
   mutate(time=as.numeric(iteration),
          id2=paste(id, site, sep="::"))%>%
-  select(-X, -sample, -iteration)
+  select(-X, -sample, -iteration)%>%
+  separate(id, into=c("alpha","theta","scenario","rep"), sep="_", remove=F)%>%
+  mutate(id3=paste(alpha, theta, scenario, sep="."))
   
 codyndat<-read.csv("~/Dropbox/CoDyn/R Files/11_06_2015_v7/relative cover_nceas and converge_12012015_cleaned.csv")%>%
   gather(species, abundance, sp1:sp99)%>%
@@ -226,67 +228,28 @@ sim_multchange_mean<-sim_mult_change%>%
 
 # Curve change ------------------------------------------------------------
 
-
 ####codyn first
 
-#clean the data first, drop plots that are not measured both comparision years, and plots that only have 1 species.
-codyn_clean2=data.frame()
+#clean the data first, drop plots that only have 1 species
+codyn_plots2spmin <- codyndat_clean%>%
+  filter(abundance!=0)%>%
+  mutate(present=1)%>%
+  group_by(experiment_year, plot_id, site_project_comm)%>%
+  mutate(numspecies=sum(present))%>%
+  filter(numspecies>1)%>%
+  ungroup()%>%
+  select(site_project_comm, experiment_year, plot_id, numspecies)%>%
+  unique()
 
-spc<-unique(codyndat_clean$site_project_comm)
+codyn_clean2<-merge(codyndat_clean, codyn_plots2spmin, by=c("site_project_comm","experiment_year","plot_id"))
 
-for (i in 1:length(spc)){
-  subset<-codyndat_clean%>%
-    filter(site_project_comm==spc[i])%>%
-    filter(abundance!=0)
-  
-  spc_id2<-spc[i]
-  
-  timestep<-sort(unique(subset$experiment_year))    
-  
-  for(i in 1:(length(timestep)-1)) {#minus 1 will keep me in year bounds NOT WORKING
-    subset_t1<-subset%>%
-      filter(experiment_year==timestep[i])
-    
-    plots_t1<-subset_t1%>%
-      select(plot_id)%>%
-      unique()
-    
-    subset_t2<-subset%>%
-      filter(experiment_year==timestep[i+1])
-    
-    plots_t2<-subset_t2%>%
-      select(plot_id)%>%
-      unique()
-    
-    plots_bothyrs<-merge(plots_t1, plots_t2, by="plot_id")
-    #dataset of two years    
-    subset_t12<-rbind(subset_t1, subset_t2)
-    
-    ##dropping plots that were not measured both years
-    subset_t12_2<-merge(plots_bothyrs, subset_t12, by="plot_id")
-    
-    #dropping plots with only 1 species in any of the years    
-    drop<-subset_t12_2%>%
-      group_by(experiment_year, plot_id)%>%
-      mutate(numplots=length(plot_id))%>%
-      ungroup()%>%
-      group_by(plot_id)%>%
-      mutate(min=min(numplots))%>%
-      select(plot_id, min)%>%
-      unique()
-    
-    subset_t12_3<-merge(subset_t12_2, drop, by="plot_id")%>%
-      filter(min!=1)%>%
-      select(-min)%>%
-      ungroup()
-    
-    codyn_clean2<-rbind(codyn_clean2, subset_t12_3)
-  }
-}
-    
-    
 #codyn_cc <-curve_change(df = codyn_clean2, "experiment_year", "species", "abundance", "id")
 #not working
+
+and<-subset(codyn_clean2, site_project_comm=="AND.control.0"&experiment_year<1993)#stuck here. I know there are more than 1 species. I am not sure why this is not working!
+
+test <- curve_change(df = and, time.var = "experiment_year", species.var = "species", abundance.var = "abundance", replicate.var = "plot_id")
+
 
 codyn_curvechange<-data.frame()
 spc<-unique(codyn_clean2$site_project_comm)
@@ -308,14 +271,27 @@ codyndat_dstar<-d_output%>%
   summarise(Dstar=mean(Dstar))
 
 #sim dataset
+sim_curve_change<-data.frame()
 
-sim_cc <- curve_change(sim, "time", "species", "abundance", "id2")
+com_rep<-unique(sim$id)
+
+for (i in 1:length(com_rep)){
+  
+  subset<-sim%>%
+    filter(id==com_rep[i])
+  
+  out <- curve_change(df = subset, time.var = "time", species.var = "species", abundance.var = "abundance", replicate.var = "site")
+  
+  out$id<-com_rep[i]
+  
+  sim_curve_change<-rbind(sim_curve_change, out)  
+}
 
 sim_info<-sim%>%
-  select(id, id2, id3)%>%
+  select(id, id2, id3, site)%>%
   unique()
 
-sim_cc_merge<-merge(sim_info, sim_cc, by="id2")
+sim_cc_merge<-merge(sim_info, sim_curve_change, by=c("id", "site"))
 
 sim_cc_ave<-sim_cc_merge%>% 
   group_by(id, time_pair)%>%
