@@ -47,11 +47,12 @@ df2$id <- paste(df2[[time.var]], df2[[replicate.var]], sep="##")
 species<-codyn:::transpose_community(df2, 'id', species.var, abundance.var)
 species$id <- row.names(species)
 speciesid <- do.call(rbind.data.frame, strsplit(species$id, split="##"))
-colnames(speciesid)[1] <- paste(time.var,2,sep="")
+colnames(speciesid)[1] <- "time_forfixxyz"
 colnames(speciesid)[2] <- replicate.var
-species2 <- cbind(speciesid, species)
+speciesid[[time.var]]<-as.numeric(as.character(speciesid$time_forfixxyz))
+speciesid.2 <- subset(speciesid, select = -time_forfixxyz)
+species2 <- cbind(speciesid.2, species)
 species3 <- subset(species2, select = -id)
-species3[[time.var]]<-as.numeric(species3[[paste(time.var,2,sep='')]])###this is a probelm. it is shuffling the numbers.
 
 #calculate bray-curtis dissimilarities
 bc <- vegdist(species3[,3:ncol(species3)], method="bray")
