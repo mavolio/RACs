@@ -150,10 +150,23 @@ pairs(codyndat_diversity[3:6])
 
 #problems with _ in rep names
 #RUNNING all by combine site_project_name with plot_id
-codyn_rac_change<-RAC_change(df = codyndat_clean, time.var = "experiment_year", species.var = "species", abundance.var = "abundance", replicate.var = "id")
+
+codyndat_rac_change<-data.frame()
+spc<-unique(codyndat_clean$site_project_comm)
+
+for (i in 1:length(spc)){
+  
+  subset<-codyndat_clean%>%
+    filter(site_project_comm==spc[i])
+  
+  out <- RAC_change(df = subset, time.var = "experiment_year", species.var = "species", abundance.var = "abundance", replicate.var = "plot_id")
+  
+  out$site_project_comm<-spc[i]
+  
+  codyndat_rac_change<-rbind(codyndat_rac_change, out)  
+}
 
 codyndat_rac_change_average<-codyn_rac_change%>%
-  separate(id, c("site_project_comm","plot_id"), sep="::")%>%
   group_by(site_project_comm, experiment_year_pair)%>%
   summarise(S=mean(richness_change),
             E=mean(evenness_change,na.rm=T),
