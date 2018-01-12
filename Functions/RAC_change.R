@@ -56,7 +56,7 @@ RAC_change <- function(df, time.var, species.var, abundance.var, replicate.var=N
     names(mytimes) = c(time.var, "dummytime")
     
     df1 <- merge(rankdf, mytimes)
-    df1[[time.var]] <- NULL
+    names(df1)[1] <- 'time1'
     names(df1)[[ncol(df1)]] <- time.var
     df1 <- subset(df1, !is.na(df1[[time.var]]))
     
@@ -112,9 +112,12 @@ SERGL <- function(df, time.var, rank.var1, rank.var2, abundance.var1, abundance.
   gain <- sum(df$gain)/nrow(df)
   loss <- sum(df$loss)/nrow(df)
   
+  time1.1<-unique(df$time1)
+  time1.2<-unique(df[[time.var]])
+  
   mrsc <- mean(abs(df[[rank.var1]]-df[[rank.var2]])/nrow(df))
   
-  time_pair <- paste(unique(df[[time.var]])-1, unique(df[[time.var]]), sep="-")
+  time_pair <- paste(time1.1, time1.2, sep="-")
   
   metrics <- data.frame(time=time_pair, richness_change=sdiff, evenness_change=ediff, rank_change=mrsc, gains=gain, losses=loss)
   
