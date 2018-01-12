@@ -13,12 +13,20 @@ abundance_change <- function(df, time.var, species.var, abundance.var, replicate
     
     rankdf <- add_ranks_time(df, time.var, species.var, abundance.var, replicate.var=NULL)
     
+    time1 <- sort(unique(rankdf[[time.var]]))
+    time2 <- c(time1[2:length(time1)], NA)
+    
     # current year rankdf
-    df2 <- rankdf
+    df2 <- rankdf[which(rankdf[[time.var]]%in%time2),]
     
     # previous year rank df
-    df1 <- rankdf
-    df1[[time.var]] <- df1[[time.var]] + 1
+    mytimes <- data.frame(cbind(time1, time2))
+    names(mytimes) = c(time.var, "dummytime")
+    
+    df1 <- merge(rankdf, mytimes)
+    names(df1)[1] <- 'time1'
+    names(df1)[[ncol(df1)]] <- time.var
+    df1 <- subset(df1, !is.na(df1[[time.var]]))
     
     # merge: .x is for previous time point, .y for current time point, time.var corresponds to current (i.e., .y)
     df12 <- merge(df1, df2,  by=c(species.var, time.var), all=T)
@@ -38,12 +46,20 @@ abundance_change <- function(df, time.var, species.var, abundance.var, replicate
     
     rankdf <- add_ranks_time(df,  time.var, species.var, abundance.var, replicate.var)
     
+    time1 <- sort(unique(rankdf[[time.var]]))
+    time2 <- c(time1[2:length(time1)], NA)
+    
     # current year rankdf
-    df2 <- rankdf
+    df2 <- rankdf[which(rankdf[[time.var]]%in%time2),]
     
     # previous year rank df
-    df1 <- rankdf
-    df1[[time.var]] <- df1[[time.var]] + 1
+    mytimes <- data.frame(cbind(time1, time2))
+    names(mytimes) = c(time.var, "dummytime")
+    
+    df1 <- merge(rankdf, mytimes)
+    names(df1)[1] <- 'time1'
+    names(df1)[[ncol(df1)]] <- time.var
+    df1 <- subset(df1, !is.na(df1[[time.var]]))
     
     # merge: .x is for previous time point, .y for current time point, time.var corresponds to current (i.e., .y)
     df12 <- merge(df1, df2,  by=c(species.var,replicate.var, time.var), all=T)
@@ -79,8 +95,11 @@ abundance_change <- function(df, time.var, species.var, abundance.var, replicate
 
 abundchange <- function(df, time.var, species.var, abundance.var1, abundance.var2){
 
+  time1.1<-unique(df$time1)
+  time1.2<-unique(df[[time.var]])
+  
   df$abund_change <- df[[abundance.var1]]-df[[abundance.var2]]
-  df$time_pair<-paste(unique(df[[time.var]])-1, unique(df[[time.var]]), sep="-")
+  df$time_pair<-paste(time1.1, time1.2, sep="-")
   
   df <- subset(df, select = c("time_pair", species.var, "abund_change"))
   
