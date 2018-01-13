@@ -23,7 +23,9 @@ codyndat<-read.csv("~/Dropbox/CoDyn/R Files/11_06_2015_v7/relative cover_nceas a
   filter(site_code!="MISS")
 
 codyndat_info<-read.csv("~/Dropbox/CoDyn/R Files/11_06_2015_v7/siteinfo_key.csv")%>%
-  filter(site_project_comm!="")
+  filter(site_project_comm!="")%>%
+  select(-site_project_comm)%>%
+  mutate(site_project_comm = paste(site_code, project_name, community_type, sep="."))
 
 #work
 sim<-read.csv('C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\R Files/SimCom_Sept28.csv')%>%
@@ -59,97 +61,110 @@ codyndat_clean<-merge(codyndat, splist, by=c("site_code","project_name","communi
 
 # Richness Evenness Metrics -----------------------------------------------
 
+#codyn dataset
+spc<-unique(codyndat_clean$site_project_comm)
+codyn_div_eq<-data.frame()
 
-#####CALCULATING DIVERSITY METRICS WITHIN A TIME STEP FOR EACH REPLICATE AND THEN AVERAGING LATER
-
-#function to calculate richness
-#' @x the vector of abundances of each species
-S<-function(x){
-  x1<-x[x!=0]
-  length(x1)
+for (i in 1:length(spc)){
+  subset<-codyndat_clean%>%
+    filter(site_project_comm==spc[i])
+  
+  out<-community_structure(subset, time.var = 'experiment_year', abundance.var = 'abundance', replicate.var = 'plot_id')
+  out$site_project_comm<-spc[i]
+  
+  codyn_div_eq<-rbind(codyn_div_eq, out)
 }
 
-#function to calculate EQ evenness from Smith and Wilson 1996
-#' @x the vector of abundances of each species
-#' if all abundances are equal it returns a 1
-E_q<-function(x){
-  x1<-x[x!=0]
-  if (length(x1)==1) {
-    return(NA)
-  }
-  if (abs(max(x1) - min(x1)) < .Machine$double.eps^0.5) {##bad idea to test for zero, so this is basically doing the same thing testing for a very small number
-    return(1)
-  }
-  r<-rank(x1, ties.method = "average")
-  r_scale<-r/max(r)
-  x_log<-log(x1)
-  fit<-lm(r_scale~x_log)
-  b<-fit$coefficients[[2]]
-  2/pi*atan(b)
+codyn_div_esimp<-data.frame()
+
+for (i in 1:length(spc)){
+  subset<-codyndat_clean%>%
+    filter(site_project_comm==spc[i])
+  
+  out<-community_structure(subset, time.var = 'experiment_year', abundance.var = 'abundance', replicate.var = 'plot_id', evenness = "SimpEven")
+  out$site_project_comm<-spc[i]
+  
+  codyn_div_esimp<-rbind(codyn_div_esimp, out)
 }
 
+codyn_div<-merge(codyn_div_eq, codyn_div_esimp, by=c("site_project_comm",'plot_id','richness','experiment_year'))
 
-#function to calculate E1/D (inverse of Simpson's) from Smith and Wilson 1996
-#' @S the number of species in the sample
-#' @x the vector of abundances of each species
-#' @N the total abundance
-#' @p the vector of relative abundances of each species
-E_simp<-function(x, S=length(x[x!=0]), N=sum(x[x!=0]), ps=x[x!=0]/N, p2=ps*ps ){
-D<-sum(p2)
-(1/D)/S
-}
+
+codyndat_diversity_mean <- codyn_div%>%
+  group_by(site_project_comm, experiment_year)%>%
+  summarize(Sp=mean(richness),
+            EQ=mean(evenness_EQ, na.rm=T),
+            ESimp=mean(evenness_Simpson))
+
 
 #calculating gini coefficeint using the gini function in the reldist package
 #' @x the vector of abundances of each species
-#' this tive the inverse of other measures of evenness??
 Gini<-function(x){
   x1<-x[x!=0]
   1-reldist::gini(x1)
 }
 
-##need to get this working with NAs for mean calculations
-codyndat_diversity <- group_by(codyndat_clean, site_project_comm, experiment_year, plot_id) %>% 
-  summarize(Sp=S(abundance),
-            E_q=E_q(abundance),
-            Gini=Gini(abundance),
-            E_simp=E_simp(abundance))%>%
+codyndat_div_gini <- group_by(codyndat_clean, site_project_comm, experiment_year, plot_id) %>% 
+  summarize(Gini=Gini(abundance))%>%
   tbl_df()%>%
   group_by(site_project_comm, experiment_year)%>%
-  summarize(Sp=mean(Sp),
-            E_Q=mean(E_q, na.rm=T),
-            Gini=mean(Gini),
-            E_simp=mean(E_simp))
+  summarize(EGini=mean(Gini))
 
-sim_diversity<-group_by(sim, id, site, time)%>%
-  summarize(Sp=S(abundance),
-            E_q=E_q(abundance),
-            Gini=Gini(abundance),
-            E_simp=E_simp(abundance))%>%
-  ungroup()%>%
-  group_by(id, time)%>%
-  summarize(Sp=mean(Sp),
-            E_Q=mean(E_q, na.rm=T),
-            Gini=mean(Gini),
-            E_simp=mean(E_simp))%>%
-  ungroup()%>%
+codyn_div_all<-merge(codyndat_diversity_mean, codyndat_div_gini, by=c("experiment_year",'site_project_comm'))
+
+#sim dataset
+com_rep<-unique(sim$id)
+
+sim_div_eq<-data.frame()
+for (i in 1:length(com_rep)){
+  
+  subset<-sim%>%
+    filter(id==com_rep[i])
+  
+  out <- community_structure(df = subset, time.var = "time", abundance.var = "abundance", replicate.var = "site")
+  out$id<-com_rep[i]
+  
+  sim_div_eq<-rbind(sim_div_eq, out)  
+}
+
+sim_div_esimp<-data.frame()
+for (i in 1:length(com_rep)){
+  
+  subset<-sim%>%
+    filter(id==com_rep[i])
+  
+  out <- community_structure(df = subset, time.var = "time", abundance.var = "abundance", replicate.var = "site", evenness = "SimpEven")
+  out$id<-com_rep[i]
+  
+  sim_div_esimp<-rbind(sim_div_esimp, out)  
+}
+
+sim_div<-merge(sim_div_eq, sim_div_esimp, by=c("id",'site','richness','time'))
+
+sim_diversity_mean<-sim_div%>%
   separate(id, into=c("alpha","theta","scenario","rep"), sep="_", remove=F)%>%
   mutate(id3=paste(alpha, theta, scenario, sep="_"))%>%
   group_by(id3, time)%>%
-  summarize(Sp=mean(Sp),
-            E_Q=mean(E_Q),
-            Gini=mean(Gini),
-            E_simp=mean(E_simp))
+  summarize(Sp=mean(richness),
+            EQ=mean(evenness_EQ, na.rm=T),
+            ESimp=mean(evenness_Simpson))
+
+sim_div_gini <- group_by(sim, id, time, site) %>% 
+  summarize(Gini=Gini(abundance))%>%
+  tbl_df()%>%
+  group_by(id, time)%>%
+  summarize(EGini=mean(Gini))%>%
+  separate(id, into=c("alpha","theta","scenario","rep"), sep="_", remove=F)%>%
+  mutate(id3=paste(alpha, theta, scenario, sep="_"))%>%
+  group_by(id3, time)%>%
+  summarize(EGini=mean(EGini))
   
-###graph this
-pairs(sim_diversity[3:6])
-pairs(codyndat_diversity[3:6])
+
+sim_div_all<-merge(sim_diversity_mean, sim_div_gini, by=c("time",'id3'))
 
 
 ###Looking at RAC Changes
 ##Codyn Dataset
-
-#problems with _ in rep names
-#RUNNING all by combine site_project_name with plot_id
 
 codyndat_rac_change<-data.frame()
 spc<-unique(codyndat_clean$site_project_comm)
@@ -298,13 +313,7 @@ for (i in 1:length(com_rep)){
   sim_curve_change<-rbind(sim_curve_change, out)  
 }
 
-sim_info<-sim%>%
-  select(id, id2, id3, site)%>%
-  unique()
-
-sim_cc_merge<-merge(sim_info, sim_curve_change, by=c("id", "site"))
-
-sim_cc_ave<-sim_cc_merge%>% 
+sim_cc_ave<-sim_curve_change%>% 
   group_by(id, time_pair)%>%
   summarise(curve_change=mean(curve_change))%>%
   separate(id, into=c("alpha","theta","scenario","rep"), sep="_", remove=F)%>%
@@ -352,21 +361,22 @@ ggplot(data=sp_output, aes(x=NMDS1, y=NMDS2, color=comtype))+
 
 ####MERGING TO A SINGE DATASET
 #codyn
-merge1<-merge(codyndat_diversity, codyndat_reorder, by=c("site_project_comm","experiment_year"))
-merge2<-merge(merge1, codyndat_braycurtis, by=c("site_project_comm","experiment_year"))
-merge3<-merge(merge2, codyndat_dstar, by=c("site_project_comm","experiment_year"))
+merge1<-merge(codyn_multchange, codyn_curvechange_mean, by=c("site_project_comm","experiment_year_pair"))
+merge2<-merge(merge1, codyndat_rac_change_average, by=c("site_project_comm","experiment_year_pair"))%>%
+  separate(experiment_year_pair, into=c("time1","experiment_year"), sep="-", remove=F)
+merge3<-merge(merge2, codyn_div_all, by=c("site_project_comm","experiment_year"))
 codyndat_allmetrics<-merge(merge3, codyndat_info, by="site_project_comm")
 
 #sim
-merge1<-merge(sim_diversity, sim_reorder, by=c("id3","time"))
-merge2<-merge(merge1, sim_bray_curtis, by=c("id3","time"))
-sim_allmetrics<-merge(merge2, sim_dstar, by=c("id3","time"))%>%
+merge1<-merge(sim_multchange_mean, sim_rac_change_mean, by=c("id3","time_pair"))
+merge2<-merge(merge1, sim_cc_ave, by=c("id3","time_pair"))%>%
+  separate(time_pair, into=c("time1","time"), sep="-", remove=F)
+sim_all_metrics<-merge(sim_div_all, merge2, by=c('time','id3'))%>%
   separate(id3, into=c("alpha","even","comtype"), sep="_")
+sim_all_metrics$comtype2<-as.factor(sim_all_metrics$comtype)
 
-sim_allmetrics$comtype2<-as.factor(sim_allmetrics$comtype)
-
-write.csv(codyndat_allmetrics,'C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\R Files\\codyn_allmetrics_diff_corrected.csv')
-write.csv(sim_allmetrics,'C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\R Files\\sim_allmetrics_diff_corrected.csv')
+write.csv(codyndat_allmetrics,'~/Dropbox/SESYNC/SESYNC_RACs/R Files/codyn_allmetrics_Jan2018.csv')
+write.csv(sim_all_metrics,'~/Dropbox/SESYNC/SESYNC_RACs/R Files/sim_allmetrics_Jan2018.csv')
 
 # pair plot graphs --------------------------------------------------------
 
