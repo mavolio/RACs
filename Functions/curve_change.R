@@ -83,7 +83,7 @@ curve_change <- function(df, time.var, species.var, abundance.var, replicate.var
     
 curvechange <- function(df, time.var, relrank, cumabund){
     
-    df <- df[order(df$cumabund),]
+    df <- df[order(df[[time.var]], df$cumabund),]
   
     timestep2 <- unique(df[[time.var]])#assumes this is a length of 2
 
