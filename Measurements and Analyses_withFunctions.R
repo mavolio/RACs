@@ -369,7 +369,7 @@ codyndat_allmetrics<-merge(merge3, codyndat_info, by="site_project_comm")
 
 #sim
 merge1<-merge(sim_multchange_mean, sim_rac_change_mean, by=c("id3","time_pair"))
-merge2<-merge(merge1, sim_cc_ave, by=c("id3","time_pair"))%>%
+merge2<-merge(merge1, sim_cc_ave, by=c("id3","time_pair"), all=T)%>%
   separate(time_pair, into=c("time1","time"), sep="-", remove=F)
 sim_all_metrics<-merge(sim_div_all, merge2, by=c('time','id3'))%>%
   separate(id3, into=c("alpha","even","comtype"), sep="_")
@@ -380,12 +380,12 @@ write.csv(sim_all_metrics,'~/Dropbox/SESYNC/SESYNC_RACs/R Files/sim_allmetrics_J
 
 # pair plot graphs --------------------------------------------------------
 
-codyndat_allmetrics<-read.csv('C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\R Files\\codyn_allmetrics_diff_corrected.csv')%>%
-  select(-X)
-sim_allmetrics<-read.csv('C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\R Files\\sim_allmetrics_diff_corrected.csv')%>%
-  select(-X)
+theme_set(theme_bw(12))
 
-
+codyndat_allmetrics<-read.csv('~/Dropbox/SESYNC/SESYNC_RACs/R Files/codyn_allmetrics_Jan2018.csv')%>%
+  select(-X)
+sim_allmetrics<-read.csv('~/Dropbox/SESYNC/SESYNC_RACs/R Files/sim_allmetrics_Jan2018.csv')%>%
+  select(-X)
 
 #graphing this
 panel.pearson <- function(x, y, ...) {
@@ -414,8 +414,8 @@ panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...){
 sim_allmetrics2<-sim_allmetrics%>%
   mutate(comtype3=as.factor(paste(alpha, even, sep="_")))
 # #color by turnover and sucession
-# pairs(sim_allmetrics2[,c(9:16)], col=sim_allmetrics$comtype2, labels=c("Richness\nChange", "Evenness\nChange","Rank\nChanges","Species\nGains","Species\nLosses","Compositional\nChange","Dispersion\nChange","Curve\nChange"), font.labels=2, cex.labels=2, upper.panel = panel.cor, oma=c(4,4,4,10))
-# 
+pairs(sim_allmetrics2[,c(13:17, 11,12,18)], col=sim_allmetrics$comtype2, labels=c("Richness\nChange", "Evenness\nChange","Rank\nChanges","Species\nGains","Species\nLosses","Compositional\nChange","Dispersion\nChange","Curve\nChange"), font.labels=2, cex.labels=2, upper.panel = panel.cor, oma=c(4,4,4,10))
+
 # #color by richness_evenness
 # pairs(sim_allmetrics[,c(14:15,9:13,16)], col=sim_allmetrics$comtype3, labels=c("Richness \nChange", "Evenness \nChange","Species \nGains","Species \nLosses","Reordering","Mean \nChange","Dispersion \nDifferences","Curve \nChange"), font.labels=2, cex.labels=2, upper.panel = panel.cor, oma=c(4,4,4,10))
 # 
@@ -431,10 +431,10 @@ sim_allmetrics2<-sim_allmetrics%>%
 
 
 ##codyn graphs
-pairs(codyndat_allmetrics[,c(3:6)],labels=c("Richness", "Evenness \n(EQ)","Evenness \n(Simpsons)","Evenness \n(Gini)"), font.labels=2, cex.labels=2, upper.panel = panel.cor,oma=c(4,4,4,10))
+pairs(codyndat_allmetrics[,c(13:16)],labels=c("Richness", "Evenness \n(EQ)","Evenness \n(Simpsons)","Evenness \n(Gini)"), font.labels=2, cex.labels=2, upper.panel = panel.cor,oma=c(4,4,4,10))
 par(xpd=T)
 
-pairs(codyndat_allmetrics[,c(7:14)], col=codyndat_allmetrics$taxa, labels=c("Richness\nChange", "Evenness\nChange","Rank\nChanges","Species\nGains","Species\nLosses","Compositional\nChange","Dispersion\nChange","Curve\nChange"), font.labels=2, cex.labels=2, upper.panel = panel.cor,oma=c(4,4,4,10))
+pairs(codyndat_allmetrics[,c(8:12, 5:7)], col=codyndat_allmetrics$taxa, labels=c("Richness\nChange", "Evenness\nChange","Rank\nChanges","Species\nGains","Species\nLosses","Compositional\nChange","Dispersion\nChange","Curve\nChange"), font.labels=2, cex.labels=2, upper.panel = panel.cor,oma=c(4,4,4,10))
 par(xpd=T)
 
 
@@ -443,20 +443,36 @@ codyndat_allmetrics2<-codyndat_allmetrics%>%
   mutate(spatialExtent=log(spatial_extent),
          plotSize=log(plot_size))
 
-pairs(codyndat_allmetrics2[,c(10:11, 23,33, 32,36,37)], labels=c("Mean \nChange","Dispersion \nDifference","MAP","MAT","Number \nPlots","Spatial \nExtent","Plot \nSize"), font.labels=2, cex.labels=2, upper.panel = panel.cor)
+pairs(codyndat_allmetrics2[,c(5,6, 25,35, 34,38,39)], labels=c("Mean \nChange","Dispersion \nDifference","MAP","MAT","Number \nPlots","Spatial \nExtent","Plot \nSize"), font.labels=2, cex.labels=2, upper.panel = panel.cor)
 
 pairs(codyndat_allmetrics2[,c(7:14,32,36,37)], font.labels=2, cex.labels=2, upper.panel = panel.cor)
 cor.test(codyndat_allmetrics$mean_change, codyndat_allmetrics$MAP_mm)
 
-cor(codyndat_allmetrics2[,c(7:14,32,36,37)], method ="pearson")
+cor(codyndat_allmetrics2[,c(5:12,34,38,39)], method ="pearson")
+cor.test(codyndat_allmetrics2$curve_change, codyndat_allmetrics2$spatialExtent)
+
 
 #evenness
-cor.test(sim_allmetrics$S, sim_allmetrics$E_Q)
-cor.test(sim_allmetrics$S, sim_allmetrics$Gini)
-cor.test(sim_allmetrics$S, sim_allmetrics$E_simp)
-cor.test(codyndat_allmetrics$S, codyndat_allmetrics$E_Q)
-cor.test(codyndat_allmetrics$S, codyndat_allmetrics$Gini)
-cor.test(codyndat_allmetrics$S, codyndat_allmetrics$E_simp)
+cor.test(sim_allmetrics$Sp, sim_allmetrics$EQ)
+cor.test(sim_allmetrics$Sp, sim_allmetrics$EGini)
+cor.test(sim_allmetrics$Sp, sim_allmetrics$ESimp)
+cor.test(codyndat_allmetrics$Sp, codyndat_allmetrics$EQ)
+cor.test(codyndat_allmetrics$Sp, codyndat_allmetrics$EGini)
+cor.test(codyndat_allmetrics$Sp, codyndat_allmetrics$ESimp)
+
+#other correlations
+cor.test(sim_allmetrics$Sp, sim_allmetrics$R)
+cor.test(sim_allmetrics$Sp, sim_allmetrics$G)
+cor.test(sim_allmetrics$Sp, sim_allmetrics$L)
+cor.test(sim_allmetrics$Sp, sim_allmetrics$composition_change)
+cor.test(sim_allmetrics$Sp, sim_allmetrics$dispersion_change)
+cor.test(sim_allmetrics$Sp, sim_allmetrics$curve_change)
+cor.test(sim_allmetrics$EQ, sim_allmetrics$R)
+cor.test(sim_allmetrics$EQ, sim_allmetrics$G)
+cor.test(sim_allmetrics$EQ, sim_allmetrics$L)
+cor.test(sim_allmetrics$EQ, sim_allmetrics$composition_change)
+cor.test(sim_allmetrics$EQ, sim_allmetrics$dispersion_change)
+cor.test(sim_allmetrics$EQ, sim_allmetrics$curve_change)
 
 
 
@@ -485,7 +501,7 @@ rich_reorder<-
    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.title.x=element_blank())
 
 rich_comp<-
-  ggplot(data=sim_allmetrics, aes(x=Sp, y=mean_change, col=comtype2))+
+  ggplot(data=sim_allmetrics, aes(x=Sp, y=composition_change, col=comtype2))+
   geom_point()+
   scale_color_manual(name="Community Type", values=c("black","red","green","blue"), breaks=c("a","d","c","b"))+
   xlab("Richness")+
@@ -493,7 +509,7 @@ rich_comp<-
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.title.x=element_blank())
 
 rich_disp<-
-  ggplot(data=sim_allmetrics, aes(x=Sp, y=dispersion_diff, col=comtype2))+
+  ggplot(data=sim_allmetrics, aes(x=Sp, y=dispersion_change, col=comtype2))+
   geom_point()+
   scale_color_manual(name="Community Type", values=c("black","red","green","blue"), breaks=c("a","d","c","b"))+
   xlab("Richness")+
@@ -501,7 +517,7 @@ rich_disp<-
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.title.x=element_blank())
 
 rich_curve<-
-  ggplot(data=sim_allmetrics, aes(x=Sp, y=Dstar, col=comtype2))+
+  ggplot(data=sim_allmetrics, aes(x=Sp, y=curve_change, col=comtype2))+
   geom_point()+
   scale_color_manual(name="Community Type", values=c("black","red","green","blue"), breaks=c("a","d","c","b"))+
   xlab("Richness")+
@@ -509,7 +525,7 @@ rich_curve<-
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 
 even_gain<-
-  ggplot(data=sim_allmetrics, aes(x=E_Q, y=G, col=comtype2))+
+  ggplot(data=sim_allmetrics, aes(x=EQ, y=G, col=comtype2))+
   geom_point()+
   scale_color_manual(name="Community Type", values=c("black","red","green","blue"), breaks=c("a","d","c","b"))+
   xlab("Evenness")+
@@ -517,7 +533,7 @@ even_gain<-
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.title=element_blank())
 
 even_loss<-
-  ggplot(data=sim_allmetrics, aes(x=E_Q, y=L, col=comtype2))+
+  ggplot(data=sim_allmetrics, aes(x=EQ, y=L, col=comtype2))+
   geom_point()+
   scale_color_manual(name="Community Type", values=c("black","red","green","blue"), breaks=c("a","d","c","b"))+
   xlab("Evenness")+
@@ -525,7 +541,7 @@ even_loss<-
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.title=element_blank())
 
 even_reorder<-
-  ggplot(data=sim_allmetrics, aes(x=E_Q, y=R, col=comtype2))+
+  ggplot(data=sim_allmetrics, aes(x=EQ, y=R, col=comtype2))+
   geom_point()+
   scale_color_manual(name="Community Type", values=c("black","red","green","blue"), breaks=c("a","d","c","b"))+
   xlab("Evenness")+
@@ -533,14 +549,14 @@ even_reorder<-
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.title=element_blank())
 
 even_comp<-
-  ggplot(data=sim_allmetrics, aes(x=E_Q, y=mean_change, col=comtype2))+
+  ggplot(data=sim_allmetrics, aes(x=EQ, y=composition_change, col=comtype2))+
   geom_point()+
   scale_color_manual(name="Community Type", values=c("black","red","green","blue"), breaks=c("a","d","c","b"))+
   xlab("Evenness")+
   ylab("Compositional Change")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.title=element_blank())
 
-even_disp<-ggplot(data=sim_allmetrics, aes(x=E_Q, y=dispersion_diff, col=comtype2))+
+even_disp<-ggplot(data=sim_allmetrics, aes(x=EQ, y=dispersion_change, col=comtype2))+
   geom_point()+
   scale_color_manual(name="Community Type", values=c("black","red","green","blue"), breaks=c("a","d","c","b"))+
   xlab("Evenness")+
@@ -548,7 +564,7 @@ even_disp<-ggplot(data=sim_allmetrics, aes(x=E_Q, y=dispersion_diff, col=comtype
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.title=element_blank())
 
 even_curve<-
-  ggplot(data=sim_allmetrics, aes(x=E_Q, y=Dstar, col=comtype2))+
+  ggplot(data=sim_allmetrics, aes(x=EQ, y=curve_change, col=comtype2))+
   geom_point()+
   scale_color_manual(name="Community Type", values=c("black","red","green","blue"), breaks=c("a","d","c","b"))+
   xlab("Evenness")+
@@ -600,3 +616,36 @@ ggplot(df, aes(x=relrank, y=cumabund, group=time))+
   xlab("Relative Rank")+
   ylab("Cumulative Abundance")+
   theme_bw()
+
+result <- df %>%
+  do({
+    y <- unique(.$time)###assumption this is a length 2 list
+    df1 <- filter(., time==y[[1]])
+    df2 <- filter(., time==y[[2]])
+    sf1 <- stepfun(df1$relrank, c(0, df1$cumabund))
+    sf2 <- stepfun(df2$relrank, c(0, df2$cumabund))
+    r <- sort(unique(c(0, df1$relrank, df2$relrank)))
+    h <- abs(sf1(r) - sf2(r))
+    w <- c(diff(r), 0)
+    data.frame(Dstar=sum(w*h))#do has to output a dataframe
+  })
+
+ggplot(df, aes(x=relrank, y=cumabund, group=time))+
+  geom_step(color=time)+
+  xlab("Relative Rank")+
+  ylab("Cumulative Abundance")+
+  theme_bw()
+
+
+df <- df[order(df$time, df$cumabund),]
+
+timestep2 <- unique(df$time)#assumes this is a length of 2
+
+df1 <- df[df$time == timestep2[1],]
+df2 <- df[df$time == timestep2[2],]
+sf1 <- stepfun(df1$relrank, c(0, df1$cumabund))
+sf2 <- stepfun(df2$relrank, c(0, df2$cumabund))
+r <- sort(unique(c(0, df1$relrank, df2$relrank)))
+h <- abs(sf1(r) - sf2(r))
+w <- c(diff(r), 0)
+CC=sum(w*h)
