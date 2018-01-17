@@ -25,19 +25,23 @@ traits<-read.csv("C:\\Users\\megha\\Dropbox\\pplots\\site_review_2017\\traits_fi
 
 ##pplots
 pplots<-dat%>%
-  filter(project_name=="pplots",calendar_year==2002|calendar_year==2011, treatment=="N1P0"|treatment=="N2P3")%>%
+  filter(project_name=="pplots",calendar_year==2002|calendar_year==2011, treatment=="N1P0"|treatment=="N2P3"|treatment=="N2P0")%>%
   tbl_df()%>%
   group_by(calendar_year, plot_id)%>%
   mutate(rank=rank(-relcov, ties.method="average"),
-         treatment=factor(treatment, levels=c("N1P0","N2P3")))###need to do this b/c otherwise R will remember every treatment
+         treatment=factor(treatment, levels=c("N1P0","N2P0", "N2P3")))###need to do this b/c otherwise R will remember every treatment
 
+trt_plots<-pplots%>%
+  ungroup()%>%
+  select(treatment, plot_id)%>%
+  unique()
 
 # NMDS --------------------------------------------------------------------
 
 
 ##step 1. do NMDS of pretreatment and last year of data
 pplots_wide<-dat%>%
-  filter(project_name=="pplots",calendar_year==2002|calendar_year==2011,treatment=="N1P0"|treatment=="N2P3")%>%
+  filter(project_name=="pplots",calendar_year==2002|calendar_year==2011,treatment=="N1P0"|treatment=="N2P3"|treatment=="N2P0")%>%
   select(treatment, calendar_year, plot_id, genus_species, relcov)%>%
   spread(genus_species, relcov, fill=0)
 
@@ -61,16 +65,23 @@ toplot<-scores2
 ##plot NMDS
 ggplot(subset(toplot, treatment=="N1P0"), aes(x=NMDS1, y=NMDS2, color=as.factor(calendar_year)))+
   geom_point(size=5)+
-  scale_color_manual(name="", values=c("black","darkgray"), labels=c("Pre-Treatment","Experiment Year 12"))+
-  scale_x_continuous(limits=c(-.8,1))+
-  scale_y_continuous(limits=c(-1,1.2))+
+  scale_color_manual(name="", values=c("black","red"), labels=c("Pre-Treatment","Experiment Year 12"))+
+  scale_x_continuous(limits=c(-1,1.2))+
+  scale_y_continuous(limits=c(-1.1,1.2))+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),legend.position = "none")
 
 ggplot(subset(toplot, treatment=="N2P3"), aes(x=NMDS1, y=NMDS2, color=as.factor(calendar_year)))+
   geom_point(size=5)+
-  scale_color_manual(name="", values=c("black","darkgray"), labels=c("Pre-Treatment","Experiment Year 12"))+
-  scale_x_continuous(limits=c(-.8,1))+
-  scale_y_continuous(limits=c(-1,1.2))+
+  scale_color_manual(name="", values=c("black","red"), labels=c("Pre-Treatment","Experiment Year 12"))+
+  scale_x_continuous(limits=c(-1,1.2))+
+  scale_y_continuous(limits=c(-1.1,1.2))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.position = "none")
+
+ggplot(subset(toplot, treatment=="N2P0"), aes(x=NMDS1, y=NMDS2, color=as.factor(calendar_year)))+
+  geom_point(size=5)+
+  scale_color_manual(name="", values=c("black","red"), labels=c("Pre-Treatment","Experiment Year 12"))+
+  scale_x_continuous(limits=c(-1,1.2))+
+  scale_y_continuous(limits=c(-1.1,1.2))+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.position = "none")
 
 
@@ -87,34 +98,53 @@ ractoplot<-merge(pplots, traits2, by="genus_species", all=T)%>%
   select(-Spnum, -Genus, -Species, -Family, -cot, -canopy, -clonality, -native, -bloom, -Seed_weight__g_, -genus)%>%
   mutate(cat=ifelse(life=="P"&form=="G"&C3_C4=="C4","G1", ifelse(life=="P"&form=="G"&C3_C4=="C3","G2", ifelse(life=="A"&form=="G", "G3", ifelse(life=="P"&form=="F"&n_fixer=="N", "F1",ifelse(life=="P"&form=="S"&n_fixer=="N", "F1", ifelse(life=="P"&form=="F"&n_fixer=="Y", "F2", ifelse(life=="P"&form=="S"&n_fixer=="Y","F2", "F3"))))))))%>%
   na.omit%>%
-  mutate(colorfill=ifelse(genus_species=="andropogon gerardii","ag",ifelse(genus_species=="andropogon scoparius","as", ifelse(genus_species=="sorghastrum nutans", "sn", ifelse(genus_species=="solidago canadensis","sc",ifelse(genus_species=="solidago missouriensis", "sm", ifelse(genus_species=="oxalis stricta", "os", "other")))))))
+  mutate(colorfill=ifelse(genus_species=="andropogon gerardii","ag",ifelse(genus_species=="andropogon scoparius","as", ifelse(genus_species=="sorghastrum nutans", "sn", ifelse(genus_species=="solidago canadensis","sc",ifelse(genus_species=="solidago missouriensis", "sm", ifelse(genus_species=="oxalis stricta", "os", ifelse(genus_species=="dichanthelium oligosanthes","do","other"))))))))
 
-#label top 5 species in contol plots in 2002 and everythign else gray. 
+pplots_ave<-pplots%>%
+  group_by(calendar_year, treatment, genus_species)%>%
+  summarise(relcov=mean(relcov))
 
+#label top three species in control plots blue, top 3 in N or N+P purple and top 3 in NP red.
+
+#top 3 control: ag, as, sn, top 3 n/np: os, sc, sm, do
+
+#ag=blue, as=lightblue, do=darkred, os = pink, other = green3, sc = red, sn = cornflowerblue, sm = orange
+
+#contorls
 ggplot(data=subset(ractoplot, treatment=="N1P0"&calendar_year==2002) , aes(x=rank, y=relcov))+
-   geom_line(aes(group=plot_id), color="black", size=1)+
+   geom_line(aes(group=plot_id), color="darkgray", size=1)+
    geom_point(aes(color=colorfill), size=5)+
-  scale_color_manual(values = c("blue","lightblue","pink","green3","orange","cornflowerblue"))+
+  scale_color_manual(values = c("blue","lightblue","darkred", "pink","green3","orange","cornflowerblue"))+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.position = "none", axis.title.x = element_blank(), axis.title.y = element_blank())
 ggplot(data=subset(ractoplot, treatment=="N1P0"&calendar_year==2011) , aes(x=rank, y=relcov))+
   geom_line(aes(group=plot_id), color="darkgray", size=1)+
   geom_point(aes(color=colorfill), size=5)+
-  scale_color_manual(values = c("blue","lightblue","pink","green3","orange","cornflowerblue"))+
+  scale_color_manual(values = c("blue","lightblue","darkred","pink","green3","orange","cornflowerblue"))+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.position = "none", axis.title.x = element_blank(), axis.title.y = element_blank())
-
+#N+P
 ggplot(data=subset(ractoplot, treatment=="N2P3"&calendar_year==2002) , aes(x=rank, y=relcov))+
-  geom_line(aes(group=plot_id), color="black", size=1)+
+  geom_line(aes(group=plot_id), color="darkgray", size=1)+
   geom_point(aes(color=colorfill), size=5)+
-  scale_color_manual(values = c("blue","lightblue","green3","red","orange","cornflowerblue"))+
+  scale_color_manual(values = c("blue","lightblue","darkred", "green3","red","orange","cornflowerblue"))+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.position = "none", axis.title.x = element_blank(), axis.title.y = element_blank())
 ggplot(data=subset(ractoplot, treatment=="N2P3"&calendar_year==2011) , aes(x=rank, y=relcov))+
   geom_line(aes(group=plot_id), color="darkgray", size=1)+
   geom_point(aes(color=colorfill), size=5)+
-  scale_color_manual(values = c("blue","lightblue","pink","green3","red","orange","cornflowerblue"))+
+  scale_color_manual(values = c("blue","lightblue","darkred", "pink","green3","red","orange","cornflowerblue"))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.position = "none", axis.title.x = element_blank(), axis.title.y = element_blank())
+#N only
+ggplot(data=subset(ractoplot, treatment=="N2P0"&calendar_year==2002) , aes(x=rank, y=relcov))+
+  geom_line(aes(group=plot_id), color="darkgray", size=1)+
+  geom_point(aes(color=colorfill), size=5)+
+  scale_color_manual(values = c("blue","lightblue","darkred", "green3","orange","cornflowerblue"))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.position = "none", axis.title.x = element_blank(), axis.title.y = element_blank())
+ggplot(data=subset(ractoplot, treatment=="N2P0"&calendar_year==2011) , aes(x=rank, y=relcov))+
+  geom_line(aes(group=plot_id), color="darkgray", size=1)+
+  geom_point(aes(color=colorfill), size=5)+
+  scale_color_manual(values = c("blue","lightblue",'darkred',"pink","green3","orange","cornflowerblue"))+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.position = "none", axis.title.x = element_blank(), axis.title.y = element_blank())
 
 # make CC examples --------------------------------------------------------
-
 
 ###figuring out cumulative curve
 average<-ractoplot%>%
@@ -141,8 +171,8 @@ ccplot<-ractoplot%>%
 
 
 ggplot(data=subset(ccplot, treatment=="N1P0"), aes(x=relrank, y=cumabund, color=year))+
-  geom_step(size=1)+
-  scale_color_manual(values=c("black","darkgray"))+
+  geom_step(size=2)+
+  scale_color_manual(values=c("black","red"))+
     theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.position = "none")+
     ylab("Cumulative Relative Abundance")+
     xlab("Relative Rank")+
@@ -152,8 +182,18 @@ ggplot(data=subset(ccplot, treatment=="N1P0"), aes(x=relrank, y=cumabund, color=
 
 
 ggplot(data=subset(ccplot, treatment=="N2P3"), aes(x=relrank, y=cumabund, color=year))+
-  geom_step(size=1)+
-  scale_color_manual(values=c("black","darkgray"))+
+  geom_step(size=2)+
+  scale_color_manual(values=c("black","red"))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.position = "none")+
+  ylab("Cumulative Relative Abundance")+
+  xlab("Relative Rank")+
+  scale_x_continuous(breaks=c(0.25, 0.75))+
+  facet_wrap(~plot_id, ncol=3)+
+  theme(strip.background = element_blank(),strip.text.x = element_blank())
+
+ggplot(data=subset(ccplot, treatment=="N2P0"), aes(x=relrank, y=cumabund, color=year))+
+  geom_step(size=2)+
+  scale_color_manual(values=c("black","red"))+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.position = "none")+
   ylab("Cumulative Relative Abundance")+
   xlab("Relative Rank")+
@@ -162,7 +202,7 @@ ggplot(data=subset(ccplot, treatment=="N2P3"), aes(x=relrank, y=cumabund, color=
   theme(strip.background = element_blank(),strip.text.x = element_blank())
 
 
-# doing SERGL -------------------------------------------------------------
+# doing RAC change and curve change -------------------------------------------------------------
 
 rac <- RAC_change(pplots, time.var = "calendar_year", species.var = "genus_species", abundance.var = "relcov", replicate.var = "plot_id")
 
@@ -176,48 +216,48 @@ trts<-pplots%>%
   select(plot_id, treatment)%>%
   unique()
 
-merge1<-merge(reordering, d_output, by=c("plot_id", "calendar_year"))
+merge1<-merge(rac, cc, by=c("plot_id", "calendar_year_pair"))
 allmetrics<-merge(merge1, trts, by="plot_id")%>%
-  gather(metric, value, S:Dstar)%>%
-  group_by(treatment, calendar_year, metric)%>%
+  gather(metric, value, richness_change:curve_change)%>%
+  group_by(treatment, calendar_year_pair, metric)%>%
     summarize(vmean=mean(value),
               vn=length(plot_id),
               vsd=sd(value))%>%
   mutate(vse=vsd/sqrt(vn))
             
 theme_set(theme_bw(12))
-S<-ggplot(data=subset(allmetrics, metric=="S"), aes(x=treatment, y=vmean))+
+S<-ggplot(data=subset(allmetrics, metric=="richness_change"), aes(x=treatment, y=vmean))+
   geom_bar(stat="identity",position=position_dodge())+
   geom_errorbar(aes(ymin=vmean-vse, ymax=vmean+vse), width=.2)+
   scale_x_discrete(name="Treatment", labels=c("Control", "N+P"))+
   ylab("Richness Changes")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
-E<-ggplot(data=subset(allmetrics, metric=="E"), aes(x=treatment, y=vmean))+
+E<-ggplot(data=subset(allmetrics, metric=="evenness_change"), aes(x=treatment, y=vmean))+
   geom_bar(stat="identity",position=position_dodge())+
   geom_errorbar(aes(ymin=vmean-vse, ymax=vmean+vse), width=.2)+
   scale_x_discrete(name="Treatment", labels=c("Control", "N+P"))+
   ylab("Evenness Changes")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
-R<-ggplot(data=subset(allmetrics, metric=="R"), aes(x=treatment, y=vmean))+
+R<-ggplot(data=subset(allmetrics, metric=="rank_change"), aes(x=treatment, y=vmean))+
   geom_bar(stat="identity",position=position_dodge())+
   geom_errorbar(aes(ymin=vmean-vse, ymax=vmean+vse), width=.2)+
   scale_x_discrete(name="Treatment", labels=c("Control", "N+P"))+
   ylab("Rank Changes")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
   annotate('text', label="*", x=1.5, y = 0.25, size=10)
-G<-ggplot(data=subset(allmetrics, metric=="G"), aes(x=treatment, y=vmean))+
+G<-ggplot(data=subset(allmetrics, metric=="gains"), aes(x=treatment, y=vmean))+
   geom_bar(stat="identity",position=position_dodge())+
   geom_errorbar(aes(ymin=vmean-vse, ymax=vmean+vse), width=.2)+
   scale_x_discrete(name="Treatment", labels=c("Control", "N+P"))+
   ylab("Speices Gains")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
-L<-ggplot(data=subset(allmetrics, metric=="L"), aes(x=treatment, y=vmean))+
+L<-ggplot(data=subset(allmetrics, metric=="losses"), aes(x=treatment, y=vmean))+
   geom_bar(stat="identity",position=position_dodge())+
   geom_errorbar(aes(ymin=vmean-vse, ymax=vmean+vse), width=.2)+
   scale_x_discrete(name="Treatment", labels=c("Control", "N+P"))+
   ylab("Species Losses")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
-C<-ggplot(data=subset(allmetrics, metric=="Dstar"), aes(x=treatment, y=vmean))+
+C<-ggplot(data=subset(allmetrics, metric=="curve_change"), aes(x=treatment, y=vmean))+
   geom_bar(stat="identity",position=position_dodge())+
   geom_errorbar(aes(ymin=vmean-vse, ymax=vmean+vse), width=.2)+
   scale_x_discrete(name="Treatment", labels=c("Control", "N+P"))+
