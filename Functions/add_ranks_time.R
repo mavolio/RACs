@@ -18,6 +18,8 @@
 #' @export
 add_ranks_time <- function(df, time.var, species.var, abundance.var,  replicate.var=NULL) {
   
+  df<-as.data.frame(df)
+  
   if(is.null(replicate.var)){
     df <- subset(df, select = c(time.var, species.var, abundance.var))
   ##add ranks for present species
