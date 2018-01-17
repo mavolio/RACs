@@ -9,6 +9,7 @@
 
 
 pool_replicates <- function(df, time.var=NULL, species.var, abundance.var, replicate.var, treatment.var) {
+  df<-as.data.frame(df)
   
   if(is.null(time.var)){
     ## isolate rep-trts
