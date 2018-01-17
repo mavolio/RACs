@@ -10,6 +10,8 @@
 
 
 curve_difference <- function(df, time.var=NULL, species.var, abundance.var, replicate.var, treatment.var=NULL, pool="NO", block.var=NULL){
+  
+  df<-as.data.frame(df)
 
   if(!is.null(block.var)){
     
