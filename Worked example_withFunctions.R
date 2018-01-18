@@ -206,7 +206,7 @@ ggplot(data=subset(ccplot, treatment=="N2P0"), aes(x=relrank, y=cumabund, color=
 
 rac <- RAC_change(pplots, time.var = "calendar_year", species.var = "genus_species", abundance.var = "relcov", replicate.var = "plot_id")
 
-#this is not working in the reshape step.
+
 
 ##doing curve change
 cc <- curve_change(pplots, time.var = "calendar_year", species.var = "genus_species", abundance.var = "relcov", replicate.var = "plot_id")
@@ -229,180 +229,141 @@ theme_set(theme_bw(12))
 S<-ggplot(data=subset(allmetrics, metric=="richness_change"), aes(x=treatment, y=vmean))+
   geom_bar(stat="identity",position=position_dodge())+
   geom_errorbar(aes(ymin=vmean-vse, ymax=vmean+vse), width=.2)+
-  scale_x_discrete(name="Treatment", labels=c("Control", "N+P"))+
-  ylab("Richness Changes")+
+  scale_x_discrete(name="Treatment", labels=c("Control", "N", "N+P"))+
+  ylab("Richness Change")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 E<-ggplot(data=subset(allmetrics, metric=="evenness_change"), aes(x=treatment, y=vmean))+
   geom_bar(stat="identity",position=position_dodge())+
   geom_errorbar(aes(ymin=vmean-vse, ymax=vmean+vse), width=.2)+
-  scale_x_discrete(name="Treatment", labels=c("Control", "N+P"))+
-  ylab("Evenness Changes")+
+  scale_x_discrete(name="Treatment", labels=c("Control", "N","N+P"))+
+  ylab("Evenness Change")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 R<-ggplot(data=subset(allmetrics, metric=="rank_change"), aes(x=treatment, y=vmean))+
   geom_bar(stat="identity",position=position_dodge())+
   geom_errorbar(aes(ymin=vmean-vse, ymax=vmean+vse), width=.2)+
-  scale_x_discrete(name="Treatment", labels=c("Control", "N+P"))+
-  ylab("Rank Changes")+
+  scale_x_discrete(name="Treatment", labels=c("Control", "N", "N+P"))+
+  ylab("Rank Change")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-  annotate('text', label="*", x=1.5, y = 0.25, size=10)
+  annotate('text', label="C", x=1, y = 0.175, size=5)+
+  annotate('text', label="B", x=2, y = 0.24, size=5)+
+  annotate('text', label="A", x=3, y = 0.28, size=5)
 G<-ggplot(data=subset(allmetrics, metric=="gains"), aes(x=treatment, y=vmean))+
   geom_bar(stat="identity",position=position_dodge())+
   geom_errorbar(aes(ymin=vmean-vse, ymax=vmean+vse), width=.2)+
-  scale_x_discrete(name="Treatment", labels=c("Control", "N+P"))+
+  scale_x_discrete(name="Treatment", labels=c("Control", "N","N+P"))+
   ylab("Speices Gains")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 L<-ggplot(data=subset(allmetrics, metric=="losses"), aes(x=treatment, y=vmean))+
   geom_bar(stat="identity",position=position_dodge())+
   geom_errorbar(aes(ymin=vmean-vse, ymax=vmean+vse), width=.2)+
-  scale_x_discrete(name="Treatment", labels=c("Control", "N+P"))+
+  scale_x_discrete(name="Treatment", labels=c("Control", "N","N+P"))+
   ylab("Species Losses")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 C<-ggplot(data=subset(allmetrics, metric=="curve_change"), aes(x=treatment, y=vmean))+
   geom_bar(stat="identity",position=position_dodge())+
   geom_errorbar(aes(ymin=vmean-vse, ymax=vmean+vse), width=.2)+
-  scale_x_discrete(name="Treatment", labels=c("Control", "N+P"))+
-  ylab("Curve Changes")+
+  scale_x_discrete(name="Treatment", labels=c("Control", "N","N+P"))+
+  ylab("Curve Change")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 
 grid.arrange(S, E,R, G, L, C, ncol=3)
 
 allmetrics_full<-allmetrics<-merge(merge1, trts, by="plot_id")%>%
-  gather(metric, value, S:Dstar)
+  gather(metric, value, richness_change:curve_change)
 
-t.test(value~treatment, data=subset(allmetrics_full, metric=="S")) # p = 0.261
-t.test(value~treatment, data=subset(allmetrics_full, metric=="E"))  # p = 0.354
-t.test(value~treatment, data=subset(allmetrics_full, metric=="R"))  # p < 0.001
-t.test(value~treatment, data=subset(allmetrics_full, metric=="G")) # p = 0.196
-t.test(value~treatment, data=subset(allmetrics_full, metric=="L")) # p = 0.088
-t.test(value~treatment, data=subset(allmetrics_full, metric=="Dstar")) # p = 0.0422
+summary(aov(value~treatment, data=subset(allmetrics_full, metric=="richness_change")))# p = 0.426
+summary(aov(value~treatment, data=subset(allmetrics_full, metric=="evenness_change")))  # p = 0.497
+summary(aov(value~treatment, data=subset(allmetrics_full, metric=="rank_change")))  # p < 0.001
+TukeyHSD(aov(value~treatment, data=subset(allmetrics_full, metric=="rank_change")))
 
+summary(aov(value~treatment, data=subset(allmetrics_full, metric=="gains"))) # p = 0.353
+summary(aov(value~treatment, data=subset(allmetrics_full, metric=="losses"))) # p = 0.174
+summary(aov(value~treatment, data=subset(allmetrics_full, metric=="curve_change"))) # p = 0.681
 
-# doing Curve Differences -------------------------------------------------
-
-
-####doing curve change
-average_test<-pplots%>%
-  group_by(calendar_year, treatment, genus_species)%>%
-  summarize(relcov=mean(relcov))%>%
-  mutate(rank=rank(-relcov, ties.method="average"),
-         maxrank=max(rank),
-         relrank=rank/maxrank)%>%
-  arrange(relrank)%>%
-  mutate(cumabund=cumsum(relcov))
-
-##compare in 2002
-pretreat<-subset(average_test, calendar_year==2002)
-
-df1 <- filter(pretreat, treatment=="N1P0")
-df2 <- filter(pretreat, treatment=="N2P3")
-sf1 <- stepfun(df1$relrank, c(0, df1$cumabund))
-sf2 <- stepfun(df2$relrank, c(0, df2$cumabund))
-r <- sort(unique(c(0, df1$relrank, df2$relrank)))
-h <- abs(sf1(r) - sf2(r))
-w <- c(diff(r), 0)
-Dstar=sum(w*h)
-
-nine<-subset(average_test, calendar_year==2011)
-
-df1 <- filter(nine, treatment=="N1P0")
-df2 <- filter(nine, treatment=="N2P3")
-sf1 <- stepfun(df1$relrank, c(0, df1$cumabund))
-sf2 <- stepfun(df2$relrank, c(0, df2$cumabund))
-r <- sort(unique(c(0, df1$relrank, df2$relrank)))
-h <- abs(sf1(r) - sf2(r))
-w <- c(diff(r), 0)
-Dstar=sum(w*h)
 
 # appendix fig of change difference through time --------------------------
+pplots_allyears<-dat%>%
+  filter(project_name=="pplots", treatment=="N1P0"|treatment=="N2P3"|treatment=="N2P0")
 
+rac_allyears<-RAC_change(pplots_allyears, time.var = "calendar_year", species.var = "genus_species", abundance.var = "relcov", replicate.var = "plot_id")
+cc_allyears<- curve_change(pplots_allyears, time.var = "calendar_year", species.var = "genus_species", abundance.var = "relcov", replicate.var = "plot_id")
+mult_change_allyears<-multivariate_change(pplots_allyears, time.var = "calendar_year", species.var = "genus_species", abundance.var = "relcov", replicate.var = "plot_id", treatment.var = "treatment")
 
-theme_set(theme_bw(16))
-# ###read in datasets where we already have this
-# 
-vpplots<-read.csv("C:\\Users\\megha\\Dropbox\\converge_diverge\\datasets\\Longform\\CORRE_RAC_Metrics_Nov2017_allReplicates.csv")%>%
-  filter(site_project_comm=="KNZ_pplots_0")%>%
-  filter(treatment=="N1P0"|treatment=="N2P3")%>%
-  select(-bc_dissim)%>%
-  gather(metric, value, S:L)%>%
-  group_by(treatment, calendar_year, metric)%>%
+rac_cc<-merge(rac_allyears,cc_allyears, by=c("calendar_year_pair", "plot_id"))
+rac_cc_mean<-merge(rac_cc, trts, by="plot_id")%>%
+  gather(metric, value, richness_change:curve_change)%>%
+  group_by(treatment, calendar_year_pair, metric)%>%
   summarize(vmean=mean(value),
             vn=length(plot_id),
             vsd=sd(value))%>%
   mutate(vse=vsd/sqrt(vn))
-  
-vpplots_bc<-read.csv("C:\\Users\\megha\\Dropbox\\converge_diverge\\datasets\\Longform\\CORRE_RAC_Metrics_Nov2017.csv")%>%
-  filter(site_project_comm=="KNZ_pplots_0")%>%
-  filter(treatment=="N1P0"|treatment=="N2P3")%>%
-  select(-S, -E, -R, -G, -L)%>%
-  gather(metric, value, mean_change:dispersion_diff)
 
+theme_set(theme_bw(12))
 bc<-
-  ggplot(data=subset(vpplots_bc, metric=="mean_change"), aes(x=calendar_year, y=value, color=treatment))+
+  ggplot(data=mult_change_allyears, aes(x=calendar_year_pair, y=composition_change, group=treatment, color=treatment))+
   geom_point(size=3)+
-  scale_color_manual(name="Treatment", values=c("black","darkgray"))+
+  scale_color_manual(name="Treatment", values=c("black","red","purple"))+
   geom_line(size=1)+
   ylab("Compositional Change")+
-  xlab("Year")+
-  scale_x_continuous(breaks=c(2004, 2012))+
+  xlab("Year-Pair")+
+  theme(axis.text.x = element_text(angle = 45, hjust=1))+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.position = "none", axis.title.x = element_blank())
 disp<-
-  ggplot(data=subset(vpplots_bc, metric=="dispersion_diff"), aes(x=calendar_year, y=value, color=treatment))+
+  ggplot(data=mult_change_allyears, aes(x=calendar_year_pair, y=dispersion_change, group=treatment, color=treatment))+
   geom_point(size=3)+
-  scale_color_manual(name="Treatment", values=c("black","darkgray"), labels=c("Control","N+P"))+
+  scale_color_manual(name="Treatment", values=c("black","red","purple"))+
   geom_line(size=1)+
   ylab("Dispersion Change")+
-  xlab("Year")+
-  scale_x_continuous(breaks=c(2004, 2012))+
+  xlab("Year-Pair")+
+  theme(axis.text.x = element_text(angle = 45, hjust=1))+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.position = "none", axis.title.x = element_blank())
 
 
 S<-
-ggplot(data=subset(vpplots,metric=="S"), aes(x=calendar_year, y=vmean, color=treatment))+
+ggplot(data=subset(rac_cc_mean,metric=="richness_change"), aes(x=calendar_year_pair, y=vmean, color=treatment))+
   geom_point(size=3)+
   geom_errorbar(aes(ymin=vmean-vse, ymax=vmean+vse), width=.2)+
-  scale_color_manual(values=c("black","darkgray"))+
+  scale_color_manual(values=c("black","red","purple"))+
   ylab("Richness Change")+
-  geom_line(size=1)+
-  scale_x_continuous(breaks=c(2004, 2012))+
+  geom_line(size=1, aes(group=treatment))+
+  theme(axis.text.x = element_text(angle = 45, hjust=1))+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.position = "none", axis.title.x=element_blank())
 E<-
-ggplot(data=subset(vpplots,metric=="E"), aes(x=calendar_year, y=vmean, color=treatment))+
+  ggplot(data=subset(rac_cc_mean,metric=="evenness_change"), aes(x=calendar_year_pair, y=vmean, color=treatment))+
   geom_point(size=3)+
   geom_errorbar(aes(ymin=vmean-vse, ymax=vmean+vse), width=.2)+
-  scale_color_manual(values=c("black","darkgray"))+
+  scale_color_manual(values=c("black","red","purple"))+
   ylab("Evenness Change")+
-  geom_line(size=1)+
-  scale_x_continuous(breaks=c(2004, 2012))+
+  geom_line(size=1, aes(group=treatment))+
+  theme(axis.text.x = element_text(angle = 45, hjust=1))+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.position = "none", axis.title.x=element_blank())
 R<-
-  ggplot(data=subset(vpplots,metric=="R"), aes(x=calendar_year, y=vmean, color=treatment))+
+  ggplot(data=subset(rac_cc_mean,metric=="rank_change"), aes(x=calendar_year_pair, y=vmean, color=treatment))+
   geom_point(size=3)+
   geom_errorbar(aes(ymin=vmean-vse, ymax=vmean+vse), width=.2)+
-  scale_color_manual(values=c("black","darkgray"))+
+  scale_color_manual(values=c("black","red","purple"))+
   ylab("Rank Change")+
-  geom_line(size=1)+
-  scale_x_continuous(breaks=c(2004, 2012))+
+  geom_line(size=1, aes(group=treatment))+
+  theme(axis.text.x = element_text(angle = 45, hjust=1))+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.position = "none", axis.title.x=element_blank())
 G<-
-  ggplot(data=subset(vpplots,metric=="G"), aes(x=calendar_year, y=vmean, color=treatment))+
+  ggplot(data=subset(rac_cc_mean,metric=="gains"), aes(x=calendar_year_pair, y=vmean, color=treatment))+
   geom_point(size=3)+
   geom_errorbar(aes(ymin=vmean-vse, ymax=vmean+vse), width=.2)+
-  scale_color_manual(values=c("black","darkgray"))+
-  ylab("Species Gain")+
-  xlab("Year")+
-  geom_line(size=1)+
-  scale_x_continuous(breaks=c(2004, 2012))+
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.position = "none")
+  scale_color_manual(values=c("black","red","purple"))+
+  ylab("Species Gains")+
+  geom_line(size=1, aes(group=treatment))+
+  theme(axis.text.x = element_text(angle = 45, hjust=1))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.position = "none", axis.title.x=element_blank())
 L<-
-  ggplot(data=subset(vpplots,metric=="L"), aes(x=calendar_year, y=vmean, color=treatment))+
+  ggplot(data=subset(rac_cc_mean,metric=="losses"), aes(x=calendar_year_pair, y=vmean, color=treatment))+
   geom_point(size=3)+
   geom_errorbar(aes(ymin=vmean-vse, ymax=vmean+vse), width=.2)+
-  scale_color_manual(values=c("black","darkgray"), name="Treatment", labels=c("Control", "N+P"))+
-  ylab("Species Loss")+
-  geom_line(size=1)+
-  xlab("Year")+
-  scale_x_continuous(breaks=c(2004, 2012))+
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+  scale_color_manual(name = "Treatment", label=c("Control", "N", "N+P"),values=c("black","red","purple"))+
+  ylab("Species Losses")+
+  geom_line(size=1, aes(group=treatment))+
+  theme(axis.text.x = element_text(angle = 45, hjust=1))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.title.x=element_blank())
 
 legend=gtable_filter(ggplot_gtable(ggplot_build(L)), "guide-box") 
 grid.draw(legend)
@@ -419,17 +380,25 @@ grid.arrange(arrangeGrob(bc+theme(legend.position="none"),
              widths=unit.c(unit(1, "npc") - legend$width, legend$width),nrow=1)
 
 
-hpplots<-read.csv("C:\\Users\\megha\\Dropbox\\converge_diverge\\datasets\\Longform\\CORRE_ContTreat_Compare_Nov2017.csv")%>%
-  filter(site_project_comm=="KNZ_pplots_0")%>%
-  filter(treatment=="N2P3"|treatment=="N2P3")%>%
-  select(-plot_mani)%>%
-  gather(metric, value, Sd:disp_diff)
+
+# Differences -------------------------------------------------------------
+
+rac_diff<-RAC_difference(df = pplots, time.var="calendar_year", species.var = "genus_species", abundance.var = "relcov", treatment.var = "treatment", replicate.var = "plot_id", pool = "YES")
+
+cc_diff<-curve_difference(df = pplots, time.var="calendar_year", species.var = "genus_species", abundance.var = "relcov", treatment.var = "treatment", replicate.var = "plot_id", pool = "YES")
+
+##graph all differences for all years
+rac_diff_allyears<-RAC_difference(pplots_allyears, time.var="calendar_year", species.var = "genus_species", abundance.var = "relcov", treatment.var = "treatment", replicate.var = "plot_id", pool = "YES")
+
+cc_diff_allyears<-curve_difference(pplots_allyears, time.var="calendar_year", species.var = "genus_species", abundance.var = "relcov", treatment.var = "treatment", replicate.var = "plot_id", pool = "YES")
+
+mult_diff_allyears<-multivariate_difference(pplots_allyears, time.var="calendar_year", species.var = "genus_species", abundance.var = "relcov", treatment.var = "treatment", replicate.var = "plot_id")%>%
+  mutate(group1=paste(treatment, treatment2, sep="_"))
 
 bc_d<-
-ggplot(data=subset(hpplots, metric=="mean_change"), aes(x=calendar_year, y=value))+
-  geom_point(color="black", size=3)+
-  geom_line(color="black", size=1)+
-  scale_x_continuous(breaks=c(2004, 2012))+
+ggplot(data=mult_diff_allyears, aes(x=calendar_year, y=as.numeric(as.character(composition_diff)), color=group1, group=group1))+
+  geom_point(size=3)+
+  geom_line(size=1)+
   ylab("Compositional Difference")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.title.x = element_blank())
 disp_d<-
