@@ -67,7 +67,7 @@ curve_difference <- function(df, time.var=NULL, species.var, abundance.var, repl
       rep_trt<-unique(subset(df, select = c(replicate.var, treatment.var)))
       
       # apply fill_zeros
-      out <- fill_zeros_rep (df, species.var, abundance.var, replicate.var)
+      out <- fill_zeros_rep (df, replicate.var, species.var, abundance.var)
       allsp <- merge(out, rep_trt, by=replicate.var)
       
       #get averages of each species by treatment
@@ -89,7 +89,7 @@ curve_difference <- function(df, time.var=NULL, species.var, abundance.var, repl
         # sort and apply fill_zeros to all time steps
         df <- df[order(df[[time.var]]),]
         X <- split(df, df[time.var])
-        out <- lapply(X, FUN = fill_zeros_rep, species.var, abundance.var, replicate.var)
+        out <- lapply(X, FUN = fill_zeros_rep, replicate.var, species.var, abundance.var)
         ID <- unique(names(out))
         out <- mapply(function(x, y) "[<-"(x, time.var, value = y) ,
                       out, ID, SIMPLIFY = FALSE)
@@ -335,8 +335,8 @@ return(output)
     return(myperms)
   }
   
-  fill_zeros_rep <- function(df, species.var, abundance.var, replicate.var){
-    df2 <- subset(df, select = c(species.var, abundance.var, replicate.var))
+  fill_zeros_rep <- function(df, replicate.var, species.var, abundance.var){
+    df2 <- subset(df, select = c(replicate.var,species.var,abundance.var))
     wide <- reshape(df2, idvar = replicate.var, timevar = species.var, direction = "wide")
     wide[is.na(wide)] <- 0
     
@@ -345,3 +345,4 @@ return(output)
     
     return(long)
   }
+  
