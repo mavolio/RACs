@@ -9,7 +9,9 @@
 
 
 multivariate_change <- function(df, time.var, species.var, abundance.var, replicate.var, treatment.var = NULL){
-
+  
+  df <- as.data.frame(df)
+  
     if(is.null(treatment.var)){
   
       mult_com_change <- mult_change(df, time.var, species.var, abundance.var, replicate.var)
@@ -19,6 +21,7 @@ multivariate_change <- function(df, time.var, species.var, abundance.var, replic
   else {
     
   # calculate change for each treatment
+  df[[treatment.var]] <- as.character(df[[treatment.var]])
   df <- df[order(df[[treatment.var]]),]
   X <- split(df, df[treatment.var])
   out <- lapply(X, FUN = mult_change, time.var, species.var, abundance.var, replicate.var)
