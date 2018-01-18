@@ -101,6 +101,7 @@ pool_replicates <- function(df, time.var=NULL, species.var, abundance.var, repli
   }
   
   
+  
   fill_zeros_rep <- function(df, replicate.var, species.var, abundance.var){
     df2 <- subset(df, select = c(replicate.var,species.var,abundance.var))
     wide <- reshape(df2, idvar = replicate.var, timevar = species.var, direction = "wide")
