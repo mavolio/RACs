@@ -1,4 +1,4 @@
-#' @title Add Ranks 
+#' @title Add Ranks for Replicates
 #'@description Ranks species by abundance in each replicate
 #' @param df A data frame containing species, abundance and replicate columns and an optional column of time points
 #' @param time.var The name of the optional time column 
@@ -21,7 +21,7 @@ add_ranks_replicate <- function(df, time.var = NULL,
                                 abundance.var, 
                                 replicate.var) {
   
-  df<-as.data.frame(df)
+  df <- as.data.frame(df)
   
   if(is.null(time.var)) {
     
@@ -60,9 +60,8 @@ add_ranks_replicate <- function(df, time.var = NULL,
   ##combine all
   rank <- rbind(rank_pres, zero_rank)
   
-  }
-  
-  else {
+  } else {
+    
     df <- subset(df, select = c(time.var, species.var, abundance.var, replicate.var))
     ##add ranks for present species
     rank_pres <- subset(df, df[[abundance.var]]!=0)
