@@ -1,4 +1,3 @@
-##calculating abundance change of each species
 #' @title Species Abundance Changes
 #' @description 
 #' @param df A data frame containing time, species and abundance columns and an optional column of replicates
@@ -7,6 +6,18 @@
 #' @param abundance.var The name of the abundance column 
 #' @param replicate.var The name of the optional replicate column 
 #' 
+#' @return The abundance_change function returns a data frame with the following attributes:
+#' \itemize{
+#'  \item{replicate.var: }{A column that has same name and type as the replicate.var column, if replicate.var is specified.}
+#'  \item{time.var_pair: }{A characteric column that has the time points to be compared, separated by a dash.}
+#'  \item{species.var: }{A column that has same name and type as the species.var column.}
+#'  \item{abund_change: }{A numeric column of the abundance differences between timepoints}
+#' }
+#' @details 
+#' @references 
+#' @example 
+#' @export
+
 
 abundance_change <- function(df, time.var, species.var, abundance.var, replicate.var=NULL) {
   if(is.null(replicate.var)){
@@ -90,8 +101,13 @@ abundance_change <- function(df, time.var, species.var, abundance.var, replicate
 }
 
 
-
-### PRIVATE FUNCTIONS ###
+############################################################################
+#
+# Private functions: these are internal functions not intended for reuse.
+# Future package releases may change these without notice. External callers
+# should not use them.
+#
+############################################################################
 
 abundchange <- function(df, time.var, species.var, abundance.var1, abundance.var2){
 

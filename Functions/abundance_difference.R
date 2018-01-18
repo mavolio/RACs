@@ -1,4 +1,4 @@
-#' @title  Abundance differences
+#' @title  Abundance Differences
 #' @description #### NEED TO ADD A DESCRIPTION#####
 #' @param df A data frame containing an optional time column and requred species, abundance, replicate and optional treatment columns and optional block column
 #' @param time.var The name of the optional time column 
