@@ -329,7 +329,7 @@ return(output)
   SERSp <- function(df, rank.var1, rank.var2, abundance.var1, abundance.var2){
     
     ## Remove 0s
-    df <- subset(df, df[[abundance.var1]]!=0 | df[[abundance.var1]]!=0)
+    df <- subset(df, df[[abundance.var1]]!=0 | df[[abundance.var2]]!=0)
     
     ## Remove instances where abundance.var is NA, probably not necessary since we are doing over space and not time but in as a check #why is this necessary?
     df <- subset(df, !is.na(df[[abundance.var1]]) & !is.na(df[[abundance.var2]]))
