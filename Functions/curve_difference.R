@@ -216,6 +216,7 @@ return(output)
  relrank_trt <- function(df, species.var, abundance.var, treatment.var ){
    
    df <- subset(df, select = c(species.var, abundance.var, treatment.var))
+   df[[treatment.var]]<-as.factor(as.character(df[[treatment.var]]))
    relrank <- subset(df, df[[abundance.var]]!=0)
    relrank$rank <- ave(relrank[[abundance.var]], relrank[[treatment.var]], FUN = function(x) rank(-x, ties.method = "average"))
    relrank$maxrank = ave(relrank$rank, relrank[[treatment.var]], FUN = function(x) max(x))
