@@ -79,7 +79,13 @@ community_structure <- function(df,  time.var = NULL,
 }
 
 
-#### PRIVATE FUNCTIONS ####
+############################################################################
+#
+# Private functions: these are internal functions not intended for reuse.
+# Future package releases may change these without notice. External callers
+# should not use them.
+#
+############################################################################
 
 
 #'  A function to calculate richness
