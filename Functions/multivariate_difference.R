@@ -60,6 +60,7 @@ mult_diff <- function(df, species.var, abundance.var, replicate.var, treatment.v
         colnames(cent_dist)[which(lower.tri(cent_dist, diag=T), arr.ind=T)[,2]],
         cent_dist[lower.tri(cent_dist, diag=T)]))
   cent_dist3 <- cent_dist2[cent_dist2$V1 != cent_dist2$V2,]
+  cent_dist3[3]<-as.numeric(as.character(cent_dist3[[3]]))
   
   colnames(cent_dist3)[1] <- paste(treatment.var, 2, sep="")
   colnames(cent_dist3)[2] <- treatment.var
@@ -77,8 +78,8 @@ mult_diff <- function(df, species.var, abundance.var, replicate.var, treatment.v
   cent_dist_disp2 <- merge(cent_dist_disp, disp2.2, by.x = paste(treatment.var, 2, sep = ""), by.y = treatment.var)
   
   #calculate absolute difference
-  cent_dist_disp2[[treatment.var]]<-as.character(cent_dist_disp2[[treatment.var]])
-  cent_dist_disp2[[paste(treatment.var, 2, sep = "")]]<-as.character(cent_dist_disp2[[paste(treatment.var, 2, sep = "")]])
+  cent_dist_disp2[[treatment.var]] <- as.character(cent_dist_disp2[[treatment.var]])
+  cent_dist_disp2[[paste(treatment.var, 2, sep = "")]] <- as.character(cent_dist_disp2[[paste(treatment.var, 2, sep = "")]])
   
    cent_dist_disp2$abs_dispersion_diff <- abs(cent_dist_disp2$dist.x - cent_dist_disp2$dist.y)
   cent_dist_disp2$trt_greater_disp <- as.character(ifelse(cent_dist_disp2$dist.x > cent_dist_disp2$dist.y, cent_dist_disp2[[treatment.var]], cent_dist_disp2[[paste(treatment.var, 2, sep = "")]]))
