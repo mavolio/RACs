@@ -9,7 +9,10 @@
 #' @param replicate.var The name of the optional replicate column 
 
 
-community_structure <- function(df,  time.var=NULL, abundance.var, replicate.var = NULL, evenness = "EQ") {
+community_structure <- function(df,  time.var=NULL, 
+                                abundance.var, replicate.var = NULL, 
+                                evenness = "EQ") {
+  
   if(is.null(replicate.var)){
     myformula <- as.formula(paste(abundance.var, "~", time.var))
     
@@ -17,14 +20,16 @@ community_structure <- function(df,  time.var=NULL, abundance.var, replicate.var
     comstruct <- do.call(data.frame,aggregate(myformula, data = df, FUN = function(x) c(SpR = S(x), evenness = EQ(x))))
     names(comstruct)[2] <- "richness"
     names(comstruct)[3] <- "evenness_EQ"
-    }
-    else{
+    
+    } else {
+      
     comstruct <- do.call(data.frame,aggregate(myformula, data = df, FUN = function(x) c(SpR = S(x), evenness = SimpEven(x))))
     names(comstruct)[2] <- "richness"
     names(comstruct)[3] <- "evenness_Simpson"
+    
     } 
-  }
-  else {
+  } else {
+    
     if(is.null(time.var)){
       myformula <- as.formula(paste(abundance.var, "~", replicate.var))
       
@@ -32,40 +37,41 @@ community_structure <- function(df,  time.var=NULL, abundance.var, replicate.var
         comstruct <- do.call(data.frame,aggregate(myformula, data = df, FUN = function(x) c(SpR = S(x), evenness = EQ(x))))
         names(comstruct)[2] <- "richness"
         names(comstruct)[3] <- "evenness_EQ"
-      }
-      else{
+        
+      } else {
         comstruct <- do.call(data.frame,aggregate(myformula, data = df, FUN = function(x) c(SpR = S(x), evenness = SimpEven(x))))
         names(comstruct)[2] <- "richness"
         names(comstruct)[3] <- "evenness_Simpson"
       }
-    } 
-    else{
+      
+    } else {
     myformula <- as.formula(paste(abundance.var, "~", time.var, "+", replicate.var))
   
     if(evenness == "EQ"){
     comstruct <- do.call(data.frame, aggregate(myformula, data = df, FUN = function(x) c(SpR = S(x), evenness = EQ(x))))
     names(comstruct)[3] <- "richness"
     names(comstruct)[4] <- "evenness_EQ"
-  } 
-    else{
+    
+  } else {
     comstruct <- do.call(data.frame,aggregate(myformula, data = df, FUN = function(x) c(SpR = S(x), evenness = SimpEven(x))))
     names(comstruct)[3] <- "richness"
     names(comstruct)[4] <- "evenness_Simpson"
   }
     }
   }
+  
     return(comstruct)
 }
 
-if(is.null(time.var)){
+if(is.null(time.var)) {
   myformula <- as.formula(paste(abundance.var, "~", replicate.var))
   
   if(evenness == "EQ"){
     comstruct <- do.call(data.frame,aggregate(myformula, data = df, FUN = function(x) c(SpR = S(x), evenness = EQ(x))))
     names(comstruct)[2] <- "richness"
     names(comstruct)[3] <- "evenness_EQ"
-  }
-  else{
+    
+  } else {
     comstruct <- do.call(data.frame,aggregate(myformula, data = df, FUN = function(x) c(SpR = S(x), evenness = SimpEven(x))))
     names(comstruct)[2] <- "richness"
     names(comstruct)[3] <- "evenness_Simpson"
@@ -75,16 +81,16 @@ if(is.null(time.var)){
 #### PRIVATE FUNCTIONS ####
 
 
-#1) function to calculate richness
-#' @x the vector of abundances of each species
+#'  A function to calculate richness
+#' @param x the vector of abundances of each species
 S <- function(x){
   x1 <- x[x!=0 & !is.na(x)]
   stopifnot(x1 == as.numeric(x1))
   length(x1)
   }
 
-# 2) function to calculate EQ evenness from Smith and Wilson 1996
-#' @x the vector of abundances of each species
+#'  A function to calculate EQ evenness from Smith and Wilson 1996
+#' @param x the vector of abundances of each species
 #' if all abundances are equal it returns a 1
 EQ <- function(x){
   x1 <- x[x!=0 & !is.na(x)]
@@ -103,11 +109,11 @@ EQ <- function(x){
 }
 
 
-#3) function to calculate E1/D (inverse of Simpson's) from Smith and Wilson 1996
-#' @S the number of species in the sample
-#' @x the vector of abundances of each species
-#' @N the total abundance
-#' @p the vector of relative abundances of each species
+#'  A function to calculate E1/D (inverse of Simpson's) from Smith and Wilson 1996
+#' @param S the number of species in the sample
+#' @param x the vector of abundances of each species
+#' @param N the total abundance
+#' @param p the vector of relative abundances of each species
 SimpEven <- function(x, S = length(x[x!=0 & !is.na(x)]), N = sum(x[x!=0&!is.na(x)]), ps = x[x!=0&!is.na(x)]/N, p2 = ps*ps ){
   D <- sum(p2)
   (1/D)/S

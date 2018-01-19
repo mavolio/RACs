@@ -1,19 +1,23 @@
-#####CALCULATING DIVERSITY METRICS
 #' @title Community Diversity
 #' @description 
-#' @param df A data frame containing time, species and abundance columns and an optional column of replicates
+#' @param df A data frame containing species and abundance columns and optional columns of time point and/or replicates
 #' @param time.var The name of the optional time column 
 #' @param species.var The name of the species column 
 #' @param abundance.var The name of the abundance column 
 #' @param replicate.var The name of the optional replicate column 
+#' @param diversity The diversity metric to return:
+#' \itemize{
+#'  \item{"Shannon": }{The default metric, calculates Shannon diversity.}
+#'  \item{"Simpson": }{Calculates Simpson diversity.}
+#' }
 #' 
 #' @return The community_diversity returns a data frame with the following attributes:
 #' \itemize{
 #'  \item{time.var: }{A column that has the same name and type as the time.var column, if time.var is specified.}
-#'  \item{replicate.var: }{A column that has same name and type as the replicate.var column.}
-#'  \item{: }{}
-#'  \item{: }{}
-#'  \item{: }{}
+#'  \item{replicate.var: }{A column that has same name and type as the replicate.var column, if specified.}
+#'  \item{Shannon: }{A numeric column of Shannons diversity if diversity = "Shannon"}
+#'  \item{Simpson: }{A numeric column of Simpsons diversity if diversity = "Simpson"}
+
 #' }
 #' @export
 #'
@@ -40,26 +44,31 @@ community_diversity <- function(df,  time.var= NULL,
   } else {
     
     if(is.null(time.var)) {
+      
       myformula <- as.formula(paste(abundance.var, "~", replicate.var))
       
       if(diversity == "Shannon"){
+        
         comdiv <- aggregate(myformula, data = df, FUN = function(x) diversity = Shannon(x))
         names(comdiv)[2] <- "Shannon"
         
-      }
-      else{
+      } else {
+        
         comdiv <- aggregate(myformula, data=df, FUN = function(x) diversity = Simpson(x))
         names(comdiv)[2] <- "Simpson"
+        
       }
-    } else{
+      
+    } else {
       
     myformula <- as.formula(paste(abundance.var, "~", time.var, "+", replicate.var))
     
-    if(diversity == "Shannon"){
+    if(diversity == "Shannon") {
       comdiv <- aggregate(myformula, data = df, FUN = function(x) diversity = Shannon(x))
       names(comdiv)[3] <- "Shannon"
       
     } else {
+      
       comdiv <- aggregate(myformula, data = df, FUN = function(x) diversity = Simpson(x))
       names(comdiv)[3] <- "Simpson"
     }
@@ -79,7 +88,7 @@ community_diversity <- function(df,  time.var= NULL,
 ############################################################################
 
 
-#1) function to calculate Simpson's Divsersity from Smith and Wilson 1996
+#' A function to calculate Simpson's Divsersity from Smith and Wilson 1996
 #' @param x the vector of abundances of each species
 #' @param N the total abundance
 #' @param p the vector of relative abundances of each species
@@ -88,7 +97,7 @@ Simpson <- function(x, N = sum(x[x!=0&!is.na(x)]), ps = x[x!=0&!is.na(x)]/N, p2=
   1/D
 }
 
-#2) function to calculate Shannon's Divsersity 
+#' A function to calculate Shannon's Divsersity 
 #' @param x the vector of abundances of each species
 #' @param N the total abundance
 #' @param p the vector of relative abundances of each species
