@@ -9,7 +9,9 @@
 #' \itemize{
 #'  \item{"EQ": }{The default metric, calculates EQ evenness from Smith and Wilson 1996}
 #'  \item{"SimpEven": }{Calculates Simpsons eveness.}
-#' }#' @return The community_structure function returns a data frame with the following attributes:
+#' }
+#'  
+#' @return The community_structure function returns a data frame with the following attributes:
 #' \itemize{
 #'  \item{time.var: }{A column that has the same name and type as the time.var column, if time.var is specified.}
 #'  \item{replicate.var: }{A column that has same name and type as the replicate.var column, if specified.}
