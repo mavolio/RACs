@@ -1,6 +1,6 @@
 #' @title Community Diversity
 #' @description 
-#' @param df A data frame containing species and abundance columns and optional columns of time point and/or replicates
+#' @param df A data frame containing species and abundance columns and optional columns of time point and/or replicates. Note that at least time.var or replicate.var must be specified.
 #' @param time.var The name of the optional time column 
 #' @param species.var The name of the species column 
 #' @param abundance.var The name of the abundance column 
@@ -11,19 +11,18 @@
 #'  \item{"Simpson": }{Calculates Simpson diversity.}
 #' }
 #' 
-#' @return The community_diversity returns a data frame with the following attributes:
+#' @return The community_diversity function returns a data frame with the following attributes:
 #' \itemize{
 #'  \item{time.var: }{A column that has the same name and type as the time.var column, if time.var is specified.}
 #'  \item{replicate.var: }{A column that has same name and type as the replicate.var column, if specified.}
 #'  \item{Shannon: }{A numeric column of Shannons diversity if diversity = "Shannon"}
 #'  \item{Simpson: }{A numeric column of Simpsons diversity if diversity = "Simpson"}
-
 #' }
 #' @export
 #'
-community_diversity <- function(df,  time.var= NULL, 
+community_diversity <- function(df,  time.var = NULL, 
                                 abundance.var, 
-                                replicate.var=NULL,  
+                                replicate.var = NULL,  
                                 diversity = "Shannon") {
   
   if(is.null(replicate.var)) {
