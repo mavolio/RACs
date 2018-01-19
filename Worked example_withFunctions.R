@@ -396,7 +396,7 @@ mult_diff_allyears<-multivariate_difference(pplots_allyears, time.var="calendar_
   mutate(group1=paste(treatment, treatment2, sep="_"))
 
 bc_d<-
-ggplot(data=mult_diff_allyears, aes(x=calendar_year, y=as.numeric(as.character(composition_diff)), color=group1, group=group1))+
+ggplot(data=mult_diff_allyears, aes(x=calendar_year, y=composition_diff, color=group1, group=group1))+
   geom_point(size=3)+
   geom_line(size=1)+
   ylab("Compositional Difference")+
