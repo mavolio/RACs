@@ -300,8 +300,11 @@ for (i in 1:length(spc)){
   
   diff_abund_block<-rbind(diff_abund_block, out)
 }
+#####CALCULATING abundance differences without blocks pooling up to treatment
 
-#####CALCULATING RAC differences without blocks pooling up to treatment
+trt_control<-corredat%>%
+  filter(block==0)
+
 spc<-unique(trt_control$site_project_comm)
 diff_abund_ct<-data.frame()
 
@@ -309,13 +312,38 @@ for (i in 1:length(spc)){
   subset<-trt_control%>%
     filter(site_project_comm==spc[i])
   
-  out<-RAC_difference(subset, time.var = 'calendar_year', species.var = "genus_species", abundance.var = 'relcov', replicate.var = 'plot_id', treatment.var = 'treatment', pool = "YES")
+  out<-abundance_difference(subset, time.var = 'calendar_year', species.var = "genus_species", abundance.var = 'relcov', replicate.var = 'plot_id', treatment.var = 'treatment', pool = "YES")
   out$site_project_comm<-spc[i]
   
   diff_abund_ct<-rbind(diff_abund_ct, out)
 }
+#####CALCULATING RAC differences without blocks pooling up to treatment for all datasets
+spc<-unique(corredat$site_project_comm)
+diff_rac_all<-data.frame()
 
-##calculating multivariate changes - this breaks
+for (i in 1:length(spc)){
+  subset<-corredat%>%
+    filter(site_project_comm==spc[i])
+  
+  out<-RAC_difference(subset, time.var = 'calendar_year', species.var = "genus_species", abundance.var = 'relcov', replicate.var = 'plot_id', treatment.var = 'treatment', pool = "YES")
+  out$site_project_comm<-spc[i]
+  
+  diff_rac_all<-rbind(diff_rac_all, out)
+}
+
+##what are the errors
+yrs_plots<-corredat%>%
+  select(site_project_comm, treatment, calendar_year)%>%
+  unique()
+
+yrs_plots_output<-diff_rac_all%>%
+  select(site_project_comm, treatment, calendar_year)%>%
+  mutate(pres=1)%>%
+  unique()
+
+test<-merge(yrs_plots, yrs_plots_output, by=c("site_project_comm","treatment","calendar_year"), all=T)
+
+##calculating multivariate differences
 
 spc<-unique(corredat$site_project_comm)
 diff_mult<-data.frame()
@@ -330,23 +358,37 @@ for (i in 1:length(spc)){
   diff_mult<-rbind(diff_mult, out)
 }
 
-###calculating curve change
-spc<-unique(corredat$site_project_comm)
-delta_curve<-data.frame()
+#####CALCULATING curve differences with block
+spc<-unique(blocked$site_project_comm)
+diff_curve_block<-data.frame()
 
 for (i in 1:length(spc)){
-  subset<-corredat%>%
+  subset<-blocked%>%
     filter(site_project_comm==spc[i])
   
-  out<-curve_change(subset, time.var = 'calendar_year', species.var = "genus_species", abundance.var = 'relcov', replicate.var = 'plot_id')
+  out<-curve_difference(subset, time.var = 'calendar_year', species.var = "genus_species", abundance.var = 'relcov', replicate.var = 'plot_id', block.var = 'block', treatment.var = 'treatment')
   out$site_project_comm<-spc[i]
   
-  delta_curve<-rbind(delta_curve, out)
+  diff_curve_block<-rbind(diff_curve_block, out)
+}
+
+#####CALCULATING curve differences without blocks pooling up to treatment
+spc<-unique(trt_control$site_project_comm)
+diff_curve_ct<-data.frame()
+
+for (i in 1:length(spc)){
+  subset<-trt_control%>%
+    filter(site_project_comm==spc[i])
+  
+  out<-curve_difference(subset, time.var = 'calendar_year', species.var = "genus_species", abundance.var = 'relcov', replicate.var = 'plot_id', treatment.var = 'treatment', pool = "YES")
+  out$site_project_comm<-spc[i]
+  
+  diff_curve_ct<-rbind(diff_curve_ct, out)
 }
 
 
-merge1<-merge(div_diff, reordering_ct, by=c("site_project_comm","calendar_year","treatment"))
-all_Cont_Treat_Compare<-merge(merge1, corre_braycurtis_control_treat,by=c("site_project_comm","calendar_year","treatment"))
-
-write.csv(all_Cont_Treat_Compare, "~/Dropbox/converge_diverge/datasets/LongForm/CORRE_ContTreat_Compare_OCT2017.csv")
-
+# merge1<-merge(div_diff, reordering_ct, by=c("site_project_comm","calendar_year","treatment"))
+# all_Cont_Treat_Compare<-merge(merge1, corre_braycurtis_control_treat,by=c("site_project_comm","calendar_year","treatment"))
+# 
+# write.csv(all_Cont_Treat_Compare, "~/Dropbox/converge_diverge/datasets/LongForm/CORRE_ContTreat_Compare_OCT2017.csv")
+# 
