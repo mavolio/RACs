@@ -68,7 +68,7 @@ pool_replicates <- function(df, time.var=NULL, species.var, abundance.var, repli
     
     ##add ranks for present species
     rank_pres <- subset(spave, spave[[abundance.var]]!=0)
-    rank_pres$trt_time <- paste(rank_pres[[treatment.var]], rank_pres[[time.var]], sep="_")
+    rank_pres$trt_time <- paste(rank_pres[[treatment.var]], rank_pres[[time.var]], sep="##")
     rank_pres$rank <- ave(rank_pres[[abundance.var]], rank_pres$trt_time, FUN = function(x) rank(-x, ties.method = "average"))
     rank_pres <- subset(rank_pres, select = -trt_time)
 
