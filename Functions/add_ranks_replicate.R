@@ -114,30 +114,3 @@ add_ranks_replicate <- function(df, time.var = NULL,
 #
 ############################################################################
 
-#' Add zeros to a long-form species and abundace dataframe
-#'
-#' @param df A dataframe containing time.var, species.var and abundance.var columns
-#' @param time.var The name of the time column from df
-#' @param species.var The name of the species column from df
-#' @param abundance.var The name of the abundance column from df
-#' @return A dataframe with the same columns as df, but with zeros added for species that were present at some point in the time series but not the particular time period.
-#' 
-fill_zeros_rep <- function(df, replicate.var, species.var, abundance.var){
-  df2 <- subset(df, select = c(replicate.var,species.var,abundance.var))
-  if(any(is.na(df2[[species.var]]))) stop("Species names are missing")
-  wide <- reshape(df2, idvar = replicate.var, timevar = species.var, direction = "wide")
-  wide[is.na(wide)] <- 0
-  
-  long<-reshape(wide, idvar = replicate.var, ids = replicate.var, time = names(wide), timevar = abundance.var, direction = "long")
-  colnames(long)[3] <- abundance.var
-  
-  return(long)
-}
-
-#1) function to calculate richness
-#' @param x the vector of abundances of each species
-S <- function(x){
-  x1 <- x[x!=0 & !is.na(x)]
-  stopifnot(x1==as.numeric(x1))
-  length(x1)
-}

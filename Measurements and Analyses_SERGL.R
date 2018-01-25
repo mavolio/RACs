@@ -192,15 +192,20 @@ for (i in 1:length(spc_id)){
     unique()
   sppool<-length(splist$species)
   
-#now get all timestep within an experiment
-  timestep<-sort(unique(subset$experiment_year))    
-
+  # now get all timestep within an experiment ## NOPE see issue #23
+  # timestep<-sort(unique(subset$experiment_year))   ## NOPE
+  # now get all timestep within a site_project_comm
+  idx <- codyndat_rank$site_project_comm == subset[[1, 'site_project_comm']]
+  timestep <- sort(unique(codyndat_rank[idx, ]$experiment_year))
+  
   for(i in 1:(length(timestep)-1)) {#minus 1 will keep me in year bounds NOT WORKING
     subset_t1<-subset%>%
       filter(experiment_year==timestep[i])
+    if (nrow(subset_t1) == 0) next;
     
     subset_t2<-subset%>%
       filter(experiment_year==timestep[i+1])
+    if (nrow(subset_t2) == 0) next;
     
     subset_t12<-merge(subset_t1, subset_t2, by=c("species","id"), all=T)%>%
       filter(abundance.x!=0|abundance.y!=0)

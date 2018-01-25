@@ -87,35 +87,6 @@ community_structure <- function(df,  time.var = NULL,
 #
 ############################################################################
 
-
-#'  A function to calculate richness
-#' @param x the vector of abundances of each species
-S <- function(x){
-  x1 <- x[x!=0 & !is.na(x)]
-  stopifnot(x1 == as.numeric(x1))
-  length(x1)
-  }
-
-#'  A function to calculate EQ evenness from Smith and Wilson 1996
-#' @param x the vector of abundances of each species
-#' if all abundances are equal it returns a 1
-EQ <- function(x){
-  x1 <- x[x!=0 & !is.na(x)]
-  if (length(x1) == 1) {
-    return(NA)
-  }
-  if (abs(max(x1) - min(x1)) < .Machine$double.eps^0.5) {##bad idea to test for zero, so this is basically doing the same thing testing for a very small number
-    return(1)
-  }
-  r <- rank(x1, ties.method = "average")
-  r_scale <- r/max(r)
-  x_log <- log(x1)
-  fit <- lm(r_scale~x_log)
-  b <- fit$coefficients[[2]]
-  2/pi*atan(b)
-}
-
-
 #'  A function to calculate E1/D (inverse of Simpson's) from Smith and Wilson 1996
 #' @param S the number of species in the sample
 #' @param x the vector of abundances of each species
