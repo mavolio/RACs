@@ -123,6 +123,7 @@ add_ranks_time <- function(df, time.var,
 #' 
 fill_zeros <- function(df, time.var, species.var, abundance.var){
   df2 <- subset(df, select = c(time.var,species.var,abundance.var))
+  if(any(is.na(df2[[species.var]]))) stop("Species names are missing")
   wide <- reshape(df2, idvar = time.var, timevar = species.var, direction = "wide")
   wide[is.na(wide)] <- 0
   

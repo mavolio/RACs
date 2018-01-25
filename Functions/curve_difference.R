@@ -373,6 +373,7 @@ trt_perms<-function(df, treatment.var){
   fill_zeros_rep <- function(df, replicate.var, species.var, abundance.var){
     
     df2 <- subset(df, select = c(replicate.var,species.var,abundance.var))
+    if(any(is.na(df2[[species.var]]))) stop("Species names are missing")
     wide <- reshape(df2, idvar = replicate.var, timevar = species.var, direction = "wide")
     wide[is.na(wide)] <- 0
     

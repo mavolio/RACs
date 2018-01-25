@@ -84,7 +84,8 @@ sak<-read.csv("C:\\Users\\megha\\Dropbox\\converge_diverge\\datasets\\LongForm\\
   filter(site_project_comm=="Saskatchewan_CCD_0")%>%
   filter(plot_id!=2)
 
-corredat<-rbind(corredat1, azi, jrn, knz, sak)
+corredat<-rbind(corredat1, azi, jrn, knz, sak)%>%
+  filter(!is.na(genus_species))##get rid of problem with RIO
 
 #problems
 #gvn face - only 2 years of data so will only have one point for the dataset.
@@ -331,17 +332,6 @@ for (i in 1:length(spc)){
   diff_rac_all<-rbind(diff_rac_all, out)
 }
 
-##what are the errors
-yrs_plots<-corredat%>%
-  select(site_project_comm, treatment, calendar_year)%>%
-  unique()
-
-yrs_plots_output<-diff_rac_all%>%
-  select(site_project_comm, treatment, calendar_year)%>%
-  mutate(pres=1)%>%
-  unique()
-
-test<-merge(yrs_plots, yrs_plots_output, by=c("site_project_comm","treatment","calendar_year"), all=T)
 
 ##calculating multivariate differences
 
@@ -380,7 +370,7 @@ for (i in 1:length(spc)){
   subset<-trt_control%>%
     filter(site_project_comm==spc[i])
   
-  out<-curve_difference(subset, time.var = 'calendar_year', species.var = "genus_species", abundance.var = 'relcov', replicate.var = 'plot_id', treatment.var = 'treatment', pool = "YES")
+  out<-curve_difference(df, time.var = 'calendar_year', species.var = "genus_species", abundance.var = 'relcov', replicate.var = 'plot_id', treatment.var = 'treatment', pool = "YES")
   out$site_project_comm<-spc[i]
   
   diff_curve_ct<-rbind(diff_curve_ct, out)
