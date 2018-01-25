@@ -33,6 +33,8 @@ abundance_difference <- function(df, time.var = NULL,
 
   if(!is.null(block.var)) {
     
+    if(length(unique(df[[block.var]]))*length(unique(df[[treatment.var]])) != length(unique(df[[replicate.var]]))) stop("There is not one replicate per treatment in a block")
+    
     myperms <- trt_perms(df, treatment.var)
     
      if(is.null(time.var)) {
