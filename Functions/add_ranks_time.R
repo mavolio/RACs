@@ -130,11 +130,3 @@ fill_zeros <- function(df, time.var, species.var, abundance.var){
   colnames(long)[3] <- abundance.var
   return(long)
 }
-
-#1) function to calculate richness
-#' @param x the vector of abundances of each species
-S <- function(x){
-  x1 <- x[x!=0 & !is.na(x)]
-  stopifnot(x1==as.numeric(x1))
-  length(x1)
-}

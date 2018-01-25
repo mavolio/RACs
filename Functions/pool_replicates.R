@@ -94,13 +94,6 @@ pool_replicates <- function(df, time.var=NULL, species.var, abundance.var, repli
 }
   
   #####other functions
-  S <- function(x){
-    x1 <- x[x!=0 & !is.na(x)]
-    stopifnot(x1==as.numeric(x1))
-    length(x1)
-  }
-  
-  
   
   fill_zeros_rep <- function(df, replicate.var, species.var, abundance.var){
     df2 <- subset(df, select = c(replicate.var,species.var,abundance.var))
