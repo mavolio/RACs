@@ -255,7 +255,8 @@ for (i in 1:length(spc)){
 #####CALCULATING RAC differences with block
 
 blocked<-corredat%>%
-  filter(block!=0)
+  filter(block!=0)%>%
+  filter(site_project_comm!="ARC_MNT_0"&site_project_comm!="BAY_LIND_0"&site_project_comm!="dcgs_gap_0"&site_project_comm!="JRN_study278_0"&site_project_comm!="KLU_KGFert_0"&site_project_comm!="KLU_BFFert_0"&site_project_comm!=""&site_project_comm!="LATNJA_CLIP_Heath"&site_project_comm!="LATNJA_CLIP_Meadow"&site_project_comm!="NWT_bowman_DryBowman"&site_project_comm!="NWT_bowman_WetBowman"&site_project_comm!="NWT_snow_0"&site_project_comm!="TRA_Lovegrass_0")
 
 spc<-unique(blocked$site_project_comm)
 diff_rac_block<-data.frame()
