@@ -92,17 +92,3 @@ pool_replicates <- function(df, time.var=NULL, species.var, abundance.var, repli
   
   return(rankdf)
 }
-  
-  #####other functions
-  
-  fill_zeros_rep <- function(df, replicate.var, species.var, abundance.var){
-    if(any(is.na(df2[[species.var]]))) stop("Species names are missing")
-    df2 <- subset(df, select = c(replicate.var,species.var,abundance.var))
-    wide <- reshape(df2, idvar = replicate.var, timevar = species.var, direction = "wide")
-    wide[is.na(wide)] <- 0
-    
-    long<-reshape(wide, idvar = replicate.var, ids = replicate.var, time = names(wide), timevar = abundance.var, direction = "long")
-    colnames(long)[3] <- abundance.var
-    
-    return(long)
-  }
