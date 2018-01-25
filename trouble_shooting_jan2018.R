@@ -1,6 +1,18 @@
 df<-subset(codyndat_clean, site_project_comm=="AND.control.0")
 df<-subset(codyndat_clean, site_project_comm=='AND.postlog.0')
 
+df<-subset(corredat, site_project_comm=="RIO_interaction_0")%>%
+  select(plot_id)%>%
+  unique()
+
+#trying to find how many plots have na
+test<-df%>%
+  mutate(ugh=ifelse(is.na(genus_species), 1, 0))%>%
+  filter(ugh!=0)%>%
+  select(plot_id)%>%
+  unique()
+#there are 44 instances of this. This has to be the problem.
+
 test<-data.frame()
 rep<-unique(df$plot_id)
 
