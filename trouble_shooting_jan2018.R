@@ -5,6 +5,13 @@ df<-subset(corredat, site_project_comm=="RIO_interaction_0")%>%
   select(plot_id)%>%
   unique()
 
+df<-subset(corredat, site_project_comm=="dcgs_gap_0")# thier blocks are useless.
+df<-subset(corredat, site_project_comm=="ARC_MAT2_0")#thier blocks are correct
+
+t<-curve_difference(df, time.var = 'calendar_year', species.var = "genus_species", abundance.var = 'relcov', replicate.var = 'plot_id', block.var = 'block', treatment.var = 'treatment')
+t<-abundance_difference(df, time.var = 'calendar_year', species.var = "genus_species", abundance.var = 'relcov', replicate.var = 'plot_id', block.var = 'block', treatment.var = 'treatment')
+t<-RAC_difference(df, time.var = 'calendar_year', species.var = "genus_species", abundance.var = 'relcov', replicate.var = 'plot_id', block.var = 'block', treatment.var = 'treatment')
+
 #trying to find how many plots have na
 test<-df%>%
   mutate(ugh=ifelse(is.na(genus_species), 1, 0))%>%
