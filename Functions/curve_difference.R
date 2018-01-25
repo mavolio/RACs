@@ -43,7 +43,7 @@ curve_difference <- function(df, time.var=NULL,
       
        #split by block and calculate curve difference
        X <- split(relrankdf1, relrankdf1[[block.var]])
-       out <- lapply(X, FUN = curve_diff, treatment.var, relrank, cumabund) 
+       out <- lapply(X, FUN = curve_diff, treatment.var, relrank, cumabund, replicate.var) 
        ID <- unique(names(out))
        out <- mapply(function(x, y) "[<-"(x, block.var, value = y) ,
                      out, ID, SIMPLIFY = FALSE)
@@ -62,16 +62,16 @@ curve_difference <- function(df, time.var=NULL,
       relrankdf1 <- merge(output, rep_trt, by=replicate.var)
       
       #split by block and time and calcualte curve difference
-      relrankdf1$splitvariable <- paste(relrankdf1[[block.var]], relrankdf1[[time.var]], sep = "_")
+      relrankdf1$splitvariable <- paste(relrankdf1[[block.var]], relrankdf1[[time.var]], sep = "##")
       X <- split(relrankdf1, relrankdf1$splitvariable)
-      out <- lapply(X, FUN = curve_diff, treatment.var, relrank, cumabund) 
+      out <- lapply(X, FUN = curve_diff, treatment.var, relrank, cumabund, replicate.var) 
       ID <- unique(names(out))
       out <- mapply(function(x, y) "[<-"(x, "splitvariable", value = y) ,
                     out, ID, SIMPLIFY = FALSE)
       output <- do.call("rbind", out)  
       
       ## Add in the identifying column names
-      outnames <- data.frame(do.call('rbind', strsplit(as.character(output$splitvariable),'_',fixed=TRUE)))
+      outnames <- data.frame(do.call('rbind', strsplit(as.character(output$splitvariable),'##',fixed=TRUE)))
       names(outnames) = c(block.var, time.var)
       output$splitvariable <- NULL
       output <- cbind(outnames, output)
@@ -98,7 +98,7 @@ curve_difference <- function(df, time.var=NULL,
       relrankdf1<-relrank_trt(spave, species.var, abundance.var, treatment.var)
       
       #calcualte curve difference
-      output <- curve_diff (relrankdf1, treatment.var, relrank, cumabund) 
+      output <- curve_diff (relrankdf1, treatment.var, relrank, cumabund, replicate.var=NULL) 
 
     } else {
       
@@ -130,7 +130,7 @@ curve_difference <- function(df, time.var=NULL,
         
         #split by time and calcualte curve difference
         X <- split(relrankdf1, relrankdf1[[time.var]])
-        out <- lapply(X, FUN = curve_diff, treatment.var, relrank, cumabund) 
+        out <- lapply(X, FUN = curve_diff, treatment.var, relrank, cumabund, replicate.var = NULL) 
         ID <- unique(names(out))
         out <- mapply(function(x, y) "[<-"(x, time.var, value = y) ,
                       out, ID, SIMPLIFY = FALSE)
@@ -230,6 +230,7 @@ return(output)
  relrank <- function(df, species.var, abundance.var, replicate.var ) {
   
  df <- subset(df, select = c(species.var, abundance.var, replicate.var))
+ df[[replicate.var]]<-as.character(df[[replicate.var]])
  relrank <- subset(df, df[[abundance.var]]!=0)
  relrank$rank <- ave(relrank[[abundance.var]], relrank[[replicate.var]], FUN = function(x) rank(-x, ties.method = "average"))
  relrank$maxrank <- ave(relrank$rank, relrank[[replicate.var]], FUN = function(x) max(x))
@@ -257,8 +258,10 @@ return(output)
  }
   
  
- curve_diff <- function(df, treatment.var, relrank, cumabund) {
+ curve_diff <- function(df, treatment.var, relrank, cumabund, replicate.var=NULL) {
    
+   if(!is.null(replicate.var) && length(unique(df[[treatment.var]])) != length(unique(df[[replicate.var]]))) stop("There is not one replicate per treatment in a block")
+      
    #determine all pairwise comparisions
    myperms <- trt_perms(df, treatment.var)
    trt1 <- as.character(myperms[[treatment.var]])
