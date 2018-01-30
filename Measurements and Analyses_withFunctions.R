@@ -181,6 +181,7 @@ for (i in 1:length(spc)){
   codyndat_rac_change<-rbind(codyndat_rac_change, out)  
 }
 
+
 codyndat_rac_change_average<-codyndat_rac_change%>%
   group_by(site_project_comm, experiment_year_pair)%>%
   summarise(S=mean(richness_change),
