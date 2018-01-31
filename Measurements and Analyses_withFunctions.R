@@ -81,20 +81,34 @@ for (i in 1:length(spc)){
   subset<-codyndat_clean%>%
     filter(site_project_comm==spc[i])
   
-  out<-community_structure(subset, time.var = 'experiment_year', abundance.var = 'abundance', replicate.var = 'plot_id', evenness = "SimpEven")
+  out<-community_structure(subset, time.var = 'experiment_year', abundance.var = 'abundance', replicate.var = 'plot_id', metric = "SimpsonEvenness")
   out$site_project_comm<-spc[i]
   
   codyn_div_esimp<-rbind(codyn_div_esimp, out)
 }
 
-codyn_div<-merge(codyn_div_eq, codyn_div_esimp, by=c("site_project_comm",'plot_id','richness','experiment_year'))
+codyn_div_evar<-data.frame()
 
+for (i in 1:length(spc)){
+  subset<-codyndat_clean%>%
+    filter(site_project_comm==spc[i])
+  
+  out<-community_structure(subset, time.var = 'experiment_year', abundance.var = 'abundance', replicate.var = 'plot_id', metric = "Evar")
+  out$site_project_comm<-spc[i]
+  
+  codyn_div_evar<-rbind(codyn_div_evar, out)
+}
+
+
+codyn_div1<-merge(codyn_div_eq, codyn_div_esimp, by=c("site_project_comm",'plot_id','richness','experiment_year'))
+codyn_div<-merge(codyn_div1, codyn_div_evar, by=c("site_project_comm",'plot_id','richness','experiment_year'))
 
 codyndat_diversity_mean <- codyn_div%>%
   group_by(site_project_comm, experiment_year)%>%
   summarize(Sp=mean(richness),
-            EQ=mean(evenness_EQ, na.rm=T),
-            ESimp=mean(evenness_Simpson))
+            EQ=mean(EQ, na.rm=T),
+            ESimp=mean(SimpsonEvenness),
+            Evar=mean(Evar, na.rm=T))
 
 
 #calculating gini coefficeint using the gini function in the reldist package
@@ -133,21 +147,35 @@ for (i in 1:length(com_rep)){
   subset<-sim%>%
     filter(id==com_rep[i])
   
-  out <- community_structure(df = subset, time.var = "time", abundance.var = "abundance", replicate.var = "site", evenness = "SimpEven")
+  out <- community_structure(df = subset, time.var = "time", abundance.var = "abundance", replicate.var = "site", metric = "SimpsonEvenness")
   out$id<-com_rep[i]
   
   sim_div_esimp<-rbind(sim_div_esimp, out)  
 }
 
-sim_div<-merge(sim_div_eq, sim_div_esimp, by=c("id",'site','richness','time'))
+sim_div_evar<-data.frame()
+for (i in 1:length(com_rep)){
+  
+  subset<-sim%>%
+    filter(id==com_rep[i])
+  
+  out <- community_structure(df = subset, time.var = "time", abundance.var = "abundance", replicate.var = "site", metric = "Evar")
+  out$id<-com_rep[i]
+  
+  sim_div_evar<-rbind(sim_div_evar, out)  
+}
+
+sim_div1<-merge(sim_div_eq, sim_div_esimp, by=c("id",'site','richness','time'))
+sim_div<-merge(sim_div1, sim_div_evar, by=c("id",'site','richness','time'))
 
 sim_diversity_mean<-sim_div%>%
   separate(id, into=c("alpha","theta","scenario","rep"), sep="_", remove=F)%>%
   mutate(id3=paste(alpha, theta, scenario, sep="_"))%>%
   group_by(id3, time)%>%
   summarize(Sp=mean(richness),
-            EQ=mean(evenness_EQ, na.rm=T),
-            ESimp=mean(evenness_Simpson))
+            EQ=mean(EQ, na.rm=T),
+            ESimp=mean(SimpsonEvenness),
+            Evar=mean(Evar, na.rm=T))
 
 sim_div_gini <- group_by(sim, id, time, site) %>% 
   summarize(Gini=Gini(abundance))%>%
@@ -457,10 +485,11 @@ cor.test(codyndat_allmetrics2$curve_change, codyndat_allmetrics2$spatialExtent)
 cor.test(sim_allmetrics$Sp, sim_allmetrics$EQ)
 cor.test(sim_allmetrics$Sp, sim_allmetrics$EGini)
 cor.test(sim_allmetrics$Sp, sim_allmetrics$ESimp)
+cor.test(sim_allmetrics$Sp, sim_allmetrics$Evar)
 cor.test(codyndat_allmetrics$Sp, codyndat_allmetrics$EQ)
 cor.test(codyndat_allmetrics$Sp, codyndat_allmetrics$EGini)
 cor.test(codyndat_allmetrics$Sp, codyndat_allmetrics$ESimp)
-
+cor.test(codyndat_allmetrics$Sp, codyndat_allmetrics$Evar)
 #other correlations
 cor.test(sim_allmetrics$Sp, sim_allmetrics$R)
 cor.test(sim_allmetrics$Sp, sim_allmetrics$G)
