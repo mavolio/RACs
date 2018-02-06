@@ -413,7 +413,11 @@ theme_set(theme_bw(12))
 
 codyndat_allmetrics<-read.csv('~/Dropbox/SESYNC/SESYNC_RACs/R Files/codyn_allmetrics_Jan2018.csv')%>%
   select(-X)
-sim_allmetrics<-read.csv('~/Dropbox/SESYNC/SESYNC_RACs/R Files/sim_allmetrics_Jan2018.csv')%>%
+
+codyndat_allmetrics<-read.csv('C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\R Files\\codyn_allmetrics_Jan2018.csv')%>%
+  select(-X)
+
+sim_allmetrics<-read.csv('C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\R Files\\sim_allmetrics_Jan2018.csv')%>%
   select(-X)
 
 #graphing this
