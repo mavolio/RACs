@@ -470,6 +470,9 @@ par(xpd=T)
 pairs(codyndat_allmetrics[,c(8:12, 5:7)], col=codyndat_allmetrics$taxa, labels=c("Richness\nChange", "Evenness\nChange","Rank\nChanges","Species\nGains","Species\nLosses","Compositional\nChange","Dispersion\nChange","Curve\nChange"), font.labels=2, cex.labels=2, upper.panel = panel.cor,oma=c(4,4,4,10))
 par(xpd=T)
 
+#without curve change in BW
+pairs(codyndat_allmetrics[,c(8:12, 5:6)], labels=c("Richness\nChange", "Evenness\nChange","Rank\nChanges","Species\nGains","Species\nLosses","Compositional\nChange","Dispersion\nChange","Curve\nChange"), font.labels=2, cex.labels=2, upper.panel = panel.cor,oma=c(4,4,4,10))
+par(xpd=T)
 
 #how do these correlate with experiment parameters. #remove outliers
 codyndat_allmetrics2<-codyndat_allmetrics%>%
