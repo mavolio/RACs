@@ -510,4 +510,20 @@ ggplot(subset(toplot, treatment=="N2P0"), aes(x=NMDS1, y=NMDS2, color=as.factor(
   scale_y_continuous(limits=c(-1.1,1.3))+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.position = "none")
 
+#all
+ggplot(toplot, aes(x=NMDS1, y=NMDS2, color=as.factor(treatment), shape = as.factor(calendar_year)))+
+  geom_point(size=5)+
+  scale_shape_manual(name = "Year", values = c(19,17))+
+  scale_color_manual(name = "Treatment", values=c("black","orange", "red"), labels=c("Control", "N", "N+P"))+
+  scale_x_continuous(limits=c(-1.6,.72))+
+  scale_y_continuous(limits=c(-1.1,1.3))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+#2002 only
+ggplot(subset(toplot, calendar_year=="2002"), aes(x=NMDS1, y=NMDS2, color=as.factor(treatment)))+
+  geom_point(size=5)+
+  scale_shape_manual(name = "Year", values = c(19,17))+
+  scale_color_manual(name = "Treatment", values=c("black","orange", "red"), labels=c("Control", "N", "N+P"))+
+  scale_x_continuous(limits=c(-1.6,.72))+
+  scale_y_continuous(limits=c(-1.1,1.3))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 
