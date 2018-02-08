@@ -36,6 +36,11 @@ trt_plots<-pplots%>%
   select(treatment, plot_id)%>%
   unique()
 
+trts<-pplots%>%
+  ungroup()%>%
+  select(plot_id, treatment)%>%
+  unique()
+
 # NMDS --------------------------------------------------------------------
 
 
@@ -211,11 +216,6 @@ rac <- RAC_change(pplots, time.var = "calendar_year", species.var = "genus_speci
 ##doing curve change
 cc <- curve_change(pplots, time.var = "calendar_year", species.var = "genus_species", abundance.var = "relcov", replicate.var = "plot_id")
 
-trts<-pplots%>%
-  ungroup()%>%
-  select(plot_id, treatment)%>%
-  unique()
-
 merge1<-merge(rac, cc, by=c("plot_id", "calendar_year_pair"))
 allmetrics<-merge(merge1, trts, by="plot_id")%>%
   gather(metric, value, richness_change:curve_change)%>%
@@ -283,7 +283,7 @@ summary(aov(value~treatment, data=subset(allmetrics_full, metric=="curve_change"
 
 # appendix fig of change difference through time --------------------------
 pplots_allyears<-dat%>%
-  filter(project_name=="pplots", treatment=="N1P0"|treatment=="N2P3"|treatment=="N2P0")
+  filter(project_name=="pplots", treatment=="N1P0"|treatment=="N2P3")
 
 rac_allyears<-RAC_change(pplots_allyears, time.var = "calendar_year", species.var = "genus_species", abundance.var = "relcov", replicate.var = "plot_id")
 cc_allyears<- curve_change(pplots_allyears, time.var = "calendar_year", species.var = "genus_species", abundance.var = "relcov", replicate.var = "plot_id")
@@ -359,7 +359,7 @@ L<-
   ggplot(data=subset(rac_cc_mean,metric=="losses"), aes(x=calendar_year_pair, y=vmean, color=treatment))+
   geom_point(size=3)+
   geom_errorbar(aes(ymin=vmean-vse, ymax=vmean+vse), width=.2)+
-  scale_color_manual(name = "Treatment", label=c("Control", "N", "N+P"),values=c("black","red","purple"))+
+  scale_color_manual(name = "Treatment", label=c("Control", "N+P"),values=c("black","red","purple"))+
   ylab("Species Losses")+
   geom_line(size=1, aes(group=treatment))+
   theme(axis.text.x = element_text(angle = 45, hjust=1))+
@@ -369,8 +369,8 @@ legend=gtable_filter(ggplot_gtable(ggplot_build(L)), "guide-box")
 grid.draw(legend)
 
 
-grid.arrange(arrangeGrob(bc+theme(legend.position="none"),
-                         disp+theme(legend.position="none"),
+grid.arrange(arrangeGrob(#bc+theme(legend.position="none"),
+                         #disp+theme(legend.position="none"),
                          S+theme(legend.position="none"),
                          E+theme(legend.position="none"),
                          R+theme(legend.position="none"),
@@ -400,42 +400,42 @@ bc_d<-
 ggplot(data=mult_diff_allyears, aes(x=as.numeric(calendar_year), y=composition_diff, color=group1, group=group1))+
   geom_point(size=3)+
   geom_line(size=1)+
-  scale_color_manual(name = "Treatment\nComparision", label=c("Control - N", "Control - N+P", "N - N+P"),values=c("orange","darkgoldenrod4","darkred"))+
+  #scale_color_manual(name = "Treatment\nComparision", label=c("Control - N", "Control - N+P", "N - N+P"),values=c("orange","darkgoldenrod4","darkred"))+
   ylab("Compositional Difference")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.title.x = element_blank())
 disp_d<-
   ggplot(data=mult_diff_allyears, aes(x=as.numeric(calendar_year), y=abs_dispersion_diff, color=group1, group=group1))+
   geom_point(size=3)+
   geom_line(size=1)+
-  scale_color_manual(name = "Treatment\nComparision", label=c("Control - N", "Control - N+P", "N - N+P"),values=c("orange","darkgoldenrod4","darkred"))+
+  #scale_color_manual(name = "Treatment\nComparision", label=c("Control - N", "Control - N+P", "N - N+P"),values=c("orange","darkgoldenrod4","darkred"))+
   ylab("Compositional Difference")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.title.x = element_blank())
 s_d<-
   ggplot(data=rac_diff_allyears, aes(x=as.numeric(calendar_year), y=richness_diff, color=group1, group=group1))+
   geom_point(size=3)+
   geom_line(size=1)+
-  scale_color_manual(name = "Treatment\nComparision", label=c("Control - N", "Control - N+P", "N - N+P"),values=c("orange","darkgoldenrod4","darkred"))+
+  scale_color_manual(name = "Treatment\nComparision", label=c("Control - N", "Control - N+P", "N - N+P"),values=c("black"))+
   ylab("Richness Difference")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.title.x = element_blank())
 e_d<-
   ggplot(data=rac_diff_allyears, aes(x=as.numeric(calendar_year), y=evenness_diff, color=group1, group=group1))+
   geom_point(size=3)+
   geom_line(size=1)+
-  scale_color_manual(name = "Treatment\nComparision", label=c("Control - N", "Control - N+P", "N - N+P"),values=c("orange","darkgoldenrod4","darkred"))+
+  scale_color_manual(name = "Treatment\nComparision", label=c("Control - N", "Control - N+P", "N - N+P"),values=c("black"))+
   ylab("Evenness Difference")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.title.x = element_blank())
 r_d<-
   ggplot(data=rac_diff_allyears, aes(x=as.numeric(calendar_year), y=rank_diff, color=group1, group=group1))+
   geom_point(size=3)+
   geom_line(size=1)+
-  scale_color_manual(name = "Treatment\nComparision", label=c("Control - N", "Control - N+P", "N - N+P"),values=c("orange","darkgoldenrod4","darkred"))+
+  scale_color_manual(name = "Treatment\nComparision", label=c("Control - N", "Control - N+P", "N - N+P"),values=c("black"))+
   ylab("Rank Difference")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.title.x = element_blank())
 sp_d<-
   ggplot(data=rac_diff_allyears, aes(x=as.numeric(calendar_year), y=species_diff, color=group1, group=group1))+
   geom_point(size=3)+
   geom_line(size=1)+
-  scale_color_manual(name = "Treatment\nComparision", label=c("Control - N", "Control - N+P", "N - N+P"),values=c("orange","darkgoldenrod4","darkred"))+
+  scale_color_manual(name = "Treatment\nComparision", label=c("Control - N+P"),values=c("black"))+
   ylab("Species Difference")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.title.x = element_blank())
   
@@ -444,8 +444,8 @@ legend=gtable_filter(ggplot_gtable(ggplot_build(sp_d)), "guide-box")
 grid.draw(legend)
 
 
-grid.arrange(arrangeGrob(bc_d+theme(legend.position="none"),
-                         disp_d+theme(legend.position="none"),
+grid.arrange(arrangeGrob(#bc_d+theme(legend.position="none"),
+                         #disp_d+theme(legend.position="none"),
                          s_d+theme(legend.position="none"),
                          e_d+theme(legend.position="none"),
                          r_d+theme(legend.position="none"),
