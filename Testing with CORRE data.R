@@ -366,14 +366,14 @@ for (i in 1:length(spc)){
 }
 
 #####CALCULATING curve differences without blocks pooling up to treatment
-spc<-unique(trt_control$site_project_comm)
+spc<-unique(corredat$site_project_comm)
 diff_curve_ct<-data.frame()
 
 for (i in 1:length(spc)){
-  subset<-trt_control%>%
+  subset<-corredat%>%
     filter(site_project_comm==spc[i])
   
-  out<-curve_difference(df, time.var = 'calendar_year', species.var = "genus_species", abundance.var = 'relcov', replicate.var = 'plot_id', treatment.var = 'treatment', pool = "YES")
+  out<-curve_difference(subset, time.var = 'calendar_year', species.var = "genus_species", abundance.var = 'relcov', replicate.var = 'plot_id', treatment.var = 'treatment', pool = "YES")
   out$site_project_comm<-spc[i]
   
   diff_curve_ct<-rbind(diff_curve_ct, out)

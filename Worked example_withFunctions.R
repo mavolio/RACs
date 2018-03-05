@@ -13,7 +13,7 @@ library(grid)
 library(gtable)
 library(codyn)
 
-theme_set(theme_bw(20))
+theme_set(theme_bw(12))
 
 # read in data ------------------------------------------------------------
 
@@ -34,6 +34,11 @@ pplots<-dat%>%
 trt_plots<-pplots%>%
   ungroup()%>%
   select(treatment, plot_id)%>%
+  unique()
+
+trts<-pplots%>%
+  ungroup()%>%
+  select(plot_id, treatment)%>%
   unique()
 
 # NMDS --------------------------------------------------------------------
@@ -211,11 +216,6 @@ rac <- RAC_change(pplots, time.var = "calendar_year", species.var = "genus_speci
 ##doing curve change
 cc <- curve_change(pplots, time.var = "calendar_year", species.var = "genus_species", abundance.var = "relcov", replicate.var = "plot_id")
 
-trts<-pplots%>%
-  ungroup()%>%
-  select(plot_id, treatment)%>%
-  unique()
-
 merge1<-merge(rac, cc, by=c("plot_id", "calendar_year_pair"))
 allmetrics<-merge(merge1, trts, by="plot_id")%>%
   gather(metric, value, richness_change:curve_change)%>%
@@ -283,7 +283,7 @@ summary(aov(value~treatment, data=subset(allmetrics_full, metric=="curve_change"
 
 # appendix fig of change difference through time --------------------------
 pplots_allyears<-dat%>%
-  filter(project_name=="pplots", treatment=="N1P0"|treatment=="N2P3"|treatment=="N2P0")
+  filter(project_name=="pplots", treatment=="N1P0"|treatment=="N2P3")
 
 rac_allyears<-RAC_change(pplots_allyears, time.var = "calendar_year", species.var = "genus_species", abundance.var = "relcov", replicate.var = "plot_id")
 cc_allyears<- curve_change(pplots_allyears, time.var = "calendar_year", species.var = "genus_species", abundance.var = "relcov", replicate.var = "plot_id")
@@ -359,7 +359,7 @@ L<-
   ggplot(data=subset(rac_cc_mean,metric=="losses"), aes(x=calendar_year_pair, y=vmean, color=treatment))+
   geom_point(size=3)+
   geom_errorbar(aes(ymin=vmean-vse, ymax=vmean+vse), width=.2)+
-  scale_color_manual(name = "Treatment", label=c("Control", "N", "N+P"),values=c("black","red","purple"))+
+  scale_color_manual(name = "Treatment", label=c("Control", "N+P"),values=c("black","red","purple"))+
   ylab("Species Losses")+
   geom_line(size=1, aes(group=treatment))+
   theme(axis.text.x = element_text(angle = 45, hjust=1))+
@@ -369,8 +369,8 @@ legend=gtable_filter(ggplot_gtable(ggplot_build(L)), "guide-box")
 grid.draw(legend)
 
 
-grid.arrange(arrangeGrob(bc+theme(legend.position="none"),
-                         disp+theme(legend.position="none"),
+grid.arrange(arrangeGrob(#bc+theme(legend.position="none"),
+                         #disp+theme(legend.position="none"),
                          S+theme(legend.position="none"),
                          E+theme(legend.position="none"),
                          R+theme(legend.position="none"),
@@ -388,7 +388,8 @@ rac_diff<-RAC_difference(df = pplots, time.var="calendar_year", species.var = "g
 cc_diff<-curve_difference(df = pplots, time.var="calendar_year", species.var = "genus_species", abundance.var = "relcov", treatment.var = "treatment", replicate.var = "plot_id", pool = "YES")
 
 ##graph all differences for all years
-rac_diff_allyears<-RAC_difference(pplots_allyears, time.var="calendar_year", species.var = "genus_species", abundance.var = "relcov", treatment.var = "treatment", replicate.var = "plot_id", pool = "YES")
+rac_diff_allyears<-RAC_difference(pplots_allyears, time.var="calendar_year", species.var = "genus_species", abundance.var = "relcov", treatment.var = "treatment", replicate.var = "plot_id", pool = "YES")%>%
+  mutate(group1=paste(treatment, treatment2, sep="_"))
 
 cc_diff_allyears<-curve_difference(pplots_allyears, time.var="calendar_year", species.var = "genus_species", abundance.var = "relcov", treatment.var = "treatment", replicate.var = "plot_id", pool = "YES")
 
@@ -396,58 +397,61 @@ mult_diff_allyears<-multivariate_difference(pplots_allyears, time.var="calendar_
   mutate(group1=paste(treatment, treatment2, sep="_"))
 
 bc_d<-
-ggplot(data=mult_diff_allyears, aes(x=calendar_year, y=composition_diff, color=group1, group=group1))+
+ggplot(data=mult_diff_allyears, aes(x=as.numeric(calendar_year), y=composition_diff, color=group1, group=group1))+
   geom_point(size=3)+
   geom_line(size=1)+
+  #scale_color_manual(name = "Treatment\nComparision", label=c("Control - N", "Control - N+P", "N - N+P"),values=c("orange","darkgoldenrod4","darkred"))+
   ylab("Compositional Difference")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.title.x = element_blank())
 disp_d<-
-  ggplot(data=subset(hpplots, metric=="disp_diff"), aes(x=calendar_year, y=value))+
-  geom_point(color="black", size=3)+
-  geom_line(color="black", size=1)+
-  scale_x_continuous(breaks=c(2004, 2012))+
-  ylab("Dispersion Difference")+
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.title.x = element_blank())
-bc_d<-
-  ggplot(data=subset(hpplots, metric=="mean_change"), aes(x=calendar_year, y=value))+
-  geom_point(color="black", size=3)+
-  geom_line(color="black", size=1)+
-  scale_x_continuous(breaks=c(2004, 2012))+
+  ggplot(data=mult_diff_allyears, aes(x=as.numeric(calendar_year), y=abs_dispersion_diff, color=group1, group=group1))+
+  geom_point(size=3)+
+  geom_line(size=1)+
+  #scale_color_manual(name = "Treatment\nComparision", label=c("Control - N", "Control - N+P", "N - N+P"),values=c("orange","darkgoldenrod4","darkred"))+
   ylab("Compositional Difference")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.title.x = element_blank())
 s_d<-
-  ggplot(data=subset(hpplots, metric=="Sd"), aes(x=calendar_year, y=value))+
-  geom_point(color="black", size=3)+
-  geom_line(color="black", size=1)+
-  scale_x_continuous(breaks=c(2004, 2012))+
+  ggplot(data=rac_diff_allyears, aes(x=as.numeric(calendar_year), y=richness_diff, color=group1, group=group1))+
+  geom_point(size=3)+
+  geom_line(size=1)+
+  scale_color_manual(name = "Treatment\nComparision", label=c("Control - N", "Control - N+P", "N - N+P"),values=c("black"))+
   ylab("Richness Difference")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.title.x = element_blank())
 e_d<-
-  ggplot(data=subset(hpplots, metric=="Ed"), aes(x=calendar_year, y=value))+
-  geom_point(color="black", size=3)+
-  geom_line(color="black", size=1)+
-  scale_x_continuous(breaks=c(2004, 2012))+
+  ggplot(data=rac_diff_allyears, aes(x=as.numeric(calendar_year), y=evenness_diff, color=group1, group=group1))+
+  geom_point(size=3)+
+  geom_line(size=1)+
+  scale_color_manual(name = "Treatment\nComparision", label=c("Control - N", "Control - N+P", "N - N+P"),values=c("black"))+
   ylab("Evenness Difference")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.title.x = element_blank())
 r_d<-
-  ggplot(data=subset(hpplots, metric=="Rd"), aes(x=calendar_year, y=value))+
-  geom_point(color="black", size=3)+
-  geom_line(color="black", size=1)+
-  scale_x_continuous(breaks=c(2004, 2012))+
+  ggplot(data=rac_diff_allyears, aes(x=as.numeric(calendar_year), y=rank_diff, color=group1, group=group1))+
+  geom_point(size=3)+
+  geom_line(size=1)+
+  scale_color_manual(name = "Treatment\nComparision", label=c("Control - N", "Control - N+P", "N - N+P"),values=c("black"))+
   ylab("Rank Difference")+
-  xlab("Year")+
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.title.x = element_blank())
 sp_d<-
-    ggplot(data=subset(hpplots, metric=="spd"), aes(x=calendar_year, y=value))+
-    geom_point(color="black", size=3)+
-    geom_line(color="black", size=1)+
-    scale_x_continuous(breaks=c(2004, 2012))+
-    ylab("Species Differences")+
-    xlab("Year")+
-    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+  ggplot(data=rac_diff_allyears, aes(x=as.numeric(calendar_year), y=species_diff, color=group1, group=group1))+
+  geom_point(size=3)+
+  geom_line(size=1)+
+  scale_color_manual(name = "Treatment\nComparision", label=c("Control - N+P"),values=c("black"))+
+  ylab("Species Difference")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.title.x = element_blank())
   
 
-grid.arrange(bc_d, disp_d, s_d, e_d, r_d, sp_d, ncol=2)
+legend=gtable_filter(ggplot_gtable(ggplot_build(sp_d)), "guide-box") 
+grid.draw(legend)
+
+
+grid.arrange(arrangeGrob(#bc_d+theme(legend.position="none"),
+                         #disp_d+theme(legend.position="none"),
+                         s_d+theme(legend.position="none"),
+                         e_d+theme(legend.position="none"),
+                         r_d+theme(legend.position="none"),
+                         sp_d+theme(legend.position="none"),
+                         ncol=2),legend, 
+             widths=unit.c(unit(1, "npc") - legend$width, legend$width),nrow=1)
 
 
 ###examples for the appendix
@@ -457,3 +461,69 @@ t2=c(70,0,20,40,0,2,11,20)
 E_q(t2)
 t1_rel=c(0.30303,0.151515,0.113636,0.378788,0.007576,0.045455,0,0)
 E_q(t1_rel)
+
+
+# Example for LTER webinar ------------------------------------------------
+
+##step 1. do NMDS of pretreatment and last year of data
+pplots_wide<-dat%>%
+  filter(project_name=="pplots",calendar_year==2002|calendar_year==2014,treatment=="N1P0"|treatment=="N2P3"|treatment=="N2P0")%>%
+  select(treatment, calendar_year, plot_id, genus_species, relcov)%>%
+  spread(genus_species, relcov, fill=0)
+
+plots<-pplots_wide[,1:3]
+mds<-metaMDS(pplots_wide[,4:63], autotransform=FALSE, shrink=FALSE)
+mds
+
+adonis(pplots_wide[,4:63]~treatment, pplots_wide)
+
+#differences in dispersion?
+dist<-vegdist(pplots_wide[,4:63])
+betadisp<-betadisper(dist,pplots_wide$treatment,type="centroid")
+betadisp
+permutest(betadisp)
+
+scores <- data.frame(scores(mds, display="sites"))  # Extracts NMDS scores for year "i" #
+scores2<- cbind(plots, scores) # binds the NMDS scores of year i to all years previously run
+
+
+toplot<-scores2
+##plot NMDS
+ggplot(subset(toplot, treatment=="N1P0"), aes(x=NMDS1, y=NMDS2, color=as.factor(calendar_year)))+
+  geom_point(size=5)+
+  scale_color_manual(name="", values=c("black","red"), labels=c("Pre-Treatment","Experiment Year 12"))+
+  scale_x_continuous(limits=c(-1.6,.72))+
+  scale_y_continuous(limits=c(-1.1,1.3))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),legend.position = "none")
+
+ggplot(subset(toplot, treatment=="N2P3"), aes(x=NMDS1, y=NMDS2, color=as.factor(calendar_year)))+
+  geom_point(size=5)+
+  scale_color_manual(name="", values=c("black","red"), labels=c("Pre-Treatment","Experiment Year 12"))+
+  scale_x_continuous(limits=c(-1.6,.72))+
+  scale_y_continuous(limits=c(-1.1,1.3))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.position = "none")
+
+ggplot(subset(toplot, treatment=="N2P0"), aes(x=NMDS1, y=NMDS2, color=as.factor(calendar_year)))+
+  geom_point(size=5)+
+  scale_color_manual(name="", values=c("black","red"), labels=c("Pre-Treatment","Experiment Year 12"))+
+  scale_x_continuous(limits=c(-1.6,.72))+
+  scale_y_continuous(limits=c(-1.1,1.3))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.position = "none")
+
+#all
+ggplot(toplot, aes(x=NMDS1, y=NMDS2, color=as.factor(treatment), shape = as.factor(calendar_year)))+
+  geom_point(size=5)+
+  scale_shape_manual(name = "Year", values = c(19,17))+
+  scale_color_manual(name = "Treatment", values=c("black","orange", "red"), labels=c("Control", "N", "N+P"))+
+  scale_x_continuous(limits=c(-1.6,.72))+
+  scale_y_continuous(limits=c(-1.1,1.3))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+#2002 only
+ggplot(subset(toplot, calendar_year=="2002"), aes(x=NMDS1, y=NMDS2, color=as.factor(treatment)))+
+  geom_point(size=5)+
+  scale_shape_manual(name = "Year", values = c(19,17))+
+  scale_color_manual(name = "Treatment", values=c("black","orange", "red"), labels=c("Control", "N", "N+P"))+
+  scale_x_continuous(limits=c(-1.6,.72))+
+  scale_y_continuous(limits=c(-1.1,1.3))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
