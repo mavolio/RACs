@@ -181,6 +181,10 @@ for (i in 1:length(spc)){
   codyndat_rac_change<-rbind(codyndat_rac_change, out)  
 }
 
+pdata<-subset(codyndat_clean, site_project_comm == "KNZ.pplots.0")
+pplots <- RAC_change(df = pdata, time.var = "experiment_year", species.var = "species", abundance.var = "abundance", replicate.var = "plotid")
+
+test <- RAC_change(df = codyndat_clean, time.var = "experiment_year", species.var = "species", abundance.var = "abundance", replicate.var = "id")
 
 codyndat_rac_change_average<-codyndat_rac_change%>%
   group_by(site_project_comm, experiment_year_pair)%>%
