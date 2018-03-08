@@ -111,6 +111,20 @@ for (i in 1:length(spc)){
   div_eq<-rbind(div_eq, out)
 }
 
+##testing diversity
+
+diversity<-data.frame()
+
+for (i in 1:length(spc)){
+  subset<-corredat%>%
+    filter(site_project_comm==spc[i])
+  
+  out<-community_diversity(subset, time.var = 'calendar_year', abundance.var = 'relcov', replicate.var = 'plot_id', metric = "Shannon")
+  out$site_project_comm<-spc[i]
+  
+  diversity<-rbind(diversity, out)
+}
+
 #####CALCULATING RAC changes
 spc<-unique(corredat$site_project_comm)
 delta_rac<-data.frame()
@@ -252,73 +266,73 @@ for (i in 1:length(spc)){
 #Sakatchewan, says Error in mapply(FUN = f, ..., SIMPLIFY = FALSE)
 #zero-length inputs cannot be mixed with those of non-zero length 
 
-#####CALCULATING RAC differences with block
-
-blocked<-corredat%>%
-  filter(block!=0)%>%
-  filter(site_project_comm!="ARC_MNT_0"&site_project_comm!="BAY_LIND_0"&site_project_comm!="dcgs_gap_0"&site_project_comm!="JRN_study278_0"&site_project_comm!="KLU_KGFert_0"&site_project_comm!="KLU_BFFert_0"&site_project_comm!=""&site_project_comm!="LATNJA_CLIP_Heath"&site_project_comm!="LATNJA_CLIP_Meadow"&site_project_comm!="NWT_bowman_DryBowman"&site_project_comm!="NWT_bowman_WetBowman"&site_project_comm!="NWT_snow_0"&site_project_comm!="TRA_Lovegrass_0")
-
-spc<-unique(blocked$site_project_comm)
-diff_rac_block<-data.frame()
-
-for (i in 1:length(spc)){
-  subset<-blocked%>%
-    filter(site_project_comm==spc[i])
-  
-  out<-RAC_difference(subset, time.var = 'calendar_year', species.var = "genus_species", abundance.var = 'relcov', replicate.var = 'plot_id', block.var = 'block', treatment.var = 'treatment')
-  out$site_project_comm<-spc[i]
-  
-  diff_rac_block<-rbind(diff_rac_block, out)
-}
-
-#####CALCULATING RAC differences without blocks pooling up to treatment
-
-trt_control<-corredat%>%
-  filter(block==0)
-
-spc<-unique(trt_control$site_project_comm)
-diff_rac_ct<-data.frame()
-
-for (i in 1:length(spc)){
-  subset<-trt_control%>%
-    filter(site_project_comm==spc[i])
-  
-  out<-RAC_difference(subset, time.var = 'calendar_year', species.var = "genus_species", abundance.var = 'relcov', replicate.var = 'plot_id', treatment.var = 'treatment', pool = "YES")
-  out$site_project_comm<-spc[i]
-  
-  diff_rac_ct<-rbind(diff_rac_ct, out)
-}
-
-#####CALCULATING abundance differences with block
-spc<-unique(blocked$site_project_comm)
-diff_abund_block<-data.frame()
-
-for (i in 1:length(spc)){
-  subset<-blocked%>%
-    filter(site_project_comm==spc[i])
-  
-  out<-abundance_difference(subset, time.var = 'calendar_year', species.var = "genus_species", abundance.var = 'relcov', replicate.var = 'plot_id', block.var = 'block', treatment.var = 'treatment')
-  out$site_project_comm<-spc[i]
-  
-  diff_abund_block<-rbind(diff_abund_block, out)
-}
-#####CALCULATING abundance differences without blocks pooling up to treatment
-
-trt_control<-corredat%>%
-  filter(block==0)
-
-spc<-unique(trt_control$site_project_comm)
-diff_abund_ct<-data.frame()
-
-for (i in 1:length(spc)){
-  subset<-trt_control%>%
-    filter(site_project_comm==spc[i])
-  
-  out<-abundance_difference(subset, time.var = 'calendar_year', species.var = "genus_species", abundance.var = 'relcov', replicate.var = 'plot_id', treatment.var = 'treatment', pool = "YES")
-  out$site_project_comm<-spc[i]
-  
-  diff_abund_ct<-rbind(diff_abund_ct, out)
-}
+# #####CALCULATING RAC differences with block
+# 
+# blocked<-corredat%>%
+#   filter(block!=0)%>%
+#   filter(site_project_comm!="ARC_MNT_0"&site_project_comm!="BAY_LIND_0"&site_project_comm!="dcgs_gap_0"&site_project_comm!="JRN_study278_0"&site_project_comm!="KLU_KGFert_0"&site_project_comm!="KLU_BFFert_0"&site_project_comm!=""&site_project_comm!="LATNJA_CLIP_Heath"&site_project_comm!="LATNJA_CLIP_Meadow"&site_project_comm!="NWT_bowman_DryBowman"&site_project_comm!="NWT_bowman_WetBowman"&site_project_comm!="NWT_snow_0"&site_project_comm!="TRA_Lovegrass_0")
+# 
+# spc<-unique(blocked$site_project_comm)
+# diff_rac_block<-data.frame()
+# 
+# for (i in 1:length(spc)){
+#   subset<-blocked%>%
+#     filter(site_project_comm==spc[i])
+#   
+#   out<-RAC_difference(subset, time.var = 'calendar_year', species.var = "genus_species", abundance.var = 'relcov', replicate.var = 'plot_id', block.var = 'block', treatment.var = 'treatment')
+#   out$site_project_comm<-spc[i]
+#   
+#   diff_rac_block<-rbind(diff_rac_block, out)
+# }
+# 
+# #####CALCULATING RAC differences without blocks pooling up to treatment
+# 
+# trt_control<-corredat%>%
+#   filter(block==0)
+# 
+# spc<-unique(trt_control$site_project_comm)
+# diff_rac_ct<-data.frame()
+# 
+# for (i in 1:length(spc)){
+#   subset<-trt_control%>%
+#     filter(site_project_comm==spc[i])
+#   
+#   out<-RAC_difference(subset, time.var = 'calendar_year', species.var = "genus_species", abundance.var = 'relcov', replicate.var = 'plot_id', treatment.var = 'treatment', pool = "YES")
+#   out$site_project_comm<-spc[i]
+#   
+#   diff_rac_ct<-rbind(diff_rac_ct, out)
+# }
+# 
+# #####CALCULATING abundance differences with block
+# spc<-unique(blocked$site_project_comm)
+# diff_abund_block<-data.frame()
+# 
+# for (i in 1:length(spc)){
+#   subset<-blocked%>%
+#     filter(site_project_comm==spc[i])
+#   
+#   out<-abundance_difference(subset, time.var = 'calendar_year', species.var = "genus_species", abundance.var = 'relcov', replicate.var = 'plot_id', block.var = 'block', treatment.var = 'treatment')
+#   out$site_project_comm<-spc[i]
+#   
+#   diff_abund_block<-rbind(diff_abund_block, out)
+# }
+# #####CALCULATING abundance differences without blocks pooling up to treatment
+# 
+# trt_control<-corredat%>%
+#   filter(block==0)
+# 
+# spc<-unique(trt_control$site_project_comm)
+# diff_abund_ct<-data.frame()
+# 
+# for (i in 1:length(spc)){
+#   subset<-trt_control%>%
+#     filter(site_project_comm==spc[i])
+#   
+#   out<-abundance_difference(subset, time.var = 'calendar_year', species.var = "genus_species", abundance.var = 'relcov', replicate.var = 'plot_id', treatment.var = 'treatment', pool = "YES")
+#   out$site_project_comm<-spc[i]
+#   
+#   diff_abund_ct<-rbind(diff_abund_ct, out)
+# }
 #####CALCULATING RAC differences without blocks pooling up to treatment for all datasets
 spc<-unique(corredat$site_project_comm)
 diff_rac_all<-data.frame()
@@ -327,12 +341,24 @@ for (i in 1:length(spc)){
   subset<-corredat%>%
     filter(site_project_comm==spc[i])
   
-  out<-RAC_difference(subset, time.var = 'calendar_year', species.var = "genus_species", abundance.var = 'relcov', replicate.var = 'plot_id', treatment.var = 'treatment', pool = "YES")
+  out<-RAC_difference(subset, time.var = 'calendar_year', species.var = "genus_species", abundance.var = 'relcov', replicate.var = 'plot_id', treatment.var = 'treatment', pool = TRUE)
   out$site_project_comm<-spc[i]
   
   diff_rac_all<-rbind(diff_rac_all, out)
 }
+#####CALCULATING abundance differences without blocks pooling up to treatment for all datasets
+spc<-unique(corredat$site_project_comm)
+diff_abund_all<-data.frame()
 
+for (i in 1:length(spc)){
+  subset<-corredat%>%
+    filter(site_project_comm==spc[i])
+  
+  out<-abundance_difference(subset, time.var = 'calendar_year', species.var = "genus_species", abundance.var = 'relcov', replicate.var = 'plot_id', treatment.var = 'treatment', pool = TRUE)
+  out$site_project_comm<-spc[i]
+  
+  diff_abund_all<-rbind(diff_abund_all, out)
+}
 
 ##calculating multivariate differences
 
@@ -349,15 +375,14 @@ for (i in 1:length(spc)){
   diff_mult<-rbind(diff_mult, out)
 }
 
-#####CALCULATING curve differences with block
-spc<-unique(blocked$site_project_comm)
+#####CALCULATING curve differences with pooling
 diff_curve_block<-data.frame()
 
 for (i in 1:length(spc)){
-  subset<-blocked%>%
+  subset<-corredat%>%
     filter(site_project_comm==spc[i])
   
-  out<-curve_difference(subset, time.var = 'calendar_year', species.var = "genus_species", abundance.var = 'relcov', replicate.var = 'plot_id', block.var = 'block', treatment.var = 'treatment')
+  out<-curve_difference(subset, time.var = 'calendar_year', species.var = "genus_species", abundance.var = 'relcov', replicate.var = 'plot_id', treatment.var = 'treatment', pool = TRUE)
   out$site_project_comm<-spc[i]
   
   diff_curve_block<-rbind(diff_curve_block, out)
