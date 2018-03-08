@@ -489,14 +489,18 @@ cor.test(codyndat_allmetrics2$curve_change, codyndat_allmetrics2$spatialExtent)
 
 
 #evenness
-cor.test(sim_allmetrics$Sp, sim_allmetrics$EQ)
-cor.test(sim_allmetrics$Sp, sim_allmetrics$EGini)
-cor.test(sim_allmetrics$Sp, sim_allmetrics$ESimp)
-cor.test(sim_allmetrics$Sp, sim_allmetrics$Evar)
-cor.test(codyndat_allmetrics$Sp, codyndat_allmetrics$EQ)
-cor.test(codyndat_allmetrics$Sp, codyndat_allmetrics$EGini)
-cor.test(codyndat_allmetrics$Sp, codyndat_allmetrics$ESimp)
-cor.test(codyndat_allmetrics$Sp, codyndat_allmetrics$Evar)
+cor.test(sim_div_all$Sp, sim_div_all$EQ)
+cor.test(sim_div_all$Sp, sim_div_all$EGini)
+cor.test(sim_div_all$Sp, sim_div_all$ESimp)
+cor.test(sim_div_all$Sp, sim_div_all$Evar)
+cor.test(codyn_div_all$Sp, codyn_div_all$EQ)
+cor.test(codyn_div_all$Sp, codyn_div_all$EGini)
+cor.test(codyn_div_all$Sp, codyn_div_all$ESimp)
+cor.test(codyn_div_all$Sp, codyn_div_all$Evar)
+
+pairs(codyn_div_all[,4:7])
+pairs(sim_div_all[,4:7])
+
 #other correlations
 cor.test(sim_allmetrics$Sp, sim_allmetrics$R)
 cor.test(sim_allmetrics$Sp, sim_allmetrics$G)
