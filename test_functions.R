@@ -2,6 +2,44 @@ setwd("C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\For R package")
 setwd("~/Dropbox/SESYNC/SESYNC_RACs/For R Package")
 #all data
 pdata<-read.csv('pplots_example.csv')
+test<-read.csv('pplots_example_missing_abund.csv')
+test1<-read.csv('pplots_example_missing_spna.csv')
+test2<-read.csv('pplots_example_duplicate_sp.csv')
+test3<-read.csv('pplots_example_one_sp.csv')
+
+multivariate_change(df = subset(test1, time < 2004),
+                 species.var = "species",
+                 abundance.var = "abundance",
+                 replicate.var = "replicate", time.var = 'time')
+multivariate_change(df = subset(test1, time < 2005),
+                 species.var = "species",
+                 abundance.var = "abundance",
+                 replicate.var = "replicate",
+                 time.var = "time",
+                 treatment.var = 'treatment')
+
+curve_change(df = subset(test3, replicate==25),
+                        species.var = "species",
+                        abundance.var = "abundance",
+                        time.var = "time")
+curve_change(df = test3,
+                        species.var = "species",
+                        abundance.var = "abundance",
+                        replicate.var = "replicate",
+                        time.var = "time")
+
+RAC_difference(df = subset(test1, time==2002),
+           species.var = "species",
+           abundance.var = "abundance",
+           replicate.var = "replicate",
+           treatment.var = 'treatment',
+           pool = "YES")
+RAC_difference(df = test1,
+           species.var = "species",
+           abundance.var = "abundance",
+           replicate.var = "replicate",
+           treatment.var = 'treatment',
+           time.var = "time", pool = "YES")
 
 #no replicate
 pdata2<-subset(pdata, replicate==1)
