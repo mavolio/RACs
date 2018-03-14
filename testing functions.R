@@ -1,11 +1,7 @@
 library(tidyverse)
 library(codyn)
 library(vegan)
-library(Kendall)
-library(gridExtra)
-library(reldist)
-library(grid)
-library(gtable)
+
 
 setwd("~/Dropbox/SESYNC/SESYNC_RACs/For R Package")
 setwd("C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\For R package")
@@ -83,7 +79,7 @@ df<-pplots%>%
   abundance.var <- 'relative_cover'
   
   df1<-pplots%>%
-    filter(year==2003)
+    filter(year==2002)
   
   time.var <- 'calendar_year'
   species.var <- 'genus_species'
@@ -136,7 +132,7 @@ df<-pplots%>%
   bc_dis <- merge(bc_dis1, bc_within_ave, by.x = paste(treatment.var, 2, sep = ""), by.y = treatment.var)
   
   #calculate absolute difference
-  bc_dis$BC_within_dissim_diff <- bc_dis$BC_dissim_within.x - bc_dis$BC_dissim_within.y
+  bc_dis$BC_within_dissim_diff <- bc_dis$BC_dissim_within.y - bc_dis$BC_dissim_within.x
 
   bc_dis$BC_dissim_within.x <- NULL
   bc_dis$BC_dissim_within.y <- NULL
@@ -176,7 +172,7 @@ df<-pplots%>%
   colnames(bc3)[6] <- time.var
   bc3$compare <- ifelse(bc3[[time.var]] == bc3[[paste(time.var, 2, sep="")]], 1, 2)
   
-  #within treatment differences
+    #within treatment differences
   bc_within <- subset(bc3, compare == 1)
   myformula <- as.formula(paste("bc_dissim", "~", time.var))
   bc_within_ave <- aggregate(myformula, mean, data=bc_within)
@@ -188,12 +184,25 @@ df<-pplots%>%
   bc_between_ave <- aggregate(myformula2, mean, data=bc_between)
   colnames(bc_between_ave)[3] <- "BC_between_change"
   
+  
+  cross.var <- time.var
+  cross.var2 <- paste(cross.var, 2, sep = '')
+  merge_on <- !(names(bc_between_ave))
+    y <- x[merge_on]
+    cross <- merge(x, y, by = species.var, suffixes = c('', '2'))
+    f <- factor(cross[[cross.var]])
+    f2 <- factor(cross[[cross.var2]], levels = levels(f))
+    idx <- (as.integer(f2) - as.integer(f)) == 1
+    cross[idx, ]
+  })
+  
+  
   #mege into get bc_within differences for each treatment
   bc_dis1 <- merge(bc_between_ave, bc_within_ave, by = time.var)
   bc_dis <- merge(bc_dis1, bc_within_ave, by.x = paste(time.var, 2, sep = ""), by.y = time.var)
   
   #calculate absolute difference
-  bc_dis$BC_within_change <- bc_dis$BC_dissim_within.x - bc_dis$BC_dissim_within.y
+  bc_dis$BC_within_change <- bc_dis$BC_dissim_within.y - bc_dis$BC_dissim_within.x
   
   bc_dis$BC_dissim_within.x <- NULL
   bc_dis$BC_dissim_within.y <- NULL
