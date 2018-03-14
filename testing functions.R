@@ -96,107 +96,108 @@ df<-pplots%>%
   
   
   
-  df2<-subset(df, select = c(species.var, abundance.var, replicate.var, treatment.var))
+ 
+  ############
+  #removing relevent info from bc matrix
+  #calculate bray-curtis dissimilarities
+  df2<-subset(df1, select = c(species.var, abundance.var, replicate.var, treatment.var))
   df2$id <- paste(df2[[treatment.var]], df2[[replicate.var]], sep="##")
   species <- codyn:::transpose_community(df2, 'id', species.var, abundance.var)
-  species$id <- row.names(species)
-  speciesid <- do.call(rbind.data.frame, strsplit(species$id, split="##"))
-  colnames(speciesid)[1] <- treatment.var
-  colnames(speciesid)[2] <- replicate.var
-  species2 <- cbind(speciesid, species)
-  species3 <- subset(species2, select = -id)
+
+  bc <- as.data.frame(as.matrix(vegdist(species, method="bray")))
+
+  #extracting lower diagonal
+  bc2 <- as.data.frame(cbind(rownames(bc)[which(lower.tri(bc), arr.ind=T)[,1]],
+                             colnames(bc)[which(lower.tri(bc), arr.ind=T)[,2]],
+                             bc[lower.tri(bc)]))
+  c1 <- as.data.frame(do.call('rbind', strsplit(as.character(bc2$V1), "##", fixed = T)))
+  c2 <- as.data.frame(do.call('rbind', strsplit(as.character(bc2$V2), "##", fixed = T)))
+
+  bc3 <- cbind(bc2, c1, c2)
+  bc3$bc_dissim <- as.numeric(as.character(bc3$V3))
+  colnames(bc3)[4] <- paste(treatment.var, 2, sep="")
+  colnames(bc3)[6] <- treatment.var
+  bc3$compare <- ifelse(bc3[[treatment.var]] == bc3[[paste(treatment.var, 2, sep="")]], 1, 2)
   
-  #calculate bray-curtis dissimilarities
-  bc <- vegdist(species3[,3:ncol(species3)], method="bray")
+  #within treatment differences
+  bc_within <- subset(bc3, compare == 1)
+  myformula <- as.formula(paste("bc_dissim", "~", treatment.var))
+  bc_within_ave <- aggregate(myformula, mean, data=bc_within)
+  colnames(bc_within_ave)[2] <- "BC_dissim_within"
   
-  #calculate distances of each plot to treatment centroid (i.e., dispersion)
-  disp <- betadisper(bc, species3[[treatment.var]], type="centroid")
+  #between treatment differences
+  bc_between <- subset(bc3, compare == 2)
+  myformula2 <- as.formula(paste("bc_dissim", "~", treatment.var, "+", paste(treatment.var, 2, sep = "")))
+  bc_between_ave <- aggregate(myformula2, mean, data=bc_between)
+  colnames(bc_between_ave)[3] <- "BC_disism_between_diff"
   
-  #getting distances between treatments with euclidean distances
-  cent_dist <- as.data.frame(as.matrix(vegdist(disp$centroids, method="euclidean")))
-  #extracting all treatment differences
-  cent_dist2 <- as.data.frame(cbind(rownames(cent_dist)[which(lower.tri(cent_dist, diag=T), arr.ind=T)[,1]],
-                                    colnames(cent_dist)[which(lower.tri(cent_dist, diag=T), arr.ind=T)[,2]],
-                                    cent_dist[lower.tri(cent_dist, diag=T)]))
-  cent_dist3 <- cent_dist2[cent_dist2$V1 != cent_dist2$V2,]
-  cent_dist3[3]<-as.numeric(as.character(cent_dist3[[3]]))
-  
-  colnames(cent_dist3)[1] <- paste(treatment.var, 2, sep="")
-  colnames(cent_dist3)[2] <- treatment.var
-  colnames(cent_dist3)[3] <- "composition_diff"
-  
-  #collecting and labeling distances to centroid from betadisper to get a measure of dispersion and then take the mean for a treatment
-  disp2 <- data.frame(treatment=species3[[treatment.var]],
-                      dist = disp$distances)
-  
-  myformula <- as.formula(paste("dist", "~", treatment.var))
-  disp2.2 <- aggregate(myformula, mean, data=disp2)
-  
-  #mege into get dispersion for each treatment
-  cent_dist_disp <- merge(cent_dist3, disp2.2, by = treatment.var)
-  cent_dist_disp2 <- merge(cent_dist_disp, disp2.2, by.x = paste(treatment.var, 2, sep = ""), by.y = treatment.var)
+  #mege into get bc_within differences for each treatment
+  bc_dis1 <- merge(bc_between_ave, bc_within_ave, by = treatment.var)
+  bc_dis <- merge(bc_dis1, bc_within_ave, by.x = paste(treatment.var, 2, sep = ""), by.y = treatment.var)
   
   #calculate absolute difference
-  cent_dist_disp2[[treatment.var]] <- as.character(cent_dist_disp2[[treatment.var]])
-  cent_dist_disp2[[paste(treatment.var, 2, sep = "")]] <- as.character(cent_dist_disp2[[paste(treatment.var, 2, sep = "")]])
+  bc_dis$BC_within_dissim_diff <- bc_dis$BC_dissim_within.x - bc_dis$BC_dissim_within.y
+
+  bc_dis$BC_dissim_within.x <- NULL
+  bc_dis$BC_dissim_within.y <- NULL
   
-  cent_dist_disp2$abs_dispersion_diff <- abs(cent_dist_disp2$dist.x - cent_dist_disp2$dist.y)
-  cent_dist_disp2$trt_greater_disp <- as.character(ifelse(cent_dist_disp2$dist.x > cent_dist_disp2$dist.y, cent_dist_disp2[[treatment.var]], cent_dist_disp2[[paste(treatment.var, 2, sep = "")]]))
+  ############
+  ########### CHANGE
+  ###########
+  ############
   
-  cent_dist_disp2$dist.x <- NULL
-  cent_dist_disp2$dist.y <- NULL
+  time.var <- 'year'
+  species.var <- 'species'
+  replicate.var <- 'plot'
+  treatment.var <- 'treatment'
+  abundance.var <- 'relative_cover'
   
-#######################
-  ########################
-  ##########################
-  #####code from converge-diverge
+  df1<-pplots%>%
+    filter(treatment == "N1P0")
   
-  df<-subset(corredat, site_project_comm=="KNZ_pplots_0"&calendar_year==2003&treatment %in% c("N1P0","N2P0","N2P3"))%>%
-    mutate(plot_mani = ifelse(treatment=="N1P0",0,1))
-  df2<-subset(corredat, site_project_comm=="KNZ_pplots_0"&calendar_year==2003)%>%
-    mutate(plot_mani = ifelse(treatment=="N1P0",0,1))
+  #removing relevent info from bc matrix
+  #calculate bray-curtis dissimilarities
+  df2<-subset(df1, select = c(time.var, species.var, abundance.var, replicate.var))
+  df2$id <- paste(df2[[time.var]], df2[[replicate.var]], sep="##")
+  species <- codyn:::transpose_community(df2, 'id', species.var, abundance.var)
+  
+  bc <- as.data.frame(as.matrix(vegdist(species, method="bray")))
+  
+  #extracting lower diagonal
+  bc2 <- as.data.frame(cbind(rownames(bc)[which(lower.tri(bc), arr.ind=T)[,1]],
+                             colnames(bc)[which(lower.tri(bc), arr.ind=T)[,2]],
+                             bc[lower.tri(bc)]))
+  c1 <- as.data.frame(do.call('rbind', strsplit(as.character(bc2$V1), "##", fixed = T)))
+  c2 <- as.data.frame(do.call('rbind', strsplit(as.character(bc2$V2), "##", fixed = T)))
+  
+  bc3 <- cbind(bc2, c1, c2)
+  bc3$bc_dissim <- as.numeric(as.character(bc3$V3))
+  colnames(bc3)[4] <- paste(time.var, 2, sep="")
+  colnames(bc3)[6] <- time.var
+  bc3$compare <- ifelse(bc3[[time.var]] == bc3[[paste(time.var, 2, sep="")]], 1, 2)
+  
+  #within treatment differences
+  bc_within <- subset(bc3, compare == 1)
+  myformula <- as.formula(paste("bc_dissim", "~", time.var))
+  bc_within_ave <- aggregate(myformula, mean, data=bc_within)
+  colnames(bc_within_ave)[2] <- "BC_dissim_within"
+  
+  #between treatment differences
+  bc_between <- subset(bc3, compare == 2)
+  myformula2 <- as.formula(paste("bc_dissim", "~", time.var, "+", paste(time.var, 2, sep = "")))
+  bc_between_ave <- aggregate(myformula2, mean, data=bc_between)
+  colnames(bc_between_ave)[3] <- "BC_between_change"
+  
+  #mege into get bc_within differences for each treatment
+  bc_dis1 <- merge(bc_between_ave, bc_within_ave, by = time.var)
+  bc_dis <- merge(bc_dis1, bc_within_ave, by.x = paste(time.var, 2, sep = ""), by.y = time.var)
+  
+  #calculate absolute difference
+  bc_dis$BC_within_change <- bc_dis$BC_dissim_within.x - bc_dis$BC_dissim_within.y
+  
+  bc_dis$BC_dissim_within.x <- NULL
+  bc_dis$BC_dissim_within.y <- NULL
+  
   
 
-    #need this to keep track of plot mani
-  labels=df2%>%
-    select(plot_mani, treatment)%>%
-    unique()
-  
-  #transpose data
-  species=df2%>%
-    spread(genus_species, relcov, fill=0)
-  
-  #calculate bray-curtis dissimilarities
-  bc=vegdist(species[,11:ncol(species)], method="bray")
-  
-  #calculate distances of each plot to treatment centroid (i.e., dispersion)
-  disp=betadisper(bc, species$treatment, type="centroid")
-  
-  #getting distances among treatment centroids; these centroids are in BC space, so that's why this uses euclidean distances
-  cent_dist=as.data.frame(as.matrix(vegdist(disp$centroids, method="euclidean"))) 
-  
-  #extracting only the distances we need and adding labels for the comparisons;
-  cent_C_T=data.frame(exp_year=exp_year$exp_year[i],
-                      treatment=row.names(cent_dist),
-                      mean_change=t(cent_dist[names(cent_dist)==labels$treatment[labels$plot_mani==0],]))
-  
-  #not sure why the name didn't work in the previous line of code, so fixing it here
-  names(cent_C_T)[3]="mean_change" 
-  
-  #merging back with labels to get back plot_mani
-  centroid=merge(cent_C_T, labels, by="treatment")
-  
-  #collecting and labeling distances to centroid from betadisper
-  trt_disp=data.frame(data.frame(exp_year=exp_year$exp_year[i], 
-                                 plot_id=species$plot_id,
-                                 treatment=species$treatment,
-                                 dist=disp$distances))%>%
-    tbl_df()%>%
-    group_by(exp_year, treatment)%>%
-    summarize(dispersion=mean(dist))
-  
-  
-  ###testing with function
-  pplots<-subset(corredat, site_project_comm == 'KNZ_pplots_0'&calendar_year==2003)
-  test<- multivariate_difference(pplots, time.var = 'calendar_year', species.var = "genus_species", abundance.var = 'relcov', replicate.var = 'plot_id', treatment.var = 'treatment')
   
