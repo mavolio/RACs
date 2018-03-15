@@ -419,7 +419,7 @@ for (i in 1:length(spc)){
   diff_abund_all<-rbind(diff_abund_all, out)
 }
 
-##calculating multivariate differences
+##calculating centroid differences
 
 spc<-unique(corredat$site_project_comm)
 diff_mult<-data.frame()
@@ -428,10 +428,25 @@ for (i in 1:length(spc)){
   subset<-corredat%>%
     filter(site_project_comm==spc[i])
   
-  out<-multivariate_difference(subset, time.var = 'calendar_year', species.var = "genus_species", abundance.var = 'relcov', replicate.var = 'plot_id', treatment='treatment')
+  out<-centroid_difference(subset, time.var = 'calendar_year', species.var = "genus_species", abundance.var = 'relcov', replicate.var = 'plot_id', treatment='treatment')
   out$site_project_comm<-spc[i]
   
   diff_mult<-rbind(diff_mult, out)
+}
+
+##calculating dissimilarity differences
+
+spc<-unique(corredat$site_project_comm)
+diff_dissim<-data.frame()
+
+for (i in 1:length(spc)){
+  subset<-corredat%>%
+    filter(site_project_comm==spc[i])
+  
+  out<-dissimilarity_difference(subset, time.var = 'calendar_year', species.var = "genus_species", abundance.var = 'relcov', replicate.var = 'plot_id', treatment='treatment')
+  out$site_project_comm<-spc[i]
+  
+  diff_dissim<-rbind(diff_dissim, out)
 }
 
 #####CALCULATING curve differences with pooling
