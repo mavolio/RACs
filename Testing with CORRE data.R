@@ -1,12 +1,7 @@
 library(tidyverse)
-library(gridExtra)
-library(reldist)
-library(grid)
-library(gtable)
 library(codyn)
 library(vegan)
-library(Kendall)
-library(codyn)
+
 
 
 #Files from home
@@ -448,6 +443,27 @@ for (i in 1:length(spc)){
   
   diff_dissim<-rbind(diff_dissim, out)
 }
+
+###why are there differences?
+diff_dissim$calendar_year <- as.integer(diff_dissim$calendar_year)
+diff_mult$calendar_year <- as.integer(diff_mult$calendar_year)
+
+test <- diff_dissim%>%
+  full_join(diff_mult)
+
+test2<-unique(diff_dissim$site_project_comm)
+
+num_dissim<-diff_dissim%>%
+  select(site_project_comm, calendar_year, treatment, treatment2, BC_between_diff)%>%
+  unique()%>%
+  mutate(present=1)
+
+num_mult<-diff_mult%>%
+  select(site_project_comm, calendar_year, treatment, treatment2, abs_dispersion_diff)%>%
+  unique()%>%
+  mutate(present2=1)%>%
+  full_join(num_dissim)
+
 
 #####CALCULATING curve differences with pooling
 diff_curve_block<-data.frame()

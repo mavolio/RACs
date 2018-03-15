@@ -1,13 +1,8 @@
 library(tidyverse)
-library(codyn)
 library(vegan)
-library(Kendall)
-library(gridExtra)
-library(reldist)
-library(grid)
-library(gtable)
-library(gtools)
+library(devtools)
 
+install_github("mavolio/codyn", ref = "RACs_cleaner")
 
 # Read in Data ------------------------------------------------------------
 #home
