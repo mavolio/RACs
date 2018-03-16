@@ -1,7 +1,9 @@
 library(tidyverse)
-library(codyn)
 library(vegan)
+library(devtools)
 
+install_github("mavolio/codyn", ref = "RACs_cleaner")
+library(codyn)
 
 
 #Files from home
@@ -444,12 +446,20 @@ for (i in 1:length(spc)){
   diff_dissim<-rbind(diff_dissim, out)
 }
 
+write.csv(diff_dissim,"C:\\Users\\megha\\Dropbox\\converge_diverge\\datasets\\LongForm\\Bray_Curtis_Ave_dissim_03162018.csv" )
+
+write.csv(test,"C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\R Files\\BCave_Vs_centdist_03162018.csv" )
+
 ###why are there differences?
 diff_dissim$calendar_year <- as.integer(diff_dissim$calendar_year)
 diff_mult$calendar_year <- as.integer(diff_mult$calendar_year)
 
 test <- diff_dissim%>%
   full_join(diff_mult)
+
+
+plot(test$centroid_distance_diff, test$BC_between_diff)
+cor.test(test$centroid_distance_diff, test$BC_between_diff)
 
 test2<-unique(diff_dissim$site_project_comm)
 
