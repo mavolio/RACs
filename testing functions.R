@@ -321,8 +321,8 @@ df<-pplots%>%
   abundance.var <- 'relcov'
   
   
-  df1<-subset(corredat, site_project_comm == "CUL_Culardoch_0" & calendar_year == 2000)
-  
+  df1<-subset(corredat, site_project_comm == "SEV_Nfert_0" & calendar_year == 2004)
+  df<-df1[order(df1[[treatment.var]], df[[replicate.var]]),]
   df2<-subset(df1, select = c(species.var, abundance.var, replicate.var, treatment.var))
   df2$id <- paste(df2[[treatment.var]], df2[[replicate.var]], sep="##")
   species <- codyn:::transpose_community(df2, 'id', species.var, abundance.var)
@@ -459,4 +459,88 @@ df<-pplots%>%
   
   bc_dis$dist.y <- NULL
   bc_dis$dist.x <- NULL
+  
+  #########getting difference into 1 functino
+  mult_diff <- function(df, time.var, species.var, abundance.var, replicate.var, comp_metric) {
+    
+    df1<-df[order(df[[treatment.var]], df[[replicate.var]]),]
+    df2<-subset(df1, select = c(treatment.var, species.var, abundance.var, replicate.var))
+    df2$id <- paste(df2[[treatment.var]], df2[[replicate.var]], sep="##")
+    species <- codyn:::transpose_community(df2, 'id', species.var, abundance.var)
+    species1<-species
+    species$id <- row.names(species)
+    speciesid <- do.call(rbind.data.frame, strsplit(species$id, split="##"))
+    colnames(speciesid)[1] <- treatment.var
+    colnames(speciesid)[2] <- replicate.var
+    species2 <- cbind(speciesid, species)
+    species3 <- subset(species2, select = -id)
+    
+    #calculate bray-curtis dissmilarity
+    bc <- vegdist(species3[,3:ncol(species3)], method="bray")
+    
+    #calculate distances of each plot to year centroid (i.e., dispersion)
+    disp <- betadisper(bc, species3[[treatment.var]], type="centroid")
+    
+    
+    #### doing compositional differences
+    if(comp_metric == "ave_BC_dissim"){
+      bc1<-as.data.frame(as.matrix(vegdist(species1, method = "bray")))
+      #extracting lower diagonal
+      bc2 <- as.data.frame(cbind(rownames(bc1)[which(lower.tri(bc1), arr.ind=T)[,1]],
+                                 colnames(bc1)[which(lower.tri(bc1), arr.ind=T)[,2]],
+                                 bc1[lower.tri(bc1)]))
+      c1 <- as.data.frame(do.call('rbind', strsplit(as.character(bc2$V1), "##", fixed = T)))
+      c2 <- as.data.frame(do.call('rbind', strsplit(as.character(bc2$V2), "##", fixed = T)))
+      
+      bc3 <- cbind(bc2, c1, c2)
+      bc3$bc_dissim <- as.numeric(as.character(bc3$V3))
+      colnames(bc3)[4] <- paste(treatment.var, 2, sep="")
+      colnames(bc3)[6] <- treatment.var
+      bc3$compare <- ifelse(bc3[[treatment.var]] == bc3[[paste(treatment.var, 2, sep="")]], 1, 2)
+      
+      #between time differences
+      bc_between <- subset(bc3, compare == 2)
+      myformula2 <- as.formula(paste("bc_dissim", "~", treatment.var, "+", paste(treatment.var, 2, sep = "")))
+      bc_between_ave <- aggregate(myformula2, mean, data=bc_between)
+      colnames(bc_between_ave)[3] <- "BC_dissim_diff"
+      
+      comp <- bc_between_ave
+      
+    } else {
+      #getting distances between centroids over years; these centroids are in BC space, so that's why this uses euclidean distances
+      cent_dist <- as.matrix(vegdist(disp$centroids, method="euclidean"))
+      
+      cent_dist2 <- as.data.frame(cbind(rownames(cent_dist)[which(lower.tri(cent_dist, diag=T), 
+                                                                  arr.ind=T)[,1]],
+                                        colnames(cent_dist)[which(lower.tri(cent_dist, diag=T), 
+                                                                  arr.ind=T)[,2]],
+                                        cent_dist[lower.tri(cent_dist, diag=T)]))
+      cent_dist3 <- cent_dist2[cent_dist2$V1 != cent_dist2$V2,]
+      cent_dist3[3]<-as.numeric(as.character(cent_dist3[[3]]))
+      
+      colnames(cent_dist3)[1] <- paste(treatment.var, 2, sep="")
+      colnames(cent_dist3)[2] <- treatment.var
+      colnames(cent_dist3)[3] <- "centroid_distance_diff"
+      
+      comp <- cent_dist3
+    }
+    
+    ##doing dispersion
+    disp2 <- data.frame(treatment=species3[[treatment.var]],
+                        dist = disp$distances)
+    
+    myformula <- as.formula(paste("dist", "~", treatment.var))
+    disp2.2 <- aggregate(myformula, mean, data=disp2)
+    
+    #mege into get dispersion for each treatment
+    cent_dist_disp <- merge(comp, disp2.2, by = treatment.var)
+    cent_dist_disp2 <- merge(cent_dist_disp, disp2.2, by.x = paste(treatment.var, 2, sep = ""), by.y = treatment.var)
+    
+    cent_dist_disp2$dispersion_diff <- cent_dist_disp2$dist.y - cent_dist_disp2$dist.x
+    
+    cent_dist_disp2$dist.x <- NULL
+    cent_dist_disp2$dist.y <- NULL
+    
+    return(cent_dist_disp2)
+  }
   
