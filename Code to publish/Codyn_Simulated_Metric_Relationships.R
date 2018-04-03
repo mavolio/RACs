@@ -1,15 +1,16 @@
 library(tidyverse)
 library(codyn)
 library(vegan)
-library(Kendall)
 library(gridExtra)
-library(reldist)
 library(grid)
 library(gtable)
-library(gtools)
+library(reldist)
+#library(gtools)
 
 
 # Read in Data ------------------------------------------------------------
+# for the sim dataset, communites are differentiated by alpha (richness), theta (evenness) and scenario (rate of turnover and spatial heterogeniety: four scenarios: a: high turnover, high spatial heterogeniety; b: low turnover, low spatial heterogeniety; c: low turnover, high spatial heterogeniety; d: high turnover, low spatial heterogeniety"). For each richness-evennes combination (9 combinations) there are each community type. Each of these 10 community types have 10 replicates, called "sites" at a given point in time. Each community type, time, and site is then replicated 10 time.
+
 #home
 sim<-read.csv("~/Dropbox/SESYNC/SESYNC_RACs/R Files/SimCom_Sept28.csv")%>%
   mutate(time=as.numeric(iteration),
@@ -25,10 +26,10 @@ codyndat<-read.csv("~/Dropbox/CoDyn/R Files/11_06_2015_v7/relative cover_nceas a
 codyndat_info<-read.csv("~/Dropbox/CoDyn/R Files/11_06_2015_v7/siteinfo_key.csv")%>%
   filter(site_project_comm!="")%>%
   select(-site_project_comm)%>%
-  mutate(site_project_comm = paste(site_code, project_name, community_type, sep="."))
+  mutate(site_project_comm = paste(site_code, project_name, community_type, sep="_"))
 
 #work
-sim<-read.csv('C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\R Files/SimCom_Sept28.csv')%>%
+sim<-read.csv('C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\R Files\\SimCom_Sept28.csv')%>%
   mutate(time=as.numeric(iteration),
          id2=paste(id, site, sep="::"))%>%
   select(-X, -sample, -iteration)%>%
@@ -53,7 +54,7 @@ splist<-codyndat%>%
 #merge back and will drop species that do not exist in a dataset
 codyndat_clean<-merge(codyndat, splist, by=c("site_code","project_name","community_type","species"))%>%
   select(-site_project_comm)%>%
-  mutate(site_project_comm = paste(site_code, project_name, community_type, sep = "."))%>%
+  mutate(site_project_comm = paste(site_code, project_name, community_type, sep = "_"))%>%
   select(-X, -sitesubplot, -site_code, -project_name, -community_type)%>%
   mutate(id=paste(site_project_comm, plot_id, sep="::"))
 
@@ -69,7 +70,7 @@ for (i in 1:length(spc)){
   subset<-codyndat_clean%>%
     filter(site_project_comm==spc[i])
   
-  out<-community_structure(subset, time.var = 'experiment_year', abundance.var = 'abundance', replicate.var = 'plot_id')
+  out<-community_structure(subset, time.var = 'experiment_year', abundance.var = 'abundance', replicate.var = 'plot_id', metric = "EQ")
   out$site_project_comm<-spc[i]
   
   codyn_div_eq<-rbind(codyn_div_eq, out)
@@ -135,7 +136,7 @@ for (i in 1:length(com_rep)){
   subset<-sim%>%
     filter(id==com_rep[i])
   
-  out <- community_structure(df = subset, time.var = "time", abundance.var = "abundance", replicate.var = "site")
+  out <- community_structure(df = subset, time.var = "time", abundance.var = "abundance", replicate.var = "site", metric = "EQ")
   out$id<-com_rep[i]
   
   sim_div_eq<-rbind(sim_div_eq, out)  
@@ -171,10 +172,16 @@ sim_div<-merge(sim_div1, sim_div_evar, by=c("id",'site','richness','time'))
 sim_diversity_mean<-sim_div%>%
   separate(id, into=c("alpha","theta","scenario","rep"), sep="_", remove=F)%>%
   mutate(id3=paste(alpha, theta, scenario, sep="_"))%>%
-  group_by(id3, time)%>%
+  group_by(id3, time, site)%>%#average over replicates
   summarize(Sp=mean(richness),
             EQ=mean(EQ, na.rm=T),
             ESimp=mean(SimpsonEvenness),
+            Evar=mean(Evar, na.rm=T))%>%
+  ungroup()%>%
+  group_by(id3, time)%>%#average over sites
+  summarize(Sp=mean(Sp),
+            EQ=mean(EQ, na.rm=T),
+            ESimp=mean(ESimp),
             Evar=mean(Evar, na.rm=T))
 
 sim_div_gini <- group_by(sim, id, time, site) %>% 
@@ -191,7 +198,9 @@ sim_div_gini <- group_by(sim, id, time, site) %>%
 sim_div_all<-merge(sim_diversity_mean, sim_div_gini, by=c("time",'id3'))
 
 
-###Looking at RAC Changes
+# RAC changes -------------------------------------------------------------
+
+
 ##Codyn Dataset
 
 codyndat_rac_change<-data.frame()
@@ -209,13 +218,8 @@ for (i in 1:length(spc)){
   codyndat_rac_change<-rbind(codyndat_rac_change, out)  
 }
 
-pdata<-subset(codyndat_clean, site_project_comm == "KNZ.pplots.0")
-pplots <- RAC_change(df = pdata, time.var = "experiment_year", species.var = "species", abundance.var = "abundance", replicate.var = "plotid")
-
-test <- RAC_change(df = codyndat_clean, time.var = "experiment_year", species.var = "species", abundance.var = "abundance", replicate.var = "id")
-
 codyndat_rac_change_average<-codyndat_rac_change%>%
-  group_by(site_project_comm, experiment_year_pair)%>%
+  group_by(site_project_comm, experiment_year, experiment_year2)%>%
   summarise(S=mean(richness_change),
             E=mean(evenness_change,na.rm=T),
             R=mean(rank_change),
@@ -242,18 +246,22 @@ for (i in 1:length(com_rep)){
 sim_rac_change_mean<-sim_rac_change%>%
   separate(id, into=c("alpha","theta","scenario","rep"), sep="_", remove=F)%>%
   mutate(id3=paste(alpha, theta, scenario, sep="_"))%>%
-  group_by(id3, time_pair)%>%
+  group_by(id3, time, time2, site)%>%
   summarize(S=mean(richness_change),
             E=mean(evenness_change,na.rm=T),
             R=mean(rank_change),
             G=mean(gains),
-            L=mean(losses))
+            L=mean(losses))%>%
+  ungroup()%>%
+  group_by(id3, time, time2)%>%
+  summarize(S=mean(S),
+            E=mean(E,na.rm=T),
+            R=mean(R),
+            G=mean(G),
+            L=mean(L))
 
 # Mean Change and Dispersion ----------------------------------------------
 #codyn dataset
-
-#codyndat_mult_change <- multivariate_change(df = codyndat_clean, time.var = "experiment_year", species.var = "species", abundance.var = "abundance", replicate.var = "id")
-#it doesnt work this way, give error: Error in rowSums(x, na.rm = TRUE) : 'x' must be numeric
 
 codyn_multchange<-data.frame()
 spc<-unique(codyndat_clean$site_project_comm)
@@ -290,32 +298,19 @@ for (i in 1:length(com_rep)){
 sim_multchange_mean<-sim_mult_change%>%
   separate(id, into=c("alpha","theta","scenario","rep"), sep="_", remove=F)%>%
   mutate(id3=paste(alpha, theta, scenario, sep="_"))%>%
-  group_by(id3, time_pair)%>%
+  group_by(id3, time, time2)%>%
   summarize(composition_change=mean(composition_change),
             dispersion_change=mean(dispersion_change))
 
 # Curve change ------------------------------------------------------------
 
 ####codyn first
-
-#clean the data first, drop plots that only have 1 species
-codyn_clean2<-subset(codyndat_clean, abundance!=0)
-codyn_clean2$present<-1
-codyn_clean_spnum<-aggregate(present~experiment_year+plot_id+site_project_comm, sum, data=codyn_clean2)
-codyn_clean2<-subset(codyn_clean_spnum, present>1)
-
-codyn_mult_sp<-merge(codyndat_clean, codyn_clean2, by=c("site_project_comm","experiment_year","plot_id"))
-
-#codyn_cc <-curve_change(df = codyn_clean2, "experiment_year", "species", "abundance", "id")
-#not working
-
-
 codyn_curvechange<-data.frame()
-spc<-unique(codyn_mult_sp$site_project_comm)
+spc<-unique(codyndat_clean$site_project_comm)
 
 for (i in 1:length(spc)){
   
-  subset<-codyn_mult_sp%>%
+  subset<-codyndat_clean%>%
     filter(site_project_comm==spc[i])
   
   out <- curve_change(df = subset, time.var = "experiment_year", species.var = "species", abundance.var = "abundance", replicate.var = "plot_id")
@@ -326,7 +321,7 @@ for (i in 1:length(spc)){
 }
 
 codyn_curvechange_mean<-codyn_curvechange%>% 
-  group_by(site_project_comm, experiment_year_pair)%>%
+  group_by(site_project_comm, experiment_year, experiment_year2)%>%
   summarise(curve_change=mean(curve_change))
 
 #sim dataset
@@ -347,90 +342,47 @@ for (i in 1:length(com_rep)){
 }
 
 sim_cc_ave<-sim_curve_change%>% 
-  group_by(id, time_pair)%>%
+  group_by(id, time, time2)%>%
   summarise(curve_change=mean(curve_change))%>%
   separate(id, into=c("alpha","theta","scenario","rep"), sep="_", remove=F)%>%
   mutate(id3=paste(alpha, theta, scenario, sep="_"))%>%
-  group_by(id3, time_pair)%>%
+  group_by(id3, time, time2)%>%
   summarize(curve_change=mean(curve_change))
-  
-
-# looking at spatial differences, testing that scenarios work well --------
 
 
-#######trying to look at spatial differences.
-sim_subset<-sim%>%
-  separate(id, into=c("alpha", "even", "comtype", "rep"), sep="_")%>%
-  filter(time==1&rep==1)%>%
-  mutate(alphaeven=paste(alpha, even, sep="_"))
-
-sp_output=data.frame()
-
-id<-unique(sim_subset$alphaeven)
-
-for (i in 1:length(id)){
-  species<-sim_subset%>%
-    filter(alphaeven==id[i])%>%
-  spread(species, abundance, fill=0)
-
-mds<-metaMDS(species[,9:ncol(species)])
-
-info<-species[,1:8]
-
-scores <- data.frame(scores(mds, display="sites"))
-scores2<- cbind(info, scores)
-
-sp_output<-rbind(sp_output,scores2)
-}
-
-theme_set(theme_bw(12))
-ggplot(data=sp_output, aes(x=NMDS1, y=NMDS2, color=comtype))+
-  geom_point()+
-  scale_color_manual(values=c("black","red","green","blue"))+
-  facet_wrap(~alphaeven, ncol=3, scales="free")
 
 # Merging all metrics to single datasets ----------------------------------
 
-
 ####MERGING TO A SINGE DATASET
-#codyn
-merge1<-merge(codyn_multchange, codyn_curvechange_mean, by=c("site_project_comm","experiment_year_pair"))
-merge2<-merge(merge1, codyndat_rac_change_average, by=c("site_project_comm","experiment_year_pair"))%>%
-  separate(experiment_year_pair, into=c("time1","experiment_year"), sep="-", remove=F)
-merge3<-merge(merge2, codyn_div_all, by=c("site_project_comm","experiment_year"))
-codyndat_allmetrics<-merge(merge3, codyndat_info, by="site_project_comm")
+
+codyndat_allmetrics<-codyn_multchange%>%
+  left_join(codyndat_rac_change_average)%>%
+  left_join(codyn_curvechange_mean)%>%
+  left_join(codyn_div_all)%>%
+  left_join(codyndat_info)
 
 #sim
-merge1<-merge(sim_multchange_mean, sim_rac_change_mean, by=c("id3","time_pair"))
-merge2<-merge(merge1, sim_cc_ave, by=c("id3","time_pair"), all=T)%>%
-  separate(time_pair, into=c("time1","time"), sep="-", remove=F)
-sim_all_metrics<-merge(sim_div_all, merge2, by=c('time','id3'))%>%
-  separate(id3, into=c("alpha","even","comtype"), sep="_")
-sim_all_metrics$comtype2<-as.factor(sim_all_metrics$comtype)
+sim_all_metrics<-sim_multchange_mean%>%
+  left_join(sim_rac_change_mean)%>%
+  left_join(sim_cc_ave)%>%
+  left_join(sim_div_all)%>%
+  separate(id3, into=c("alpha","even","comtype"), sep="_")%>%
+  mutate(comtype2 = as.factor(comtype))
 
-write.csv(codyndat_allmetrics,'~/Dropbox/SESYNC/SESYNC_RACs/R Files/codyn_allmetrics_Jan2018.csv')
-write.csv(sim_all_metrics,'~/Dropbox/SESYNC/SESYNC_RACs/R Files/sim_allmetrics_Jan2018.csv')
+write.csv(codyndat_allmetrics,'C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\R Files\\codyn_allmetrics_April2018.csv', row.names = F)
+write.csv(sim_all_metrics,'C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\R Files\\sim_allmetrics_April2018.csv', row.names = F)
 
 # pair plot graphs --------------------------------------------------------
 
 theme_set(theme_bw(12))
 
-codyndat_allmetrics<-read.csv('~/Dropbox/SESYNC/SESYNC_RACs/R Files/codyn_allmetrics_Jan2018.csv')%>%
-  select(-X)
+codyndat_allmetrics<-read.csv('C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\R Files\\codyn_allmetrics_April2018.csv')%>%
+  mutate(absS = abs(S),
+         absE = abs(E))
 
-codyndat_allmetrics<-read.csv('C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\R Files\\codyn_allmetrics_Jan2018.csv')%>%
-  select(-X)
-
-sim_allmetrics<-read.csv('C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\R Files\\sim_allmetrics_Jan2018.csv')%>%
-  select(-X)
+sim_allmetrics<-read.csv('C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\R Files\\sim_allmetrics_Jan2018.csv')
 
 #graphing this
-panel.pearson <- function(x, y, ...) {
-  horizontal <- (par("usr")[1] + par("usr")[2]) / 2; 
-  vertical <- (par("usr")[3] + par("usr")[4]) / 2; 
-  text(horizontal, vertical, format(cor(x,y), digits=3, cex=10)) 
-}
-
 panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...){
   usr <- par("usr"); on.exit(par(usr))
   par(usr = c(0, 1, 0, 1))
@@ -448,48 +400,25 @@ panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...){
   text(0.8, 0.5, Signif, cex=5, col="red")
 }
 
-sim_allmetrics2<-sim_allmetrics%>%
-  mutate(comtype3=as.factor(paste(alpha, even, sep="_")))
-# #color by turnover and sucession
-pairs(sim_allmetrics2[,c(13:17, 11,12,18)], col=sim_allmetrics$comtype2, labels=c("Richness\nChange", "Evenness\nChange","Rank\nChanges","Species\nGains","Species\nLosses","Compositional\nChange","Dispersion\nChange","Curve\nChange"), font.labels=2, cex.labels=2, upper.panel = panel.cor, oma=c(4,4,4,10))
-
-# #color by richness_evenness
-# pairs(sim_allmetrics[,c(14:15,9:13,16)], col=sim_allmetrics$comtype3, labels=c("Richness \nChange", "Evenness \nChange","Species \nGains","Species \nLosses","Reordering","Mean \nChange","Dispersion \nDifferences","Curve \nChange"), font.labels=2, cex.labels=2, upper.panel = panel.cor, oma=c(4,4,4,10))
-# 
-# ## reodering static richness/eveness
-# pairs(sim_allmetrics[,c(5,6,11)], col=sim_allmetrics$comtype3, labels=c("Richness", "Evenness","Reordering"), font.labels=2, cex.labels=2, upper.panel = panel.cor, oma=c(4,4,4,10))
-# 
-# ## gain loss static richness/eveness
-# pairs(sim_allmetrics[,c(5,6,9:10)], col=sim_allmetrics$comtype3, labels=c("Richness", "Evenness","Gains","Losses"), font.labels=2, cex.labels=2, upper.panel = panel.cor, oma=c(4,4,4,10))
-# 
-# ## disp, mc, dstar static richness/eveness
-# pairs(sim_allmetrics[,c(5,6,12,13,16)], col=sim_allmetrics$comtype3, labels=c("Richness", "Evenness","Mean \nChange","Dispersion \nDifference","Curve \nChange"), font.labels=2, cex.labels=2, upper.panel = panel.cor, oma=c(4,4,4,10))
-
-
-
 ##codyn graphs
-pairs(codyndat_allmetrics[,c(13:16)],labels=c("Richness", "Evenness \n(EQ)","Evenness \n(Simpsons)","Evenness \n(Gini)"), font.labels=2, cex.labels=2, upper.panel = panel.cor,oma=c(4,4,4,10))
+colnames(codyndat_allmetrics)
+pairs(codyndat_allmetrics[,c(6:10,3,4,11)], col=codyndat_allmetrics$taxa, labels=c("Richness\nChange", "Evenness\nChange","Rank\nChanges","Species\nGains","Species\nLosses","Compositional\nChange","Dispersion\nChange","Curve\nChange"), font.labels=2, cex.labels=2, upper.panel = panel.cor,oma=c(4,4,4,10))
 par(xpd=T)
 
-pairs(codyndat_allmetrics[,c(8:12, 5:7)], col=codyndat_allmetrics$taxa, labels=c("Richness\nChange", "Evenness\nChange","Rank\nChanges","Species\nGains","Species\nLosses","Compositional\nChange","Dispersion\nChange","Curve\nChange"), font.labels=2, cex.labels=2, upper.panel = panel.cor,oma=c(4,4,4,10))
-par(xpd=T)
-
-#without curve change in BW
-pairs(codyndat_allmetrics[,c(8:12, 5:6)], labels=c("Richness\nChange", "Evenness\nChange","Rank\nChanges","Species\nGains","Species\nLosses","Compositional\nChange","Dispersion\nChange","Curve\nChange"), font.labels=2, cex.labels=2, upper.panel = panel.cor,oma=c(4,4,4,10))
+#same figure with absolute value of S and E
+pairs(codyndat_allmetrics[,c(38,39, 8:10,3,4,11)], col=codyndat_allmetrics$taxa, labels=c(" Abs. Richness\nChange", "Abs. Evenness\nChange","Rank\nChanges","Species\nGains","Species\nLosses","Compositional\nChange","Dispersion\nChange","Curve\nChange"), font.labels=2, cex.labels=2, upper.panel = panel.cor,oma=c(4,4,4,10))
 par(xpd=T)
 
 #how do these correlate with experiment parameters. #remove outliers
 codyndat_allmetrics2<-codyndat_allmetrics%>%
   mutate(spatialExtent=log(spatial_extent),
          plotSize=log(plot_size))
+colnames(codyndat_allmetrics2)
 
-pairs(codyndat_allmetrics2[,c(5,6, 25,35, 34,38,39)], labels=c("Mean \nChange","Dispersion \nDifference","MAP","MAT","Number \nPlots","Spatial \nExtent","Plot \nSize"), font.labels=2, cex.labels=2, upper.panel = panel.cor)
+pairs(codyndat_allmetrics2[,c(3,4,38,39,8:11,34,40,41)], upper.panel = panel.cor)
 
-pairs(codyndat_allmetrics2[,c(7:14,32,36,37)], font.labels=2, cex.labels=2, upper.panel = panel.cor)
-cor.test(codyndat_allmetrics$mean_change, codyndat_allmetrics$MAP_mm)
+cor(codyndat_allmetrics2[,c(3,4,38,39,8:11,34,40,41)], method ="pearson")
 
-cor(codyndat_allmetrics2[,c(5:12,34,38,39)], method ="pearson")
-cor.test(codyndat_allmetrics2$curve_change, codyndat_allmetrics2$spatialExtent)
 
 
 #evenness
@@ -694,3 +623,36 @@ r <- sort(unique(c(0, df1$relrank, df2$relrank)))
 h <- abs(sf1(r) - sf2(r))
 w <- c(diff(r), 0)
 CC=sum(w*h)
+
+# looking at spatial differences, testing that scenarios work well --------
+
+#######trying to look at spatial differences.
+sim_subset<-sim%>%
+  separate(id, into=c("alpha", "even", "comtype", "rep"), sep="_")%>%
+  filter(time==1&rep==1)%>%
+  mutate(alphaeven=paste(alpha, even, sep="_"))
+
+sp_output=data.frame()
+
+id<-unique(sim_subset$alphaeven)
+
+for (i in 1:length(id)){
+  species<-sim_subset%>%
+    filter(alphaeven==id[i])%>%
+    spread(species, abundance, fill=0)
+  
+  mds<-metaMDS(species[,9:ncol(species)])
+  
+  info<-species[,1:8]
+  
+  scores <- data.frame(scores(mds, display="sites"))
+  scores2<- cbind(info, scores)
+  
+  sp_output<-rbind(sp_output,scores2)
+}
+
+theme_set(theme_bw(12))
+ggplot(data=sp_output, aes(x=NMDS1, y=NMDS2, color=comtype))+
+  geom_point()+
+  scale_color_manual(values=c("black","red","green","blue"))+
+  facet_wrap(~alphaeven, ncol=3, scales="free")
