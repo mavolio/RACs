@@ -416,7 +416,7 @@ for (i in 1:length(spc)){
   diff_abund_all<-rbind(diff_abund_all, out)
 }
 
-##calculating centroid differences
+##calculating multivariate differences
 
 spc<-unique(corredat$site_project_comm)
 diff_mult<-data.frame()
@@ -425,54 +425,54 @@ for (i in 1:length(spc)){
   subset<-corredat%>%
     filter(site_project_comm==spc[i])
   
-  out<-centroid_difference(subset, time.var = 'calendar_year', species.var = "genus_species", abundance.var = 'relcov', replicate.var = 'plot_id', treatment='treatment')
+  out<-multivariate_difference(subset, time.var = 'calendar_year', species.var = "genus_species", abundance.var = 'relcov', replicate.var = 'plot_id', treatment='treatment')
   out$site_project_comm<-spc[i]
   
   diff_mult<-rbind(diff_mult, out)
 }
 
-##calculating dissimilarity differences
-
-spc<-unique(corredat$site_project_comm)
-diff_dissim<-data.frame()
-
-for (i in 1:length(spc)){
-  subset<-corredat%>%
-    filter(site_project_comm==spc[i])
-  
-  out<-dissimilarity_difference(subset, time.var = 'calendar_year', species.var = "genus_species", abundance.var = 'relcov', replicate.var = 'plot_id', treatment='treatment')
-  out$site_project_comm<-spc[i]
-  
-  diff_dissim<-rbind(diff_dissim, out)
-}
+# ##calculating dissimilarity differences
+# 
+# spc<-unique(corredat$site_project_comm)
+# diff_dissim<-data.frame()
+# 
+# for (i in 1:length(spc)){
+#   subset<-corredat%>%
+#     filter(site_project_comm==spc[i])
+#   
+#   out<-dissimilarity_difference(subset, time.var = 'calendar_year', species.var = "genus_species", abundance.var = 'relcov', replicate.var = 'plot_id', treatment='treatment')
+#   out$site_project_comm<-spc[i]
+#   
+#   diff_dissim<-rbind(diff_dissim, out)
+# }
 
 write.csv(diff_dissim,"C:\\Users\\megha\\Dropbox\\converge_diverge\\datasets\\LongForm\\Bray_Curtis_Ave_dissim_03162018.csv" )
 
 write.csv(test,"C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\R Files\\BCave_Vs_centdist_03162018.csv" )
 
-###why are there differences?
-diff_dissim$calendar_year <- as.integer(diff_dissim$calendar_year)
-diff_mult$calendar_year <- as.integer(diff_mult$calendar_year)
-
-test <- diff_dissim%>%
-  full_join(diff_mult)
-
-
-plot(test$centroid_distance_diff, test$BC_between_diff)
-cor.test(test$centroid_distance_diff, test$BC_between_diff)
-
-test2<-unique(diff_dissim$site_project_comm)
-
-num_dissim<-diff_dissim%>%
-  select(site_project_comm, calendar_year, treatment, treatment2, BC_between_diff)%>%
-  unique()%>%
-  mutate(present=1)
-
-num_mult<-diff_mult%>%
-  select(site_project_comm, calendar_year, treatment, treatment2, abs_dispersion_diff)%>%
-  unique()%>%
-  mutate(present2=1)%>%
-  full_join(num_dissim)
+# ###why are there differences?
+# diff_dissim$calendar_year <- as.integer(diff_dissim$calendar_year)
+# diff_mult$calendar_year <- as.integer(diff_mult$calendar_year)
+# 
+# test <- diff_dissim%>%
+#   full_join(diff_mult)
+# 
+# 
+# plot(test$centroid_distance_diff, test$BC_between_diff)
+# cor.test(test$centroid_distance_diff, test$BC_between_diff)
+# 
+# test2<-unique(diff_dissim$site_project_comm)
+# 
+# num_dissim<-diff_dissim%>%
+#   select(site_project_comm, calendar_year, treatment, treatment2, BC_between_diff)%>%
+#   unique()%>%
+#   mutate(present=1)
+# 
+# num_mult<-diff_mult%>%
+#   select(site_project_comm, calendar_year, treatment, treatment2, abs_dispersion_diff)%>%
+#   unique()%>%
+#   mutate(present2=1)%>%
+#   full_join(num_dissim)
 
 
 #####CALCULATING curve differences with pooling
@@ -496,7 +496,7 @@ for (i in 1:length(spc)){
   subset<-corredat%>%
     filter(site_project_comm==spc[i])
   
-  out<-curve_difference(subset, time.var = 'calendar_year', species.var = "genus_species", abundance.var = 'relcov', replicate.var = 'plot_id', treatment.var = 'treatment', pool = "YES")
+  out<-curve_difference(subset, time.var = 'calendar_year', species.var = "genus_species", abundance.var = 'relcov', replicate.var = 'plot_id', treatment.var = 'treatment', pool = TRUE)
   out$site_project_comm<-spc[i]
   
   diff_curve_ct<-rbind(diff_curve_ct, out)
