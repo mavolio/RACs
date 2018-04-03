@@ -3,6 +3,7 @@ library(vegan)
 library(devtools)
 
 install_github("mavolio/codyn", ref = "RACs_cleaner")
+library(codyn)
 
 # Read in Data ------------------------------------------------------------
 #home
@@ -66,7 +67,7 @@ for (i in 1:length(spc)){
   subset<-codyndat_clean%>%
     filter(site_project_comm==spc[i])
   
-  out<-community_structure(subset, time.var = 'experiment_year', abundance.var = 'abundance', replicate.var = 'plot_id')
+  out<-community_diversity(subset, time.var = 'experiment_year', abundance.var = 'abundance', replicate.var = 'plot_id')
   out$site_project_comm<-spc[i]
   
   codyn_diversity<-rbind(codyn_diversity, out)
@@ -105,7 +106,7 @@ for (i in 1:length(spc)){
   subset<-codyndat_clean%>%
     filter(site_project_comm==spc[i])
   
-  out <- RAC_change(df = subset, time.var = "experiment_year", species.var = "species", abundance.var = "abundance", replicate.var = "plot_id")
+  out <- abundance_change(df = subset, time.var = "experiment_year", species.var = "species", abundance.var = "abundance", replicate.var = "plot_id")
   
   out$site_project_comm<-spc[i]
   
@@ -125,31 +126,12 @@ for (i in 1:length(spc)){
   subset<-codyndat_clean%>%
     filter(site_project_comm==spc[i])
   
-  out <- centroid_change(df = subset, time.var = "experiment_year", species.var = "species", abundance.var = "abundance", replicate.var = "plot_id")
+  out <- multivariate_change(df = subset, time.var = "experiment_year", species.var = "species", abundance.var = "abundance", replicate.var = "plot_id")
   
   out$site_project_comm<-spc[i]
   
   codyn_multchange<-rbind(codyn_multchange, out)  
 }
-
-# Dissimilarity ----------------------------------------------
-#codyn dataset
-
-codyn_dissimchange<-data.frame()
-spc<-unique(codyndat_clean$site_project_comm)
-
-for (i in 1:length(spc)){
-  
-  subset<-codyndat_clean%>%
-    filter(site_project_comm==spc[i])
-  
-  out <- dissimilarity_change(df = subset, time.var = "experiment_year", species.var = "species", abundance.var = "abundance", replicate.var = "plot_id")
-  
-  out$site_project_comm<-spc[i]
-  
-  codyn_dissimchange<-rbind(codyn_dissimchange, out)  
-}
-
 
 # Curve change ------------------------------------------------------------
 
