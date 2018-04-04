@@ -17,7 +17,7 @@ sim<-read.csv("~/Dropbox/SESYNC/SESYNC_RACs/R Files/SimCom_Sept28.csv")%>%
          id2=paste(id, site, sep="::"))%>%
   select(-X, -sample, -iteration)%>%
   separate(id, into=c("alpha","theta","scenario","rep"), sep="_", remove=F)%>%
-  mutate(id3=paste(alpha, theta, scenario, sep="."))
+  mutate(id3=paste(alpha, theta, scenario, sep="_"))
   
 codyndat<-read.csv("~/Dropbox/CoDyn/R Files/11_06_2015_v7/relative cover_nceas and converge_12012015_cleaned.csv")%>%
   gather(species, abundance, sp1:sp99)%>%
@@ -34,7 +34,7 @@ sim<-read.csv('C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\R Files\\SimCom_S
          id2=paste(id, site, sep="::"))%>%
   select(-X, -sample, -iteration)%>%
   separate(id, into=c("alpha","theta","scenario","rep"), sep="_", remove=F)%>%
-  mutate(id3=paste(alpha, theta, scenario, sep="."))
+  mutate(id3=paste(alpha, theta, scenario, sep="_"))
 
 codyndat<-read.csv('C:\\Users\\megha\\Dropbox\\CoDyn\\R Files\\11_06_2015_v7\\relative cover_nceas and converge_12012015_cleaned.csv')%>%
   gather(species, abundance, sp1:sp99)%>%
@@ -380,7 +380,7 @@ codyndat_allmetrics<-read.csv('C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\R
   mutate(absS = abs(S),
          absE = abs(E))
 
-sim_allmetrics<-read.csv('C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\R Files\\sim_allmetrics_Jan2018.csv')
+sim_allmetrics<-read.csv('C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\R Files\\sim_allmetrics_April2018.csv')
 
 #graphing this
 panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...){
@@ -401,12 +401,13 @@ panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...){
 }
 
 ##codyn graphs
+#comparing with raw S and E changes
 colnames(codyndat_allmetrics)
-pairs(codyndat_allmetrics[,c(6:10,3,4,11)], col=codyndat_allmetrics$taxa, labels=c("Richness\nChange", "Evenness\nChange","Rank\nChanges","Species\nGains","Species\nLosses","Compositional\nChange","Dispersion\nChange","Curve\nChange"), font.labels=2, cex.labels=2, upper.panel = panel.cor,oma=c(4,4,4,10))
+pairs(codyndat_allmetrics[,c(6:10,3,4,11)], col=codyndat_allmetrics$taxa, labels=c("Richness\nChange", "Evenness\nChange","Rank\nChanges","Species\nGains","Species\nLosses","Compositional\nChange","Dispersion\nChange", "Curve\nChange"), font.labels=2, cex.labels=2, upper.panel = panel.cor,oma=c(4,4,4,10))
 par(xpd=T)
 
-#same figure with absolute value of S and E
-pairs(codyndat_allmetrics[,c(38,39, 8:10,3,4,11)], col=codyndat_allmetrics$taxa, labels=c(" Abs. Richness\nChange", "Abs. Evenness\nChange","Rank\nChanges","Species\nGains","Species\nLosses","Compositional\nChange","Dispersion\nChange","Curve\nChange"), font.labels=2, cex.labels=2, upper.panel = panel.cor,oma=c(4,4,4,10))
+#comparing absolute S and E changes
+pairs(codyndat_allmetrics[,c(38,39, 8:10, 3, 4, 11)], col=codyndat_allmetrics$taxa, labels=c(" Abs. Richness\nChange", "Abs. Evenness\nChange","Rank\nChanges","Species\nGains","Species\nLosses","Compositional\nChange","Dispersion\nChange","Curve\nChange"), font.labels=2, cex.labels=2, upper.panel = panel.cor,oma=c(4,4,4,10))
 par(xpd=T)
 
 #how do these correlate with experiment parameters. #remove outliers
@@ -421,7 +422,7 @@ cor(codyndat_allmetrics2[,c(3,4,38,39,8:11,34,40,41)], method ="pearson")
 
 
 
-#evenness
+#How are evenness metrics affected by richness?
 cor.test(sim_div_all$Sp, sim_div_all$EQ)
 cor.test(sim_div_all$Sp, sim_div_all$EGini)
 cor.test(sim_div_all$Sp, sim_div_all$ESimp)
@@ -434,130 +435,86 @@ cor.test(codyn_div_all$Sp, codyn_div_all$Evar)
 pairs(codyn_div_all[,4:7])
 pairs(sim_div_all[,4:7])
 
-#other correlations
-cor.test(sim_allmetrics$Sp, sim_allmetrics$R)
-cor.test(sim_allmetrics$Sp, sim_allmetrics$G)
-cor.test(sim_allmetrics$Sp, sim_allmetrics$L)
-cor.test(sim_allmetrics$Sp, sim_allmetrics$composition_change)
-cor.test(sim_allmetrics$Sp, sim_allmetrics$dispersion_change)
-cor.test(sim_allmetrics$Sp, sim_allmetrics$curve_change)
-cor.test(sim_allmetrics$EQ, sim_allmetrics$R)
-cor.test(sim_allmetrics$EQ, sim_allmetrics$G)
-cor.test(sim_allmetrics$EQ, sim_allmetrics$L)
-cor.test(sim_allmetrics$EQ, sim_allmetrics$composition_change)
-cor.test(sim_allmetrics$EQ, sim_allmetrics$dispersion_change)
-cor.test(sim_allmetrics$EQ, sim_allmetrics$curve_change)
+#How are change metrics affected by the richness and evenness of the community?
+#Not sure if this is the right was to look at this.
+cor.test(sim_allmetrics$Sp, abs(sim_allmetrics$S)) #not sig r = 0.178, p = 0.0014
+cor.test(sim_allmetrics$Sp, abs(sim_allmetrics$E)) #SIG r = -0.268, p < 0.001
+cor.test(sim_allmetrics$Sp, sim_allmetrics$R) #not sig
+cor.test(sim_allmetrics$Sp, sim_allmetrics$G) #not sig
+cor.test(sim_allmetrics$Sp, sim_allmetrics$L) #not sig
+cor.test(sim_allmetrics$Sp, sim_allmetrics$composition_change) #not sig
+cor.test(sim_allmetrics$Sp, sim_allmetrics$dispersion_change) #not sig
+cor.test(sim_allmetrics$Sp, sim_allmetrics$curve_change) #SIG  r = -0.445, p < 0.001
+cor.test(sim_allmetrics$Evar, abs(sim_allmetrics$S)) #SIG r = -0.529, p < 0.001
+cor.test(sim_allmetrics$Evar, abs(sim_allmetrics$E)) #not sig
+cor.test(sim_allmetrics$Evar, sim_allmetrics$R) #not sig (p = 0.041, r = 0.114)
+cor.test(sim_allmetrics$Evar, sim_allmetrics$G) #not sig
+cor.test(sim_allmetrics$Evar, sim_allmetrics$L) #not sig
+cor.test(sim_allmetrics$Evar, sim_allmetrics$composition_change) #not sig
+cor.test(sim_allmetrics$Evar, sim_allmetrics$dispersion_change) #not sig
+cor.test(sim_allmetrics$Evar, sim_allmetrics$curve_change) #SIG r = -0.279, p < 0.001.
+
+summary(lm(abs(S)~Sp*comtype, data=sim_allmetrics))
+summary(lm(abs(E)~Sp*comtype, data=sim_allmetrics))
+summary(lm(R~Sp*comtype, data=sim_allmetrics))
+summary(lm(G~Sp*comtype, data=sim_allmetrics))
+summary(lm(L~Sp*comtype, data=sim_allmetrics))
+summary(lm(composition_change~Sp*comtype, data=sim_allmetrics))
+summary(lm(dispersion_change~Sp*comtype, data=sim_allmetrics))
+summary(lm(curve_change~Sp*comtype, data=sim_allmetrics))
+
+summary(lm(abs(S)~Evar*comtype, data=sim_allmetrics))
+summary(lm(abs(E)~Evar*comtype, data=sim_allmetrics))
+summary(lm(R~Evar*comtype, data=sim_allmetrics))
+summary(lm(G~Evar*comtype, data=sim_allmetrics))
+summary(lm(L~Evar*comtype, data=sim_allmetrics))
+summary(lm(composition_change~Evar*comtype, data=sim_allmetrics))
+summary(lm(dispersion_change~Evar*comtype, data=sim_allmetrics))
+summary(lm(curve_change~Evar*comtype, data=sim_allmetrics))
 
 
-
-###LOOKING AT STATIC RICHNESS AND EVENNESS
-rich_gain<-ggplot(data=sim_allmetrics2, aes(x=Sp, y=G, col=comtype2))+
+###Figures of significant relationships
+rich_even<-
+  ggplot(data=sim_allmetrics, aes(x=Sp, y=E, col=comtype2))+
   geom_point()+
   scale_color_manual(name="Community Type", values=c("black","red","green","blue"), breaks=c("a","d","c","b"), labels=c("High Turnover &\nHigh Spatial Variability","High Turnover &\nLow Spatial Variability","Low Turnover &\nHigh Spatial Variability","Low Turnover &\nLow Spatial Variability"))+
-  xlab("Richness")+
-  ylab("Species Gains")+
+  ylab("Evenness Change")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.title.x=element_blank())
 
-rich_loss<-
-  ggplot(data=sim_allmetrics, aes(x=Sp, y=L, col=comtype2))+
-  geom_point()+
-  scale_color_manual(name="Community Type", values=c("black","red","green","blue"), breaks=c("a","d","c","b"))+
-  xlab("Richness")+
-  ylab("Species Losses")+
-   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.title.x=element_blank())
-
-rich_reorder<-
-  ggplot(data=sim_allmetrics, aes(x=Sp, y=R, col=comtype2))+
-  geom_point()+
-  scale_color_manual(name="Community Type", values=c("black","red","green","blue"), breaks=c("a","d","c","b"))+
-  xlab("Richness")+
-  ylab("Rank Change")+
-   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.title.x=element_blank())
-
-rich_comp<-
-  ggplot(data=sim_allmetrics, aes(x=Sp, y=composition_change, col=comtype2))+
-  geom_point()+
-  scale_color_manual(name="Community Type", values=c("black","red","green","blue"), breaks=c("a","d","c","b"))+
-  xlab("Richness")+
-  ylab("Compositional Change")+
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.title.x=element_blank())
-
-rich_disp<-
-  ggplot(data=sim_allmetrics, aes(x=Sp, y=dispersion_change, col=comtype2))+
-  geom_point()+
-  scale_color_manual(name="Community Type", values=c("black","red","green","blue"), breaks=c("a","d","c","b"))+
-  xlab("Richness")+
-  ylab("Dispersion Change")+
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.title.x=element_blank())
 
 rich_curve<-
   ggplot(data=sim_allmetrics, aes(x=Sp, y=curve_change, col=comtype2))+
   geom_point()+
-  scale_color_manual(name="Community Type", values=c("black","red","green","blue"), breaks=c("a","d","c","b"))+
+  scale_color_manual(name="Community Type", values=c("black","red","green","blue"), breaks=c("a","d","c","b"), labels=c("High Turnover &\nHigh Spatial Variability","High Turnover &\nLow Spatial Variability","Low Turnover &\nHigh Spatial Variability","Low Turnover &\nLow Spatial Variability"))+
   xlab("Richness")+
   ylab("Curve Change")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
 
-even_gain<-
-  ggplot(data=sim_allmetrics, aes(x=EQ, y=G, col=comtype2))+
+even_rich<-
+  ggplot(data=sim_allmetrics, aes(x=Evar, y=S, col=comtype2))+
   geom_point()+
-  scale_color_manual(name="Community Type", values=c("black","red","green","blue"), breaks=c("a","d","c","b"))+
+  scale_color_manual(name="Community Type", values=c("black","red","green","blue"), breaks=c("a","d","c","b"), labels=c("High Turnover &\nHigh Spatial Variability","High Turnover &\nLow Spatial Variability","Low Turnover &\nHigh Spatial Variability","Low Turnover &\nLow Spatial Variability"))+
   xlab("Evenness")+
   ylab("Species Gains")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.title=element_blank())
 
-even_loss<-
-  ggplot(data=sim_allmetrics, aes(x=EQ, y=L, col=comtype2))+
-  geom_point()+
-  scale_color_manual(name="Community Type", values=c("black","red","green","blue"), breaks=c("a","d","c","b"))+
-  xlab("Evenness")+
-  ylab("Species Losses")+
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.title=element_blank())
-
-even_reorder<-
-  ggplot(data=sim_allmetrics, aes(x=EQ, y=R, col=comtype2))+
-  geom_point()+
-  scale_color_manual(name="Community Type", values=c("black","red","green","blue"), breaks=c("a","d","c","b"))+
-  xlab("Evenness")+
-  ylab("Reordering")+
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.title=element_blank())
-
-even_comp<-
-  ggplot(data=sim_allmetrics, aes(x=EQ, y=composition_change, col=comtype2))+
-  geom_point()+
-  scale_color_manual(name="Community Type", values=c("black","red","green","blue"), breaks=c("a","d","c","b"))+
-  xlab("Evenness")+
-  ylab("Compositional Change")+
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.title=element_blank())
-
-even_disp<-ggplot(data=sim_allmetrics, aes(x=EQ, y=dispersion_change, col=comtype2))+
-  geom_point()+
-  scale_color_manual(name="Community Type", values=c("black","red","green","blue"), breaks=c("a","d","c","b"))+
-  xlab("Evenness")+
-  ylab("Dispersion Change")+
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.title=element_blank())
-
 even_curve<-
-  ggplot(data=sim_allmetrics, aes(x=EQ, y=curve_change, col=comtype2))+
+  ggplot(data=sim_allmetrics, aes(x=Evar, y=curve_change, col=comtype2))+
   geom_point()+
-  scale_color_manual(name="Community Type", values=c("black","red","green","blue"), breaks=c("a","d","c","b"))+
-  xlab("Evenness")+
+  scale_color_manual(name="Community Type", values=c("black","red","green","blue"), breaks=c("a","d","c","b"), labels=c("High Turnover &\nHigh Spatial Variability","High Turnover &\nLow Spatial Variability","Low Turnover &\nHigh Spatial Variability","Low Turnover &\nLow Spatial Variability"))+
   ylab("Curve Change")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.title.y=element_blank())
 
-grid.arrange(arrangeGrob(rich_reorder+theme(legend.position="none"),
-                         even_reorder+theme(legend.position="none"),
-                         rich_gain+theme(legend.position="none"),
-                         even_gain+theme(legend.position="none"),
-                         rich_loss+theme(legend.position="none"),
-                         even_loss+theme(legend.position="none"),
-                         rich_comp+theme(legend.position="none"),
-                         even_comp+theme(legend.position="none"),
-                         rich_disp+theme(legend.position="none"),
-                         even_disp+theme(legend.position="none"),
+grid.arrange(arrangeGrob(even_rich+theme(legend.position="none"),
+                         rich_even+theme(legend.position="none"),
                          rich_curve+theme(legend.position="none"),
                          even_curve+theme(legend.position="none"),
                          ncol=2))
+
+####trying this with grid arrange
+
+
+
 
 
 # example of a curve comparision for the paper ----------------------------
@@ -624,35 +581,64 @@ h <- abs(sf1(r) - sf2(r))
 w <- c(diff(r), 0)
 CC=sum(w*h)
 
-# looking at spatial differences, testing that scenarios work well --------
+# How well did the simualtions do -----------------------------------------
 
-#######trying to look at spatial differences.
-sim_subset<-sim%>%
-  separate(id, into=c("alpha", "even", "comtype", "rep"), sep="_")%>%
-  filter(time==1&rep==1)%>%
-  mutate(alphaeven=paste(alpha, even, sep="_"))
+###looking at turnover
+sim_turnover<-data.frame()
+com_rep<-unique(sim$id)
 
-sp_output=data.frame()
-
-id<-unique(sim_subset$alphaeven)
-
-for (i in 1:length(id)){
-  species<-sim_subset%>%
-    filter(alphaeven==id[i])%>%
-    spread(species, abundance, fill=0)
+for (i in 1:length(com_rep)){
   
-  mds<-metaMDS(species[,9:ncol(species)])
+  subset<-sim%>%
+    filter(id==com_rep[i])
   
-  info<-species[,1:8]
+  out <- turnover(df = subset, time.var = "time", species.var = "species", abundance.var = "abundance", replicate.var = "site")
   
-  scores <- data.frame(scores(mds, display="sites"))
-  scores2<- cbind(info, scores)
+  out$id<-com_rep[i]
   
-  sp_output<-rbind(sp_output,scores2)
+  sim_turnover<-rbind(sim_turnover, out)  
 }
 
-theme_set(theme_bw(12))
-ggplot(data=sp_output, aes(x=NMDS1, y=NMDS2, color=comtype))+
-  geom_point()+
-  scale_color_manual(values=c("black","red","green","blue"))+
-  facet_wrap(~alphaeven, ncol=3, scales="free")
+sim_turnvoer_ave<-sim_turnover%>% 
+  group_by(id, time)%>%
+  summarise(total=mean(total))%>%
+  separate(id, into=c("alpha","theta","scenario","rep"), sep="_", remove=F)%>%
+  mutate(id3=paste(alpha, theta, scenario, sep="_"))%>%
+  group_by(id3, time)%>%
+  summarize(turnover=mean(total))%>%
+  ungroup()%>%
+  separate(id3, into=c("alpha","even","comtype"), sep="_")%>%
+  group_by(comtype)%>%
+  summarize(turnover=mean(turnover))
+  
+#Whittacker beta diversity (gamma / average alpha)
+gammadiv<-sim%>%
+  filter(abundance!=0)%>%
+  group_by(id3, time, rep, species)%>%
+  summarize(splist=mean(abundance))%>%
+  ungroup()%>%
+  group_by(id3, time, rep)%>%
+  summarize(gamma=length(species))
+
+##richness
+S<-function(x){
+  x1<-x[x!=0]
+  length(x1)
+}
+
+rich <- group_by(sim, id3, time, rep, site) %>% 
+  summarize(S=S(abundance))%>%
+  ungroup()%>%
+  group_by(id3, time, rep)%>%
+  summarize(alpha=mean(S))
+
+beta_div<-gammadiv%>%
+  left_join(rich)%>%
+  mutate(wbeta=gamma/alpha)%>%
+  group_by(id3, time)%>%
+  summarize(wbeta=mean(wbeta))%>%
+  ungroup()%>%
+  separate(id3, into=c("alpha","even","comtype"), sep="_")%>%
+  group_by(comtype)%>%
+  summarize(betadiv=mean(wbeta))
+
