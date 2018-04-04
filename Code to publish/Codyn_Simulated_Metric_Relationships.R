@@ -454,7 +454,7 @@ cor.test(sim_allmetrics$Evar, sim_allmetrics$composition_change) #not sig
 cor.test(sim_allmetrics$Evar, sim_allmetrics$dispersion_change) #not sig
 cor.test(sim_allmetrics$Evar, sim_allmetrics$curve_change) #SIG r = -0.279, p < 0.001.
 
-summary(lm(abs(S)~Sp*comtype, data=sim_allmetrics))
+summary(aov(lm(abs(S)~Sp*comtype, data=sim_allmetrics)))
 summary(lm(abs(E)~Sp*comtype, data=sim_allmetrics))
 summary(lm(R~Sp*comtype, data=sim_allmetrics))
 summary(lm(G~Sp*comtype, data=sim_allmetrics))
