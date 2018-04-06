@@ -1,17 +1,16 @@
 ##worked example with pplots
-
 setwd("~/Dropbox/converge_diverge/datasets/Longform")
 setwd("C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\For R package")
 
-
-library(tidyr)
-library(dplyr)
-library(ggplot2)
+library(tidyverse)
 library(vegan)
 library(gridExtra)
 library(grid)
 library(gtable)
+library(devtools)
+install_github("mavolio/codyn", ref = "RACs_cleaner")
 library(codyn)
+
 
 theme_set(theme_bw(12))
 
@@ -208,10 +207,8 @@ ggplot(data=subset(ccplot, treatment=="N2P0"), aes(x=relrank, y=cumabund, color=
 
 
 # doing RAC change and curve change -------------------------------------------------------------
-
+pplots$treatment<-as.factor(pplots$treatment)
 rac <- RAC_change(pplots, time.var = "calendar_year", species.var = "genus_species", abundance.var = "relcov", replicate.var = "plot_id")
-
-
 
 ##doing curve change
 cc <- curve_change(pplots, time.var = "calendar_year", species.var = "genus_species", abundance.var = "relcov", replicate.var = "plot_id")
