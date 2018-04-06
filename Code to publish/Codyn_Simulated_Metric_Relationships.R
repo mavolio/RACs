@@ -380,7 +380,7 @@ codyndat_allmetrics<-read.csv('C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\R
   mutate(absS = abs(S),
          absE = abs(E))
 
-sim_allmetrics<-read.csv('C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\R Files\\sim_allmetrics_April2018.csv')
+sim_allmetrics<-read.csv('~/Dropbox/SESYNC/SESYNC_RACs/R Files/sim_allmetrics_April2018.csv')
 
 #graphing this
 panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...){
