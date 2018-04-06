@@ -27,8 +27,11 @@ pplots<-dat%>%
   filter(project_name=="pplots",calendar_year==2002|calendar_year==2011, treatment=="N1P0"|treatment=="N2P3"|treatment=="N2P0")%>%
   tbl_df()%>%
   group_by(calendar_year, plot_id)%>%
-  mutate(rank=rank(-relcov, ties.method="average"),
-         treatment=factor(treatment, levels=c("N1P0","N2P0", "N2P3")))###need to do this b/c otherwise R will remember every treatment
+    mutate(rank=rank(-relcov, ties.method="average"))%>%
+  ungroup()%>%
+  mutate(treatment=factor(treatment, levels=c("N1P0","N2P0", "N2P3")),
+         genus_species=as.character(genus_species),
+         plot_id = as.character(plot_id))###need to do this b/c otherwise R will remember every treatment
 
 trt_plots<-pplots%>%
   ungroup()%>%
@@ -207,7 +210,7 @@ ggplot(data=subset(ccplot, treatment=="N2P0"), aes(x=relrank, y=cumabund, color=
 
 
 # doing RAC change and curve change -------------------------------------------------------------
-pplots$treatment<-as.factor(pplots$treatment)
+
 rac <- RAC_change(pplots, time.var = "calendar_year", species.var = "genus_species", abundance.var = "relcov", replicate.var = "plot_id")
 
 ##doing curve change
