@@ -6,7 +6,6 @@ library(gtable)
 library(reldist)
 #library(gtools)
 library(devtools)
-
 install_github("mavolio/codyn", ref = "RACs_cleaner")
 library(codyn)
 
