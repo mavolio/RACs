@@ -380,8 +380,12 @@ codyndat_allmetrics<-read.csv('C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\R
   mutate(absS = abs(S),
          absE = abs(E))
 
+<<<<<<< HEAD
 sim_allmetrics<-read.csv('C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\R Files\\sim_allmetrics_April2018.csv')%>%
   mutate(community = ifelse(comtype=="a","High-Turn, High-Spat", ifelse(comtype=="b", "Low-Turn, Low-Spat", ifelse(comtype=="c", "Low-Turn, High-Spat", "High-Turn, Low-Spat"))))
+=======
+sim_allmetrics<-read.csv('~/Dropbox/SESYNC/SESYNC_RACs/R Files/sim_allmetrics_April2018.csv')
+>>>>>>> 9302cca4bd390df5dd502efb001b97ea4b61da15
 
 #graphing this
 panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...){
