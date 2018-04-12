@@ -595,19 +595,12 @@ for (i in 1:length(com_rep)){
     sim_mult_diff<-rbind(sim_mult_diff, out)  
 }
 
-time2<-unlist(sim_mult_diff$time)
-
-sim_mult_diff2<-cbind(sim_mult_diff, time2)
-
-sim_mult_diff_mean<-sim_mult_diff2%>%
-  select(-time)%>%
+sim_mult_diff_mean<-sim_mult_diff%>%
   separate(id, into=c("alpha","theta","scenario","rep"), sep="_", remove=F)%>%
   mutate(id3=paste(alpha, theta, scenario, sep="_"))%>%
-  group_by(id3, time2)%>%
+  group_by(id3, time)%>%
   summarize(composition_diff=mean(composition_diff),
-            abs_dispersion_diff=mean(abs_dispersion_diff))%>%
-  mutate(time = as.numeric(time2))
-
+            abs_dispersion_diff=mean(abs_dispersion_diff))
 
 ###curve diff
 sim_curve_diff<-data.frame()
