@@ -227,6 +227,9 @@ codyndat_rac_change_average<-codyndat_rac_change%>%
             G=mean(gains),
             L=mean(losses))
 
+
+
+
 ##SIM dataset
 sim_rac_change<-data.frame()
 
@@ -370,18 +373,18 @@ sim_all_metrics<-sim_multchange_mean%>%
   separate(id3, into=c("alpha","even","comtype"), sep="_")%>%
   mutate(comtype2 = as.factor(comtype))
 
-write.csv(codyndat_allmetrics,'C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\R Files\\codyn_allmetrics_April2018.csv', row.names = F)
-write.csv(sim_all_metrics,'C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\R Files\\sim_allmetrics_April2018.csv', row.names = F)
+write.csv(codyndat_allmetrics,'~/Dropbox/SESYNC/SESYNC_RACs/R Files/codyn_allmetrics_April2018.csv', row.names = F)
+write.csv(sim_all_metrics, '~/Dropbox/SESYNC/SESYNC_RACs/R Files/sim_allmetrics_April2018.csv', row.names = F)
 
 # pair plot graphs --------------------------------------------------------
 
 theme_set(theme_bw(12))
 
-codyndat_allmetrics<-read.csv('C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\R Files\\codyn_allmetrics_April2018.csv')%>%
+codyndat_allmetrics<-read.csv('~/Dropbox/SESYNC/SESYNC_RACs/R Files/codyn_allmetrics_April2018.csv')%>%
   mutate(absS = abs(S),
          absE = abs(E))
 
-sim_allmetrics<-read.csv('C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\R Files\\sim_allmetrics_April2018.csv')
+sim_allmetrics<-read.csv('~/Dropbox/SESYNC/SESYNC_RACs/R Files/sim_allmetrics_April2018.csv')
 
 #graphing this
 panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...){
