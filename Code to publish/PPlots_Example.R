@@ -23,6 +23,7 @@ dat<-read.csv("~/Dropbox/converge_diverge/datasets/Longform/SpeciesRelativeAbund
 dat<-read.csv("C:\\Users\\megha\\Dropbox\\converge_diverge\\datasets\\Longform\\SpeciesRelativeAbundance_Oct2017.csv")%>%
   select(-X)
 traits<-read.csv("C:\\Users\\megha\\Dropbox\\pplots\\site_review_2017\\traits_final.csv")
+traits<-read.csv("~/Dropbox/pplots/site_review_2017/traits_final.csv")
 
 ##pplots
 pplots<-dat%>%
@@ -32,11 +33,6 @@ pplots<-dat%>%
     mutate(rank=rank(-relcov, ties.method="average"))%>%
   ungroup()%>%
   mutate(treatment=factor(treatment, levels=c("N1P0","N2P0", "N2P3")))###need to do this b/c otherwise R will remember every treatment
-
-trt_plots<-pplots%>%
-  ungroup()%>%
-  select(treatment, plot_id)%>%
-  unique()
 
 trts<-pplots%>%
   ungroup()%>%
@@ -392,8 +388,7 @@ rac_diff<-RAC_difference(df = pplots, time.var="calendar_year", species.var = "g
 cc_diff<-curve_difference(df = pplots, time.var="calendar_year", species.var = "genus_species", abundance.var = "relcov", treatment.var = "treatment", replicate.var = "plot_id", pool = TRUE)
 
 ##graph all differences for all years
-rac_diff_allyears<-RAC_difference(pplots_allyears, time.var="calendar_year", species.var = "genus_species", abundance.var = "relcov", treatment.var = "treatment", replicate.var = "plot_id", pool = TRUE)%>%
-  mutate(group1=paste(treatment, treatment2, sep="_"))
+rac_diff_allyears<-RAC_difference(pplots_allyears, time.var="calendar_year", species.var = "genus_species", abundance.var = "relcov", treatment.var = "treatment", replicate.var = "plot_id", pool = TRUE)
 
 cc_diff_allyears<-curve_difference(pplots_allyears, time.var="calendar_year", species.var = "genus_species", abundance.var = "relcov", treatment.var = "treatment", replicate.var = "plot_id", pool = TRUE)
 
@@ -463,75 +458,14 @@ grid.arrange(arrangeGrob(bc_d+theme(legend.position="none"),
 
 
 ###examples for the appendix
+Evar <- function(x, S = length(x)) {
+  x1 <- x[x!=0]
+  lnx <- log(x1)
+  theta <- (S - 1) / S * var(lnx)
+  return(1 - 2 / pi * atan(theta))
+} 
+
 t1=c(40,20,15,50,1,6,0,0)
-E_q(t1)
+Evar(t1)
 t2=c(70,0,20,40,0,2,11,20)
-E_q(t2)
-t1_rel=c(0.30303,0.151515,0.113636,0.378788,0.007576,0.045455,0,0)
-E_q(t1_rel)
-
-
-# Example for LTER webinar ------------------------------------------------
-
-##step 1. do NMDS of pretreatment and last year of data
-pplots_wide<-dat%>%
-  filter(project_name=="pplots",calendar_year==2002|calendar_year==2014,treatment=="N1P0"|treatment=="N2P3"|treatment=="N2P0")%>%
-  select(treatment, calendar_year, plot_id, genus_species, relcov)%>%
-  spread(genus_species, relcov, fill=0)
-
-plots<-pplots_wide[,1:3]
-mds<-metaMDS(pplots_wide[,4:63], autotransform=FALSE, shrink=FALSE)
-mds
-
-adonis(pplots_wide[,4:63]~treatment, pplots_wide)
-
-#differences in dispersion?
-dist<-vegdist(pplots_wide[,4:63])
-betadisp<-betadisper(dist,pplots_wide$treatment,type="centroid")
-betadisp
-permutest(betadisp)
-
-scores <- data.frame(scores(mds, display="sites"))  # Extracts NMDS scores for year "i" #
-scores2<- cbind(plots, scores) # binds the NMDS scores of year i to all years previously run
-
-
-toplot<-scores2
-##plot NMDS
-ggplot(subset(toplot, treatment=="N1P0"), aes(x=NMDS1, y=NMDS2, color=as.factor(calendar_year)))+
-  geom_point(size=5)+
-  scale_color_manual(name="", values=c("black","red"), labels=c("Pre-Treatment","Experiment Year 12"))+
-  scale_x_continuous(limits=c(-1.6,.72))+
-  scale_y_continuous(limits=c(-1.1,1.3))+
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),legend.position = "none")
-
-ggplot(subset(toplot, treatment=="N2P3"), aes(x=NMDS1, y=NMDS2, color=as.factor(calendar_year)))+
-  geom_point(size=5)+
-  scale_color_manual(name="", values=c("black","red"), labels=c("Pre-Treatment","Experiment Year 12"))+
-  scale_x_continuous(limits=c(-1.6,.72))+
-  scale_y_continuous(limits=c(-1.1,1.3))+
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.position = "none")
-
-ggplot(subset(toplot, treatment=="N2P0"), aes(x=NMDS1, y=NMDS2, color=as.factor(calendar_year)))+
-  geom_point(size=5)+
-  scale_color_manual(name="", values=c("black","red"), labels=c("Pre-Treatment","Experiment Year 12"))+
-  scale_x_continuous(limits=c(-1.6,.72))+
-  scale_y_continuous(limits=c(-1.1,1.3))+
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.position = "none")
-
-#all
-ggplot(toplot, aes(x=NMDS1, y=NMDS2, color=as.factor(treatment), shape = as.factor(calendar_year)))+
-  geom_point(size=5)+
-  scale_shape_manual(name = "Year", values = c(19,17))+
-  scale_color_manual(name = "Treatment", values=c("black","orange", "red"), labels=c("Control", "N", "N+P"))+
-  scale_x_continuous(limits=c(-1.6,.72))+
-  scale_y_continuous(limits=c(-1.1,1.3))+
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
-#2002 only
-ggplot(subset(toplot, calendar_year=="2002"), aes(x=NMDS1, y=NMDS2, color=as.factor(treatment)))+
-  geom_point(size=5)+
-  scale_shape_manual(name = "Year", values = c(19,17))+
-  scale_color_manual(name = "Treatment", values=c("black","orange", "red"), labels=c("Control", "N", "N+P"))+
-  scale_x_continuous(limits=c(-1.6,.72))+
-  scale_y_continuous(limits=c(-1.1,1.3))+
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
-
+Evar(t2)
