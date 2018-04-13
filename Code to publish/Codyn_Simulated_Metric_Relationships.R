@@ -384,7 +384,26 @@ codyndat_allmetrics<-read.csv('~/Dropbox/SESYNC/SESYNC_RACs/R Files/codyn_allmet
   mutate(absS = abs(S),
          absE = abs(E))
 
-sim_allmetrics<-read.csv('~/Dropbox/SESYNC/SESYNC_RACs/R Files/sim_allmetrics_April2018.csv')
+# codyndat_allmetrics_old<-read.csv('~/Dropbox/SESYNC/SESYNC_RACs/R Files/codyn_allmetrics_Jan2018.csv')%>%
+#   separate(experiment_year_pair, into=c("experiment_year", "experiment_year2"), sep = "-")
+# 
+# t1<-codyndat_allmetrics%>%
+#   select(experiment_year, curve_change, site_project_comm)
+# 
+# t2<-codyndat_allmetrics_old%>%
+#   select(experiment_year, curve_change, site_project_comm)%>%
+#   mutate(experiment_year=as.numeric(experiment_year),
+#          curve_change_old=curve_change,
+#          exyear=experiment_year,
+#          spc=site_project_comm)%>%
+#   select(-curve_change, -experiment_year, -site_project_comm)
+# 
+# merge<-cbind(t1, t2)%>%
+#   mutate(diff=curve_change_old-curve_change)%>%
+#   filter(diff!=0)
+# write.csv(merge, "~/Dropbox/SESYNC/SESYNC_RACs/R Files/curve_change_inconsistentcies.csv", row.names = F)
+# 
+# sim_allmetrics<-read.csv('~/Dropbox/SESYNC/SESYNC_RACs/R Files/sim_allmetrics_April2018.csv')
 
 #graphing this
 panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...){
@@ -414,16 +433,16 @@ par(xpd=T)
 pairs(codyndat_allmetrics[,c(38,39, 8:10, 3, 4, 11)], col=codyndat_allmetrics$taxa, labels=c(" Abs. Richness\nChange", "Abs. Evenness\nChange","Rank\nChanges","Species\nGains","Species\nLosses","Compositional\nChange","Dispersion\nChange","Curve\nChange"), font.labels=2, cex.labels=2, upper.panel = panel.cor,oma=c(4,4,4,10))
 par(xpd=T)
 
-#how do these correlate with experiment parameters. #remove outliers
-codyndat_allmetrics2<-codyndat_allmetrics%>%
-  mutate(spatialExtent=log(spatial_extent),
-         plotSize=log(plot_size))
-colnames(codyndat_allmetrics2)
+#how do these correlate with experiment parameters.
+codyndat_allmetrics3<-codyndat_allmetrics%>%
+  group_by(site_project_comm)%>%
+  summarize_at(vars(absS, absE, R, G, L, curve_change, composition_change, dispersion_change, spatial_extent, plot_size, num_plots), funs(mean), rm.na=T)%>%
+  mutate(spatialExtent=log(spatial_extent),plotSize=log(plot_size))
+                 
+colnames(codyndat_allmetrics3)
 
-pairs(codyndat_allmetrics2[,c(3,4,38,39,8:11,34,40,41)], upper.panel = panel.cor)
-
-cor(codyndat_allmetrics2[,c(3,4,38,39,8:11,34,40,41)], method ="pearson")
-
+pairs(codyndat_allmetrics3[,c(2:9, 12:14)], upper.panel = panel.cor)
+cor(codyndat_allmetrics3[,c(2:9, 12:14)], method = "pearson")
 
 
 #How are evenness metrics affected by richness?
