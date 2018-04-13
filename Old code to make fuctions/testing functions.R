@@ -544,3 +544,95 @@ df<-pplots%>%
     return(cent_dist_disp2)
   }
   
+##########
+########## april 2018 why is the output different from Januray
+ 
+##add ranks dropping zeros
+  codyndat_rank_pres<-codyndat_clean%>%
+    filter(abundance!=0)%>%
+    tbl_df()%>%
+    group_by(site_project_comm, experiment_year, plot_id)%>%
+    mutate(rank=rank(-abundance, ties.method = "average"))%>%
+    tbl_df()
+  
+  ###make zero abundant species have the rank S+1 (the size of the species pool plus 1)
+  ##pull out zeros
+  
+  S <- function(x){
+    x <- x[x > 0 & !is.na(x)]
+    stopifnot(x == as.numeric(x))
+    length(x)
+  }
+  
+  codyndat_zeros<-codyndat_clean%>%
+    filter(abundance==0)
+  ##get species richness for each year
+  codyndat_S<-group_by(codyndat_clean, site_project_comm, experiment_year, plot_id)%>%
+    summarize(S=S(abundance))
+  ##merge together make zero abundances rank S+1
+  codyndat_zero_rank<-merge(codyndat_zeros, codyndat_S, by=c("site_project_comm","experiment_year","plot_id"))%>%
+    mutate(rank=S+1)%>%
+    select(-S)%>%
+    tbl_df()
+  ##combine all
+  codyndat_rank<-rbind(codyndat_rank_pres, codyndat_zero_rank)
+  
+  
+reordering=data.frame(id=c(), experiment_year=c(), S=c(), E=c(), R=c(), G=c(), L=c())#expeiment year is year of timestep2
+  
+  spc_id<-unique(codyndat_rank$id)
+  
+  for (i in 1:length(spc_id)){
+    subset<-codyndat_rank%>%
+      filter(id==spc_id[i])
+    id<-spc_id[i]
+    
+    splist<-subset%>%
+      select(species)%>%
+      unique()
+    sppool<-length(splist$species)
+    
+    # now get all timestep within an experiment ## NOPE see issue #23
+    # timestep<-sort(unique(subset$experiment_year))   ## NOPE
+    # now get all timestep within a site_project_comm
+    idx <- codyndat_rank$site_project_comm == subset[[1, 'site_project_comm']]
+    timestep <- sort(unique(codyndat_rank[idx, ]$experiment_year))
+    
+    for(i in 1:(length(timestep)-1)) {#minus 1 will keep me in year bounds NOT WORKING
+      subset_t1<-subset%>%
+        filter(experiment_year==timestep[i])
+      if (nrow(subset_t1) == 0) next;
+      
+      subset_t2<-subset%>%
+        filter(experiment_year==timestep[i+1])
+      if (nrow(subset_t2) == 0) next;
+      
+      subset_t12<-merge(subset_t1, subset_t2, by=c("species","id"), all=T)%>%
+        filter(abundance.x!=0|abundance.y!=0)
+      
+      #reodering
+      MRSc<-mean(abs(subset_t12$rank.x-subset_t12$rank.y))/nrow(subset_t12)
+      
+      #evnness and richenss
+      s_t1 <- S(subset_t12$abundance.x)
+      e_t1 <- E_q(subset_t12$abundance.x)
+      s_t2 <- S(subset_t12$abundance.y)
+      e_t2 <- E_q(subset_t12$abundance.y)
+      
+      sdiff<-abs(s_t1-s_t2)/nrow(subset_t12)
+      ediff<-abs(e_t1-e_t2)/nrow(subset_t12)
+      
+      #gains and losses
+      subset_t12$gain<-ifelse(subset_t12$abundance.x==0, 1, 0)
+      subset_t12$loss<-ifelse(subset_t12$abundance.y==0, 1, 0)
+      
+      gain<-sum(subset_t12$gain)/nrow(subset_t12)
+      loss<-sum(subset_t12$loss)/nrow(subset_t12)
+      
+      metrics<-data.frame(id=id, experiment_year=timestep[i+1], S=sdiff, E=ediff, R=MRSc, G=gain, L=loss)#spc_id
+      ##calculate differences for these year comparison and rbind to what I want.
+      
+      reordering=rbind(metrics, reordering)  
+    }
+  }
+  
