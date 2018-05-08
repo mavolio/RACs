@@ -2,7 +2,7 @@ library(tidyverse)
 library(vegan)
 library(devtools)
 
-install_github("mavolio/codyn", ref = "RACs_cleaner")
+install_github("NCEAS/codyn", ref = github_pull(83))
 library(codyn)
 
 # Read in Data ------------------------------------------------------------
