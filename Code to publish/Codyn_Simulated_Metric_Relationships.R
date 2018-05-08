@@ -403,7 +403,7 @@ codyndat_allmetrics<-read.csv('~/Dropbox/SESYNC/SESYNC_RACs/R Files/codyn_allmet
 #   filter(diff!=0)
 # write.csv(merge, "~/Dropbox/SESYNC/SESYNC_RACs/R Files/curve_change_inconsistentcies.csv", row.names = F)
 # 
-# sim_allmetrics<-read.csv('~/Dropbox/SESYNC/SESYNC_RACs/R Files/sim_allmetrics_April2018.csv')
+sim_allmetrics<-read.csv('C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\R Files\\sim_allmetrics_April2018.csv')
 
 #graphing this
 panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...){
@@ -563,11 +563,17 @@ with(subset(sim_allmetrics, comtype =="d"), cor.test(Evar, curve_change))
 
 
 ###Figures of significant relationships
-ggplot(data=sim_allmetrics, aes(x=Sp, y=R))+
+labels <-c(a = "High Spatial, High Temporal",
+           b = "Low Spatial, Low Temporal",
+           c = "High Spatail, Low Temporal",
+           d = "Low Spatial, High Temporal")
+
+ggplot(data=sim_allmetrics, aes(x=Sp, y=Evar))+
   geom_point()+
   xlab("Richness")+
-  ylab("Rank Change")+
-  facet_wrap(~comtype, scales ="free")
+  ylab("Evenness")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  facet_wrap(~comtype, scales ="free",labeller=labeller(comtype = labels))
 
 # Effet of rich and even on DIFF sim data ---------------------------------
 
