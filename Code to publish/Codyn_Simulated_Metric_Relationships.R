@@ -30,7 +30,7 @@ codyndat_info<-read.csv("~/Dropbox/CoDyn/R Files/11_06_2015_v7/siteinfo_key.csv"
   mutate(site_project_comm = paste(site_code, project_name, community_type, sep="_"))
 
 #work
-sim<-read.csv('C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\R Files\\SimCom_Sept28.csv')%>%
+sim<-read.csv('C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\R Files\\SimCom_May15_ShiftT.csv')%>%
   mutate(time=as.numeric(iteration),
          id2=paste(id, site, sep="::"))%>%
   select(-X, -sample, -iteration)%>%
@@ -366,7 +366,7 @@ codyndat_allmetrics<-codyn_multchange%>%
   left_join(codyndat_info)
 
 #sim
-sim_all_metrics<-sim_multchange_mean%>%
+sim_allmetrics<-sim_multchange_mean%>%
   left_join(sim_rac_change_mean)%>%
   left_join(sim_cc_ave)%>%
   left_join(sim_div_all)%>%
@@ -374,7 +374,7 @@ sim_all_metrics<-sim_multchange_mean%>%
   mutate(comtype2 = as.factor(comtype))
 
 write.csv(codyndat_allmetrics,'~/Dropbox/SESYNC/SESYNC_RACs/R Files/codyn_allmetrics_April2018.csv', row.names = F)
-write.csv(sim_all_metrics, '~/Dropbox/SESYNC/SESYNC_RACs/R Files/sim_allmetrics_April2018.csv', row.names = F)
+write.csv(sim_all_metrics, 'C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\R Files\\sim_allmetrics_May2018.csv', row.names = F)
 
 # pair plot graphs --------------------------------------------------------
 
@@ -403,7 +403,7 @@ codyndat_allmetrics<-read.csv('~/Dropbox/SESYNC/SESYNC_RACs/R Files/codyn_allmet
 #   filter(diff!=0)
 # write.csv(merge, "~/Dropbox/SESYNC/SESYNC_RACs/R Files/curve_change_inconsistentcies.csv", row.names = F)
 # 
-sim_allmetrics<-read.csv('C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\R Files\\sim_allmetrics_April2018.csv')
+sim_allmetrics<-read.csv('C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\R Files\\sim_allmetrics_May2018.csv')
 
 #graphing this
 panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...){
@@ -482,6 +482,22 @@ with(subset(sim_allmetrics, comtype =="a"), cor.test(Sp, R))
 with(subset(sim_allmetrics, comtype =="b"), cor.test(Sp, R))
 with(subset(sim_allmetrics, comtype =="c"), cor.test(Sp, R))
 with(subset(sim_allmetrics, comtype =="d"), cor.test(Sp, R))
+
+##removing extra division by Sp to demonstate to why it is necessary to divide again by the size of the species pool.
+# sim_allmetrics2<-sim_allmetrics%>%
+#   mutate(MRS = R*Sp)
+# 
+# with(subset(sim_allmetrics2, comtype =="a"), cor.test(Sp, MRS))
+# with(subset(sim_allmetrics2, comtype =="b"), cor.test(Sp, MRS))
+# with(subset(sim_allmetrics2, comtype =="c"), cor.test(Sp, MRS))
+# with(subset(sim_allmetrics2, comtype =="d"), cor.test(Sp, MRS))
+# 
+# ggplot(data=sim_allmetrics2, aes(x=Sp, y=MRS, color = Evar))+
+#   geom_point()+
+#   xlab("Simulated Community Richness")+
+#   ylab("Rank Change")+
+#   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+#   facet_wrap(~comtype, scales ="free",labeller=labeller(comtype = labels))
 
 #rich with gains
 with(subset(sim_allmetrics, comtype =="a"), cor.test(Sp, G))
@@ -568,10 +584,47 @@ labels <-c(a = "High Spatial, High Temporal",
            c = "High Spatail, Low Temporal",
            d = "Low Spatial, High Temporal")
 
-ggplot(data=sim_allmetrics, aes(x=Sp, y=Evar))+
+ggplot(data=sim_allmetrics, aes(x=Sp, y=R, color = Evar))+
   geom_point()+
-  xlab("Richness")+
-  ylab("Evenness")+
+  xlab("Simulated Community Richness")+
+  ylab("Rank Change")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  facet_wrap(~comtype, scales = "free", labeller=labeller(comtype = labels))
+
+ggplot(data=sim_allmetrics, aes(x=G, y=R))+
+  geom_point()+
+  xlab("Gains")+
+  ylab("Rank Change")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  facet_wrap(~comtype, scales = "free", labeller=labeller(comtype = labels))
+
+ggplot(data=sim_allmetrics, aes(x=L, y=R, color = as.factor(Sp)))+
+  geom_point()+
+  xlab("Losses")+
+  ylab("Rank Change")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  facet_wrap(~comtype, scales = "free", labeller=labeller(comtype = labels))
+
+ggplot(data=sim_allmetrics, aes(x=Sp, y=composition_change, color = Evar))+
+  geom_point()+
+  xlab("Simulated Community Richness")+
+  ylab("Composition Change")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  facet_wrap(~comtype, scales ="free",labeller=labeller(comtype = labels))
+
+ggplot(data=sim_allmetrics, aes(x=Evar, y=composition_change, color = as.factor(Sp)))+
+  geom_point()+
+  xlab("Simulated Community Evenness")+
+  ylab("Composition Change")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  facet_wrap(~comtype, scales ="free",labeller=labeller(comtype = labels))
+
+
+
+ggplot(data=sim_allmetrics, aes(x=Sp, y= Evar))+
+  geom_point()+
+  xlab("Simulated Community Richness")+
+  ylab("Simulated Community Evenness")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
   facet_wrap(~comtype, scales ="free",labeller=labeller(comtype = labels))
 
