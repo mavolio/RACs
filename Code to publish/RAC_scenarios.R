@@ -142,7 +142,7 @@ sims <- mapply(rcommunity, n = 1, size = 1000, sites = 10, iterations = 10,
                theta = param$theta,
                beta = param$beta,
                sigma = param$sigma,
-               shift=F,# allows richness to vary
+               shift=T,# prevents richness from varying
                SIMPLIFY = FALSE
 )
 
@@ -154,3 +154,4 @@ for (i in 1:nrow(param)){
 }
 
 write.csv(df, "C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\R Files\\SimCom_Sept28.csv")
+write.csv(df, "C:\\Users\\megha\\Dropbox\\SESYNC\\SESYNC_RACs\\R Files\\SimCom_May15_ShiftT.csv")
