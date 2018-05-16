@@ -465,113 +465,90 @@ pairs(sim_div_all[,4:7])
 #Richness
 
 #doing for all communities
-#rich with delta rich
-with(subset(sim_allmetrics, comtype =="a"), cor.test(Sp, abs(S)))
-with(subset(sim_allmetrics, comtype =="b"), cor.test(Sp, abs(S)))
-with(subset(sim_allmetrics, comtype =="c"), cor.test(Sp, abs(S)))
-with(subset(sim_allmetrics, comtype =="d"), cor.test(Sp, abs(S)))
 
-#rich with delta even
-with(subset(sim_allmetrics, comtype =="a"), cor.test(Sp, abs(E)))
-with(subset(sim_allmetrics, comtype =="b"), cor.test(Sp, abs(E)))
-with(subset(sim_allmetrics, comtype =="c"), cor.test(Sp, abs(E)))
-with(subset(sim_allmetrics, comtype =="d"), cor.test(Sp, abs(E)))
 
 #rich with delta rank
+with(sim_allmetrics,  cor.test(Sp, R))
 with(subset(sim_allmetrics, comtype =="a"), cor.test(Sp, R))
 with(subset(sim_allmetrics, comtype =="b"), cor.test(Sp, R))
 with(subset(sim_allmetrics, comtype =="c"), cor.test(Sp, R))
 with(subset(sim_allmetrics, comtype =="d"), cor.test(Sp, R))
 
 ##removing extra division by Sp to demonstate to why it is necessary to divide again by the size of the species pool.
-# sim_allmetrics2<-sim_allmetrics%>%
-#   mutate(MRS = R*Sp)
-# 
-# with(subset(sim_allmetrics2, comtype =="a"), cor.test(Sp, MRS))
-# with(subset(sim_allmetrics2, comtype =="b"), cor.test(Sp, MRS))
-# with(subset(sim_allmetrics2, comtype =="c"), cor.test(Sp, MRS))
-# with(subset(sim_allmetrics2, comtype =="d"), cor.test(Sp, MRS))
-# 
-# ggplot(data=sim_allmetrics2, aes(x=Sp, y=MRS, color = Evar))+
-#   geom_point()+
-#   xlab("Simulated Community Richness")+
-#   ylab("Rank Change")+
-#   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-#   facet_wrap(~comtype, scales ="free",labeller=labeller(comtype = labels))
+sim_allmetrics2<-sim_allmetrics%>%
+  mutate(MRS = R*Sp)
+with(sim_allmetrics2, cor.test(Sp, MRS))
+with(subset(sim_allmetrics2, comtype =="a"), cor.test(Sp, MRS))
+with(subset(sim_allmetrics2, comtype =="b"), cor.test(Sp, MRS))
+with(subset(sim_allmetrics2, comtype =="c"), cor.test(Sp, MRS))
+with(subset(sim_allmetrics2, comtype =="d"), cor.test(Sp, MRS))
 
-#rich with gains
+ggplot(data=sim_allmetrics2, aes(x=Sp, y=MRS, color = Evar))+
+  geom_point()+
+  xlab("Simulated Community Richness")+
+  ylab("Rank Change")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  facet_wrap(~comtype, labeller=labeller(comtype = labels), ncol =4)
+
+#rich with gains or lossess same thing
+with(sim_allmetrics, cor.test(Sp, G))
 with(subset(sim_allmetrics, comtype =="a"), cor.test(Sp, G))
 with(subset(sim_allmetrics, comtype =="b"), cor.test(Sp, G))
 with(subset(sim_allmetrics, comtype =="c"), cor.test(Sp, G))
 with(subset(sim_allmetrics, comtype =="d"), cor.test(Sp, G))
 
-#rich with loss
-with(subset(sim_allmetrics, comtype =="a"), cor.test(Sp, L))
-with(subset(sim_allmetrics, comtype =="b"), cor.test(Sp, L))
-with(subset(sim_allmetrics, comtype =="c"), cor.test(Sp, L))
-with(subset(sim_allmetrics, comtype =="d"), cor.test(Sp, L))
-
 #rich with composition
+with(sim_allmetrics, cor.test(Sp, composition_change))
 with(subset(sim_allmetrics, comtype =="a"), cor.test(Sp, composition_change))
 with(subset(sim_allmetrics, comtype =="b"), cor.test(Sp, composition_change))
 with(subset(sim_allmetrics, comtype =="c"), cor.test(Sp, composition_change))
 with(subset(sim_allmetrics, comtype =="d"), cor.test(Sp, composition_change))
 
 #rich with dispersion
+with(sim_allmetrics, cor.test(Sp, dispersion_change))
 with(subset(sim_allmetrics, comtype =="a"), cor.test(Sp, dispersion_change))
 with(subset(sim_allmetrics, comtype =="b"), cor.test(Sp, dispersion_change))
 with(subset(sim_allmetrics, comtype =="c"), cor.test(Sp, dispersion_change))
 with(subset(sim_allmetrics, comtype =="d"), cor.test(Sp, dispersion_change))
 
 #rich with curve
+with(sim_allmetrics, cor.test(Sp, curve_change))
 with(subset(sim_allmetrics, comtype =="a"), cor.test(Sp, curve_change))
 with(subset(sim_allmetrics, comtype =="b"), cor.test(Sp, curve_change))
 with(subset(sim_allmetrics, comtype =="c"), cor.test(Sp, curve_change))
 with(subset(sim_allmetrics, comtype =="d"), cor.test(Sp, curve_change))
 
-#even with delta rich
-with(subset(sim_allmetrics, comtype =="a"), cor.test(Evar, abs(S)))
-with(subset(sim_allmetrics, comtype =="b"), cor.test(Evar, abs(S)))
-with(subset(sim_allmetrics, comtype =="c"), cor.test(Evar, abs(S)))
-with(subset(sim_allmetrics, comtype =="d"), cor.test(Evar, abs(S)))
-
-#even with delta even
-with(subset(sim_allmetrics, comtype =="a"), cor.test(Evar, abs(E)))
-with(subset(sim_allmetrics, comtype =="b"), cor.test(Evar, abs(E)))
-with(subset(sim_allmetrics, comtype =="c"), cor.test(Evar, abs(E)))
-with(subset(sim_allmetrics, comtype =="d"), cor.test(Evar, abs(E)))
-
 #even with delta rank
+with(sim_allmetrics, cor.test(Evar, R))
 with(subset(sim_allmetrics, comtype =="a"), cor.test(Evar, R))
 with(subset(sim_allmetrics, comtype =="b"), cor.test(Evar, R))
 with(subset(sim_allmetrics, comtype =="c"), cor.test(Evar, R))
 with(subset(sim_allmetrics, comtype =="d"), cor.test(Evar, R))
 
-#even with gains
+#even with gains/losses
+with(sim_allmetrics, cor.test(Evar, G))
 with(subset(sim_allmetrics, comtype =="a"), cor.test(Evar, G))
 with(subset(sim_allmetrics, comtype =="b"), cor.test(Evar, G))
 with(subset(sim_allmetrics, comtype =="c"), cor.test(Evar, G))
 with(subset(sim_allmetrics, comtype =="d"), cor.test(Evar, G))
 
-#even with loss
-with(subset(sim_allmetrics, comtype =="a"), cor.test(Evar, L))
-with(subset(sim_allmetrics, comtype =="b"), cor.test(Evar, L))
-with(subset(sim_allmetrics, comtype =="c"), cor.test(Evar, L))
-with(subset(sim_allmetrics, comtype =="d"), cor.test(Evar, L))
 
 #even with composition
+with(sim_allmetrics, cor.test(Evar, composition_change))
 with(subset(sim_allmetrics, comtype =="a"), cor.test(Evar, composition_change))
 with(subset(sim_allmetrics, comtype =="b"), cor.test(Evar, composition_change))
 with(subset(sim_allmetrics, comtype =="c"), cor.test(Evar, composition_change))
 with(subset(sim_allmetrics, comtype =="d"), cor.test(Evar, composition_change))
 
 #even with dispersion
+with(sim_allmetrics, cor.test(Evar, dispersion_change))
 with(subset(sim_allmetrics, comtype =="a"), cor.test(Evar, dispersion_change))
 with(subset(sim_allmetrics, comtype =="b"), cor.test(Evar, dispersion_change))
 with(subset(sim_allmetrics, comtype =="c"), cor.test(Evar, dispersion_change))
 with(subset(sim_allmetrics, comtype =="d"), cor.test(Evar, dispersion_change))
 
 #even with curve
+with(sim_allmetrics, cor.test(Evar, curve_change))
 with(subset(sim_allmetrics, comtype =="a"), cor.test(Evar, curve_change))
 with(subset(sim_allmetrics, comtype =="b"), cor.test(Evar, curve_change))
 with(subset(sim_allmetrics, comtype =="c"), cor.test(Evar, curve_change))
@@ -584,49 +561,60 @@ labels <-c(a = "High Spatial, High Temporal",
            c = "High Spatail, Low Temporal",
            d = "Low Spatial, High Temporal")
 
-ggplot(data=sim_allmetrics, aes(x=Sp, y=R, color = Evar))+
-  geom_point()+
-  xlab("Simulated Community Richness")+
-  ylab("Rank Change")+
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-  facet_wrap(~comtype, scales = "free", labeller=labeller(comtype = labels))
-
-ggplot(data=sim_allmetrics, aes(x=G, y=R))+
-  geom_point()+
-  xlab("Gains")+
-  ylab("Rank Change")+
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-  facet_wrap(~comtype, scales = "free", labeller=labeller(comtype = labels))
-
-ggplot(data=sim_allmetrics, aes(x=L, y=R, color = as.factor(Sp)))+
-  geom_point()+
-  xlab("Losses")+
-  ylab("Rank Change")+
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-  facet_wrap(~comtype, scales = "free", labeller=labeller(comtype = labels))
-
-ggplot(data=sim_allmetrics, aes(x=Sp, y=composition_change, color = Evar))+
-  geom_point()+
-  xlab("Simulated Community Richness")+
-  ylab("Composition Change")+
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-  facet_wrap(~comtype, scales ="free",labeller=labeller(comtype = labels))
-
-ggplot(data=sim_allmetrics, aes(x=Evar, y=composition_change, color = as.factor(Sp)))+
-  geom_point()+
-  xlab("Simulated Community Evenness")+
-  ylab("Composition Change")+
-  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-  facet_wrap(~comtype, scales ="free",labeller=labeller(comtype = labels))
-
-
-
-ggplot(data=sim_allmetrics, aes(x=Sp, y= Evar))+
+ggplot(data=sim_allmetrics, aes(x=Sp, y=Evar))+
   geom_point()+
   xlab("Simulated Community Richness")+
   ylab("Simulated Community Evenness")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-  facet_wrap(~comtype, scales ="free",labeller=labeller(comtype = labels))
+  facet_wrap(~comtype, labeller=labeller(comtype = labels), ncol = 4)
+
+##make all the plots - for richness change
+rrc<-ggplot(data=sim_allmetrics, aes(x=Sp, y=R, color = Evar))+
+  geom_point()+
+  xlab("Simulated Community Richness")+
+  ylab("Rank Change")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  facet_wrap(~comtype, labeller=labeller(comtype = labels), ncol=4)
+rgl<-ggplot(data=sim_allmetrics, aes(x=Sp, y=G, color = Evar))+
+  geom_point()+
+  xlab("Simulated Community Richness")+
+  ylab("Gains/Losses")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  facet_wrap(~comtype, labeller=labeller(comtype = labels), ncol=4)
+rcc<-ggplot(data=sim_allmetrics, aes(x=Sp, y=composition_change, color = Evar))+
+  geom_point()+
+  xlab("Simulated Community Richness")+
+  ylab("Composition Change")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  facet_wrap(~comtype, labeller=labeller(comtype = labels), ncol=4)
+rcuc<-ggplot(data=sim_allmetrics, aes(x=Sp, y=curve_change, color = Evar))+
+  geom_point()+
+  xlab("Simulated Community Richness")+
+  ylab("Curve Change")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  facet_wrap(~comtype, labeller=labeller(comtype = labels), ncol=4)
+grid.arrange(rrc, rgl, rcc, rcuc, ncol=1)
+
+##make all the plots - for evenness change
+erc<-ggplot(data=sim_allmetrics, aes(x=Evar, y=R, color = as.factor(Sp)))+
+  geom_point()+
+  xlab("Simulated Community Evenness")+
+  ylab("Rank Change")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  facet_wrap(~comtype, labeller=labeller(comtype = labels), ncol = 4)
+ecc<-ggplot(data=sim_allmetrics, aes(x=Evar, y=curve_change, color = as.factor(Sp)))+
+  geom_point()+
+  xlab("Simulated Community Evenness")+
+  ylab("Composition Change")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  facet_wrap(~comtype, labeller=labeller(comtype = labels), ncol = 4)
+ecuc<-ggplot(data=sim_allmetrics, aes(x=Evar, y=curve_change, color = as.factor(Sp)))+
+  geom_point()+
+  xlab("Simulated Community Evenness")+
+  ylab("Curve Change")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  facet_wrap(~comtype, labeller=labeller(comtype = labels), ncol = 4)
+grid.arrange(erc, ecc, ecuc, ncol=1)
 
 # Effet of rich and even on DIFF sim data ---------------------------------
 
@@ -719,85 +707,73 @@ sim_diff_allmetrics<-sim_rac_diff_mean%>%
   mutate(comtype2 = as.factor(comtype))
 
 ###doing the correlations with rich and even for all community types
-###rich with delta rich
-with(subset(sim_diff_allmetrics, comtype =="a"), cor.test(Sp, abs(S)))
-with(subset(sim_diff_allmetrics, comtype =="b"), cor.test(Sp, abs(S)))
-with(subset(sim_diff_allmetrics, comtype =="c"), cor.test(Sp, abs(S)))
-with(subset(sim_diff_allmetrics, comtype =="d"), cor.test(Sp, abs(S)))
 
-#rich with delta even
-with(subset(sim_diff_allmetrics, comtype =="a"), cor.test(Sp, abs(E)))
-with(subset(sim_diff_allmetrics, comtype =="b"), cor.test(Sp, abs(E)))
-with(subset(sim_diff_allmetrics, comtype =="c"), cor.test(Sp, abs(E)))
-with(subset(sim_diff_allmetrics, comtype =="d"), cor.test(Sp, abs(E)))
 
 #rich with delta rank
+with(sim_diff_allmetrics, cor.test(Sp, R))
 with(subset(sim_diff_allmetrics, comtype =="a"), cor.test(Sp, R))
 with(subset(sim_diff_allmetrics, comtype =="b"), cor.test(Sp, R))
 with(subset(sim_diff_allmetrics, comtype =="c"), cor.test(Sp, R))
 with(subset(sim_diff_allmetrics, comtype =="d"), cor.test(Sp, R))
 
 #rich with species_diff
+with(sim_diff_allmetrics,cor.test(Sp, D))
 with(subset(sim_diff_allmetrics, comtype =="a"), cor.test(Sp, D))
 with(subset(sim_diff_allmetrics, comtype =="b"), cor.test(Sp, D))
 with(subset(sim_diff_allmetrics, comtype =="c"), cor.test(Sp, D))
 with(subset(sim_diff_allmetrics, comtype =="d"), cor.test(Sp, D))
 
 #rich with composition
+with(sim_diff_allmetrics, cor.test(Sp, composition_diff))
 with(subset(sim_diff_allmetrics, comtype =="a"), cor.test(Sp, composition_diff))
 with(subset(sim_diff_allmetrics, comtype =="b"), cor.test(Sp, composition_diff))
 with(subset(sim_diff_allmetrics, comtype =="c"), cor.test(Sp, composition_diff))
 with(subset(sim_diff_allmetrics, comtype =="d"), cor.test(Sp, composition_diff))
 
 #rich with dispersion
+with(sim_diff_allmetrics, cor.test(Sp, abs_dispersion_diff))
 with(subset(sim_diff_allmetrics, comtype =="a"), cor.test(Sp, abs_dispersion_diff))
 with(subset(sim_diff_allmetrics, comtype =="b"), cor.test(Sp, abs_dispersion_diff))
 with(subset(sim_diff_allmetrics, comtype =="c"), cor.test(Sp, abs_dispersion_diff))
 with(subset(sim_diff_allmetrics, comtype =="d"), cor.test(Sp, abs_dispersion_diff))
 
 #rich with curve
+with(sim_diff_allmetrics, cor.test(Sp, curve_diff))
 with(subset(sim_diff_allmetrics, comtype =="a"), cor.test(Sp, curve_diff))
 with(subset(sim_diff_allmetrics, comtype =="b"), cor.test(Sp, curve_diff))
 with(subset(sim_diff_allmetrics, comtype =="c"), cor.test(Sp, curve_diff))
 with(subset(sim_diff_allmetrics, comtype =="d"), cor.test(Sp, curve_diff))
 
-#even with delta rich
-with(subset(sim_diff_allmetrics, comtype =="a"), cor.test(Evar, abs(S)))
-with(subset(sim_diff_allmetrics, comtype =="b"), cor.test(Evar, abs(S)))
-with(subset(sim_diff_allmetrics, comtype =="c"), cor.test(Evar, abs(S)))
-with(subset(sim_diff_allmetrics, comtype =="d"), cor.test(Evar, abs(S)))
-
-#even with delta even
-with(subset(sim_diff_allmetrics, comtype =="a"), cor.test(Evar, abs(E)))
-with(subset(sim_diff_allmetrics, comtype =="b"), cor.test(Evar, abs(E)))
-with(subset(sim_diff_allmetrics, comtype =="c"), cor.test(Evar, abs(E)))
-with(subset(sim_diff_allmetrics, comtype =="d"), cor.test(Evar, abs(E)))
-
 #even with delta rank
+with(sim_diff_allmetrics, cor.test(Evar, R))
 with(subset(sim_diff_allmetrics, comtype =="a"), cor.test(Evar, R))
 with(subset(sim_diff_allmetrics, comtype =="b"), cor.test(Evar, R))
 with(subset(sim_diff_allmetrics, comtype =="c"), cor.test(Evar, R))
 with(subset(sim_diff_allmetrics, comtype =="d"), cor.test(Evar, R))
 
 #even with species difference
+with(sim_diff_allmetrics, cor.test(Evar, D))
 with(subset(sim_diff_allmetrics, comtype =="a"), cor.test(Evar, D))
 with(subset(sim_diff_allmetrics, comtype =="b"), cor.test(Evar, D))
 with(subset(sim_diff_allmetrics, comtype =="c"), cor.test(Evar, D))
 with(subset(sim_diff_allmetrics, comtype =="d"), cor.test(Evar, D))
 
 #even with composition
+with(sim_diff_allmetrics, cor.test(Evar, composition_diff))
 with(subset(sim_diff_allmetrics, comtype =="a"), cor.test(Evar, composition_diff))
 with(subset(sim_diff_allmetrics, comtype =="b"), cor.test(Evar, composition_diff))
 with(subset(sim_diff_allmetrics, comtype =="c"), cor.test(Evar, composition_diff))
 with(subset(sim_diff_allmetrics, comtype =="d"), cor.test(Evar, composition_diff))
 
 #even with dispersion
+with(sim_diff_allmetrics, cor.test(Evar, abs_dispersion_diff))
 with(subset(sim_diff_allmetrics, comtype =="a"), cor.test(Evar, abs_dispersion_diff))
 with(subset(sim_diff_allmetrics, comtype =="b"), cor.test(Evar, abs_dispersion_diff))
 with(subset(sim_diff_allmetrics, comtype =="c"), cor.test(Evar, abs_dispersion_diff))
 with(subset(sim_diff_allmetrics, comtype =="d"), cor.test(Evar, abs_dispersion_diff))
 
 #even with curve
+with(sim_diff_allmetrics, cor.test(Evar, curve_diff))
 with(subset(sim_diff_allmetrics, comtype =="a"), cor.test(Evar, curve_diff))
 with(subset(sim_diff_allmetrics, comtype =="b"), cor.test(Evar, curve_diff))
 with(subset(sim_diff_allmetrics, comtype =="c"), cor.test(Evar, curve_diff))
@@ -808,6 +784,42 @@ with(subset(sim_diff_allmetrics, comtype =="d"), cor.test(Evar, curve_diff))
 ggplot(data=sim_diff_allmetrics, aes(x=Evar, y=composition_diff))+
   geom_point()+
   facet_wrap(~comtype, scales ="free")
+
+##make all the plots - for richness change
+rrd<-ggplot(data=sim_diff_allmetrics, aes(x=Sp, y=R, color = Evar))+
+  geom_point()+
+  xlab("Simulated Community Richness")+
+  ylab("Rank Difference")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  facet_wrap(~comtype, labeller=labeller(comtype = labels), ncol=4)
+rdd<-ggplot(data=sim_diff_allmetrics, aes(x=Sp, y=abs_dispersion_diff, color = Evar))+
+  geom_point()+
+  xlab("Simulated Community Richness")+
+  ylab("Dispersion Difference")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  facet_wrap(~comtype, labeller=labeller(comtype = labels), ncol=4)
+rcd<-ggplot(data=sim_diff_allmetrics, aes(x=Sp, y=curve_diff, color = Evar))+
+  geom_point()+
+  xlab("Simulated Community Richness")+
+  ylab("Curve Difference")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  facet_wrap(~comtype, labeller=labeller(comtype = labels), ncol=4)
+grid.arrange(rrd,rdd, rcd, ncol=1)
+
+##make all the plots - for evenness change
+edd<-ggplot(data=sim_diff_allmetrics, aes(x=Evar, y=abs_dispersion_diff, color = as.factor(Sp)))+
+  geom_point()+
+  xlab("Simulated Community Evenness")+
+  ylab("Dispersion Difference")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  facet_wrap(~comtype, labeller=labeller(comtype = labels), ncol = 4)
+ecd<-ggplot(data=sim_diff_allmetrics, aes(x=Evar, y=curve_diff, color = as.factor(Sp)))+
+  geom_point()+
+  xlab("Simulated Community Evenness")+
+  ylab("Composition Difference")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  facet_wrap(~comtype, labeller=labeller(comtype = labels), ncol = 4)
+grid.arrange(ecd, edd, ncol=1)
 
 # example of a curve comparision for the paper ----------------------------
 
