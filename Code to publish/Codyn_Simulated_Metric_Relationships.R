@@ -423,6 +423,16 @@ panel.cor <- function(x, y, digits = 2, prefix = "", cex.cor, ...){
   text(0.8, 0.5, Signif, cex=5, col="red")
 }
 
+panel.hist <- function(x, ...)
+{
+  usr <- par("usr"); on.exit(par(usr))
+  par(usr = c(usr[1:2], 0, 1.5) )
+  h <- hist(x, plot = FALSE)
+  breaks <- h$breaks; nB <- length(breaks)
+  y <- h$counts; y <- y/max(y)
+  rect(breaks[-nB], 0, breaks[-1], y, ...)
+}
+
 ##codyn graphs
 #comparing with raw S and E changes
 colnames(codyndat_allmetrics)
@@ -432,6 +442,11 @@ par(xpd=T)
 #comparing absolute S and E changes
 pairs(codyndat_allmetrics[,c(38,39, 8:10, 3, 4, 11)], col=codyndat_allmetrics$taxa, labels=c(" Abs. Richness\nChange", "Abs. Evenness\nChange","Rank\nChanges","Species\nGains","Species\nLosses","Compositional\nChange","Dispersion\nChange","Curve\nChange"), font.labels=2, cex.labels=2, upper.panel = panel.cor,oma=c(4,4,4,10))
 par(xpd=T)
+
+#comparing absolute S and E changes
+pairs(codyndat_allmetrics[,c(38,39, 8:10, 3, 4, 11)], col=codyndat_allmetrics$taxa,upper.panel = panel.cor,diag.panel = panel.hist, cex.axis = 2)
+par(xpd=T)
+
 
 #how do these correlate with experiment parameters.
 codyndat_allmetrics3<-codyndat_allmetrics%>%
@@ -465,7 +480,6 @@ pairs(sim_div_all[,4:7])
 #Richness
 
 #doing for all communities
-
 
 #rich with delta rank
 with(sim_allmetrics,  cor.test(Sp, R))
@@ -561,12 +575,56 @@ labels <-c(a = "High Spatial, High Temporal",
            c = "High Spatail, Low Temporal",
            d = "Low Spatial, High Temporal")
 
-ggplot(data=sim_allmetrics, aes(x=Sp, y=Evar))+
-  geom_point()+
+ggplot(data=sim_allmetrics, aes(x=Sp, y=Evar, shape = comtype))+
+  geom_point(size = 2)+
   xlab("Simulated Community Richness")+
   ylab("Simulated Community Evenness")+
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-  facet_wrap(~comtype, labeller=labeller(comtype = labels), ncol = 4)
+  scale_shape_manual(name = "Community Type", labels = c("High Spatial, High Temporal","Low Spatial, Low Temporal","High Spatail, Low Temporal","Low Spatial, High Temporal"), values = c(15,16,17,18))
+
+sim_tograph<-sim_allmetrics%>%
+  gather(metric, value, composition_change:curve_change)%>%
+  filter(metric != "S")%>%
+  filter(metric != "E")%>%
+  filter(metric != "L")
+
+
+labels_change <-c(composition_change = "Compositon Change",
+           curve_change = "Curve Change",
+           dispersion_change = "Dispersion Change",
+           G = "Gains/Losses",
+           R = "Rank Change")
+
+#change with richness
+ggplot(data=sim_tograph, aes(x=as.factor(Sp), y=value, color = comtype))+
+  geom_boxplot()+
+  scale_color_manual(name = "Community Type", labels = c("High Spatial, High Temporal","Low Spatial, Low Temporal","High Spatail, Low Temporal","Low Spatial, High Temporal"), values= c("gold","orange","darkorange4","red"))+
+  xlab("Simulated Community Richness")+
+  ylab("Metric Value")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  facet_wrap(~metric, ncol = 3, scales = "free", labeller = labeller(metric = labels_change))+
+  theme(strip.background = element_rect(fill = 0))
+
+
+#change with evenness
+ggplot(data=sim_tograph, aes(x=as.factor(even), y=value, color = comtype))+
+  geom_boxplot()+
+  scale_color_manual(name = "Community Type", labels = c("High Spatial, High Temporal","Low Spatial, Low Temporal","High Spatail, Low Temporal","Low Spatial, High Temporal"), values= c("gold","orange","darkorange4","red"))+
+  xlab("Simulated Community Evenness")+
+  ylab("Metric Value")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  facet_wrap(~metric, ncol = 3, scales = "free", labeller = labeller(metric = labels_change))+
+  theme(strip.background = element_rect(fill = 0))+
+  scale_x_discrete(labels = c("Low","Mid","High"))
+
+sim_formeans<-sim_allmetrics%>%
+  mutate(abs_dc = abs(dispersion_change))%>%
+  gather(metric, value, c(composition_change:curve_change, abs_dc))
+
+sim_means<-sim_formeans%>%
+  group_by(comtype, metric)%>%
+  summarize(mean = mean (value),
+            se = sd(value)/sqrt(81))
 
 ##make all the plots - for richness change
 rrc<-ggplot(data=sim_allmetrics, aes(x=Sp, y=R, color = Evar))+
@@ -615,6 +673,9 @@ ecuc<-ggplot(data=sim_allmetrics, aes(x=Evar, y=curve_change, color = as.factor(
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
   facet_wrap(~comtype, labeller=labeller(comtype = labels), ncol = 4)
 grid.arrange(erc, ecc, ecuc, ncol=1)
+
+
+
 
 # Effet of rich and even on DIFF sim data ---------------------------------
 
@@ -701,8 +762,8 @@ sim_diff_div<-sim_div_evar%>%
 
 sim_diff_allmetrics<-sim_rac_diff_mean%>%
   left_join(sim_cc_diff)%>%
+   left_join(sim_mult_diff_mean)%>%
   left_join(sim_diff_div)%>%
-  left_join(sim_mult_diff_mean)%>%
   separate(id3, into=c("alpha","even","comtype"), sep="_")%>%
   mutate(comtype2 = as.factor(comtype))
 
@@ -780,6 +841,44 @@ with(subset(sim_diff_allmetrics, comtype =="c"), cor.test(Evar, curve_diff))
 with(subset(sim_diff_allmetrics, comtype =="d"), cor.test(Evar, curve_diff))
 
 ###looking at some figures
+
+sim_diff_tograph<-sim_diff_allmetrics%>%
+  gather(metric, value, S:abs_dispersion_diff)%>%
+  filter(metric != "S")%>%
+  filter(metric != "E")
+
+labels_diff <-c(composition_diff = "Compositon Difference",
+                  curve_diff = "Curve Difference",
+                  abs_dispersion_diff = "Dispersion Difference",
+                  D = "Species Differences",
+                  R = "Rank Difference")
+#diff with richness
+ggplot(data=sim_diff_tograph, aes(x=as.factor(Sp), y=value, color = comtype))+
+  geom_boxplot()+
+  scale_color_manual(name = "Community Type", labels = c("High Spatial, High Temporal","Low Spatial, Low Temporal","High Spatail, Low Temporal","Low Spatial, High Temporal"), values= c("gold","orange","darkorange4","red"))+
+  xlab("Simulated Community Richness")+
+  ylab("Metric Value")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  facet_wrap(~metric, ncol = 3, scales = "free", labeller = labeller(metric = labels_diff))+
+  theme(strip.background = element_rect(fill = 0))
+
+
+#diff with evenness
+ggplot(data=sim_diff_tograph, aes(x=as.factor(even), y=value, color = comtype))+
+  geom_boxplot()+
+  scale_color_manual(name = "Community Type", labels = c("High Spatial, High Temporal","Low Spatial, Low Temporal","High Spatail, Low Temporal","Low Spatial, High Temporal"), values= c("gold","orange","darkorange4","red"))+
+  xlab("Simulated Community Evenness")+
+  ylab("Metric Value")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  facet_wrap(~metric, ncol = 3, scales = "free", labeller = labeller(metric = labels_diff))+
+  theme(strip.background = element_rect(fill = 0))+
+  scale_x_discrete(labels = c("Low","Mid","High"))
+
+diff_means<-sim_diff_tograph%>%
+  group_by(comtype, metric)%>%
+  summarize(mean = mean (value),
+            se = sd(value)/sqrt(90))
+
 
 ggplot(data=sim_diff_allmetrics, aes(x=Evar, y=composition_diff))+
   geom_point()+
