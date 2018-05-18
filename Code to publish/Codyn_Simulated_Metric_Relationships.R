@@ -354,7 +354,32 @@ sim_cc_ave<-sim_curve_change%>%
   summarize(curve_change=mean(curve_change))
 
 
+sim_shannon <- data.frame()
+for (i in 1:length(com_rep)){
+  
+  subset<-sim%>%
+    filter(id==com_rep[i])
+  
+  out <- community_diversity(df = subset, time.var = "time", abundance.var = "abundance", replicate.var = "site")
+  
+  out$id<-com_rep[i]
+  
+  sim_shannon<-rbind(sim_shannon, out)  
+}
 
+sim_shannon_ave<-sim_shannon%>% 
+  group_by(id, time)%>%
+  summarise(H=mean(Shannon))%>%
+  separate(id, into=c("alpha","theta","scenario","rep"), sep="_", remove=F)%>%
+  mutate(id3=paste(alpha, theta, scenario, sep="_"))%>%
+  group_by(id3, time)%>%
+  summarize(H=mean(H))
+
+corr.test<-sim_cc_ave%>%
+  left_join(sim_shannon_ave)
+
+plot(corr.test$H, corr.test$curve_change)
+cor.test(corr.test$H, corr.test$curve_change)
 # Merging all metrics to single datasets ----------------------------------
 
 ####MERGING TO A SINGE DATASET
