@@ -359,7 +359,7 @@ L<-
   ggplot(data=subset(rac_cc_mean,metric=="losses"), aes(x=calendar_year2, y=vmean, color=treatment))+
   geom_point(size=3)+
   geom_errorbar(aes(ymin=vmean-vse, ymax=vmean+vse), width=.2)+
-  scale_color_manual(name = "Treatment", label=c("Control", "N+P"),values=c("black","red","purple"))+
+  scale_color_manual(name = "Treatment", label=c("Control", "N", "N+P"),values=c("black","red","purple"))+
   ylab("Species Losses")+
   geom_line(size=1, aes(group=treatment))+
   scale_x_continuous(breaks=c(2004, 2008, 2012))+
