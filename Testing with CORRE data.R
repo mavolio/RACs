@@ -397,9 +397,9 @@ for (i in 1:length(spc)){
   
   diff_rac_all<-rbind(diff_rac_all, out)
 }
-
-pplots<-subset(corredat, site_project_comm == 'KNZ_pplots_0')
-test<- RAC_difference(pplots, time.var = 'calendar_year', species.var = "genus_species", abundance.var = 'relcov', replicate.var = 'plot_id', treatment.var = 'treatment', pool = TRUE)
+# 
+# pplots<-subset(corredat, site_project_comm == 'KNZ_pplots_0')
+# test<- RAC_difference(pplots, time.var = 'calendar_year', species.var = "genus_species", abundance.var = 'relcov', replicate.var = 'plot_id', treatment.var = 'treatment', pool = TRUE)
 
 
 #####CALCULATING abundance differences without blocks pooling up to treatment for all datasets
