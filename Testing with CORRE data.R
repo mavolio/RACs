@@ -3,6 +3,7 @@ library(vegan)
 library(devtools)
 
 install_github("NCEAS/codyn",  ref = github_pull(83))
+install_github("NCEAS/codyn", ref = "anderson")
 library(codyn)
 
 
@@ -19,25 +20,25 @@ corredat1<-read.csv("~/Dropbox/converge_diverge/datasets/LongForm/SpeciesRelativ
   filter(site_project_comm!="GVN_FACE_0", site_project_comm!="AZI_NitPhos_0", site_project_comm!="JRN_study278_0", site_project_comm!="KNZ_GFP_4F", site_project_comm!="Saskatchewan_CCD_0")
 
 ##several studies only have two measurments of a plot. I am dropping those plots
-azi<-read.csv("~/Dropbox/converge_diverge/datasets/LongForm/SpeciesRelativeAbundance_Oct2017.csv")%>%
+azi<-corredat1%>%
   select(-X)%>%
   mutate(site_project_comm=paste(site_code, project_name, community_type, sep="_"))%>%
   filter(site_code=="AZI")%>%
   filter(plot_id!=11&plot_id!=15&plot_id!=35&plot_id!=37)
 
-jrn<-read.csv("~/Dropbox/converge_diverge/datasets/LongForm/SpeciesRelativeAbundance_Oct2017.csv")%>%
+jrn<-corredat1%>%
   select(-X)%>%
   mutate(site_project_comm=paste(site_code, project_name, community_type, sep="_"))%>%
   filter(site_project_comm=="JRN_study278_0")%>%
   filter(plot_id!=211&plot_id!=210)
 
-knz<-read.csv("~/Dropbox/converge_diverge/datasets/LongForm/SpeciesRelativeAbundance_Oct2017.csv")%>%
+knz<-corredat1%>%
   select(-X)%>%
   mutate(site_project_comm=paste(site_code, project_name, community_type, sep="_"))%>%
   filter(site_project_comm=="KNZ_GFP_4F")%>%
   filter(plot_id!="7_1_1"&plot_id!="7_2_1")
 
-sak<-read.csv("~/Dropbox/converge_diverge/datasets/LongForm/SpeciesRelativeAbundance_Oct2017.csv")%>%
+sak<-corredat1%>%
   select(-X)%>%
   mutate(site_project_comm=paste(site_code, project_name, community_type, sep="_"))%>%
   filter(site_project_comm=="Saskatchewan_CCD_0")%>%
@@ -434,6 +435,8 @@ for (i in 1:length(spc)){
   
   diff_mult<-rbind(diff_mult, out)
 }
+
+write.csv(diff_mult, "~/Dropbox/SESYNC/SESYNC_RACs/R Files/anderson_corre_multdiff_new.csv", row.names = F )"
 
 # ##calculating dissimilarity differences
 # 
