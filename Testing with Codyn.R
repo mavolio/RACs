@@ -95,6 +95,11 @@ pplots <- RAC_change(df = pdata, time.var = "experiment_year", species.var = "sp
 
 test <- RAC_change(df = codyndat_clean, time.var = "experiment_year", species.var = "species", abundance.var = "abundance", replicate.var = "id")
 
+
+## test odd year values
+test<-subset(codyndat_clean, site_project_comm =="OND.ZOOPS.0")
+testing<-RAC_change(df = test, time.var = "experiment_year", species.var = "species", abundance.var = "abundance", replicate.var = "id", reference.time = 1976.429)
+
 ###Looking at abundance Changes
 ##Codyn Dataset
 

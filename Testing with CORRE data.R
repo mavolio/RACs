@@ -2,7 +2,7 @@ library(tidyverse)
 library(vegan)
 library(devtools)
 
-install_github("mavolio/codyn", ref = "RACs_cleaner")
+install_github("NCEAS/codyn",  ref = github_pull(83))
 library(codyn)
 
 
@@ -401,6 +401,10 @@ for (i in 1:length(spc)){
 # pplots<-subset(corredat, site_project_comm == 'KNZ_pplots_0')
 # test<- RAC_difference(pplots, time.var = 'calendar_year', species.var = "genus_species", abundance.var = 'relcov', replicate.var = 'plot_id', treatment.var = 'treatment', pool = TRUE)
 
+
+##test with reference treatment
+test<-subset(corredat, site_project_comm == "SCL_TER_0")
+testing<-RAC_difference(test, time.var = 'calendar_year', species.var = "genus_species", abundance.var = 'relcov', replicate.var = 'plot_id', treatment.var = 'treatment', pool = TRUE, reference.treatment = "OO")
 
 #####CALCULATING abundance differences without blocks pooling up to treatment for all datasets
 spc<-unique(corredat$site_project_comm)
