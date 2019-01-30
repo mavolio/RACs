@@ -2,7 +2,7 @@ library(tidyverse)
 library(vegan)
 library(devtools)
 
-install_github("NCEAS/codyn", ref = github_pull(83))
+install_github("NCEAS/codyn", ref = "anderson")
 library(codyn)
 
 # Read in Data ------------------------------------------------------------
@@ -137,6 +137,8 @@ for (i in 1:length(spc)){
   
   codyn_multchange<-rbind(codyn_multchange, out)  
 }
+
+write.csv(codyn_multchange, "~/Dropbox/SESYNC/SESYNC_RACs/R Files/anderson_codyn_mult_new.csv", row.names = F )
 
 # Curve change ------------------------------------------------------------
 
