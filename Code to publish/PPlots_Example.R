@@ -8,7 +8,7 @@ library(gridExtra)
 library(grid)
 library(gtable)
 library(devtools)
-install_github("mavolio/codyn", ref = "RACs_cleaner")
+install_github("nceas/codyn", ref = "anderson")
 library(codyn)
 
 
@@ -388,9 +388,11 @@ rac_diff<-RAC_difference(df = pplots, time.var="calendar_year", species.var = "g
 cc_diff<-curve_difference(df = pplots, time.var="calendar_year", species.var = "genus_species", abundance.var = "relcov", treatment.var = "treatment", replicate.var = "plot_id", pool = TRUE)
 
 ##graph all differences for all years
-rac_diff_allyears<-RAC_difference(pplots_allyears, time.var="calendar_year", species.var = "genus_species", abundance.var = "relcov", treatment.var = "treatment", replicate.var = "plot_id", pool = TRUE)
+rac_diff_allyears<-RAC_difference(pplots_allyears, time.var="calendar_year", species.var = "genus_species", abundance.var = "relcov", treatment.var = "treatment", replicate.var = "plot_id", pool = TRUE)%>%
+  mutate(group1=paste(treatment, treatment2, sep="_"))
 
-cc_diff_allyears<-curve_difference(pplots_allyears, time.var="calendar_year", species.var = "genus_species", abundance.var = "relcov", treatment.var = "treatment", replicate.var = "plot_id", pool = TRUE)
+cc_diff_allyears<-curve_difference(pplots_allyears, time.var="calendar_year", species.var = "genus_species", abundance.var = "relcov", treatment.var = "treatment", replicate.var = "plot_id", pool = TRUE)%>%
+  mutate(group1=paste(treatment, treatment2, sep="_"))
 
 mult_diff_allyears<-multivariate_difference(pplots_allyears, time.var="calendar_year", species.var = "genus_species", abundance.var = "relcov", treatment.var = "treatment", replicate.var = "plot_id")%>%
   mutate(group1=paste(treatment, treatment2, sep="_"))
