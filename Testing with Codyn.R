@@ -3,6 +3,7 @@ library(vegan)
 library(devtools)
 
 install_github("NCEAS/codyn", ref = github_pull(83))
+install_github("NCEAS/codyn", ref = "anderson")
 library(codyn)
 
 # Read in Data ------------------------------------------------------------

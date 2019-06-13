@@ -5,6 +5,10 @@ library(devtools)
 install_github("mavolio/codyn", ref = "RACs_cleaner")
 library(codyn)
 
+install_github("NCEAS/codyn", ref = "anderson")
+library(codyn)
+
+
 
 #Files from home
 
