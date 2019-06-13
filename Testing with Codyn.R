@@ -2,7 +2,10 @@ library(tidyverse)
 library(vegan)
 library(devtools)
 
+<<<<<<< HEAD
 install_github("NCEAS/codyn", ref = github_pull(83))
+=======
+>>>>>>> d4912af31ca1b2f8bee07dbf0eeccc9a8c3ee1db
 install_github("NCEAS/codyn", ref = "anderson")
 library(codyn)
 
@@ -96,6 +99,11 @@ pplots <- RAC_change(df = pdata, time.var = "experiment_year", species.var = "sp
 
 test <- RAC_change(df = codyndat_clean, time.var = "experiment_year", species.var = "species", abundance.var = "abundance", replicate.var = "id")
 
+
+## test odd year values
+test<-subset(codyndat_clean, site_project_comm =="OND.ZOOPS.0")
+testing<-RAC_change(df = test, time.var = "experiment_year", species.var = "species", abundance.var = "abundance", replicate.var = "id", reference.time = 1976.429)
+
 ###Looking at abundance Changes
 ##Codyn Dataset
 
@@ -133,6 +141,8 @@ for (i in 1:length(spc)){
   
   codyn_multchange<-rbind(codyn_multchange, out)  
 }
+
+write.csv(codyn_multchange, "~/Dropbox/SESYNC/SESYNC_RACs/R Files/anderson_codyn_mult_new.csv", row.names = F )
 
 # Curve change ------------------------------------------------------------
 
