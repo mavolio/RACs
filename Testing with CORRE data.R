@@ -3,22 +3,22 @@ library(vegan)
 library(devtools)
 
 install_github("NCEAS/codyn",  ref = github_pull(83))
-install_github("NCEAS/codyn", ref = "anderson")
+install_github("NCEAS/codyn", ref = "sp_diff_test")
 library(codyn)
 
 install_github("NCEAS/codyn", ref = "anderson")
 library(codyn)
 
+setwd("~/Dropbox/")
+setwd("C:\\Users\\megha\\Dropbox\\")
 
-
-#Files from home
-
-corredat<-read.csv("~/Dropbox/converge_diverge/datasets/LongForm/SpeciesRelativeAbundance_Oct2017.csv")%>%
+#import data
+corredat<-read.csv("converge_diverge/datasets/LongForm/SpeciesRelativeAbundance_Oct2017.csv")%>%
   select(-X)%>%
   mutate(site_project_comm=paste(site_code, project_name, community_type, sep="_"))%>%
   filter(site_project_comm!="GVN_FACE_0")
 
-corredat1<-read.csv("~/Dropbox/converge_diverge/datasets/LongForm/SpeciesRelativeAbundance_Oct2017.csv")%>%
+corredat1<-read.csv("converge_diverge/datasets/LongForm/SpeciesRelativeAbundance_Oct2017.csv")%>%
   select(-X)%>%
   mutate(site_project_comm=paste(site_code, project_name, community_type, sep="_"))%>%
   filter(site_project_comm!="GVN_FACE_0", site_project_comm!="AZI_NitPhos_0", site_project_comm!="JRN_study278_0", site_project_comm!="KNZ_GFP_4F", site_project_comm!="Saskatchewan_CCD_0")
